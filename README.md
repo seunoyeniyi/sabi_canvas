@@ -1,5 +1,4 @@
 # Sabi Canvas
-Hello from sabiprint2
 
 A powerful, open-source canvas design editor framework built with React and Konva. Sabi Canvas gives developers a full-featured graphic design editor — shapes, images, text, fonts, templates, layers, undo/redo, export to PDF/PNG — ready to embed in any React application.
 
