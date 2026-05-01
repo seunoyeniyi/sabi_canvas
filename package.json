@@ -1,6 +1,6 @@
 {
   "name": "sabi-canvas",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A powerful, open-source canvas design editor framework built with React and Konva.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -8,6 +8,11 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./design-templates": {
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"

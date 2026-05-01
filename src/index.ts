@@ -126,6 +126,10 @@ export type { Project, ProjectPage } from './types/project';
 export type { CustomFont } from './types/custom-fonts';
 export type { DesignTemplate, TemplateCategory } from './types/design-templates';
 
+// ─── Design Templates ─────────────────────────────────────────────────────────
+export { DESIGN_TEMPLATES, TEMPLATE_CATEGORIES } from './design-templates';
+export type { TemplateCategoryItem } from './design-templates';
+
 // ─── Utilities ────────────────────────────────────────────────────────────────
 export { cn } from './lib/utils';
 export { convertPolotnoDesign } from './lib/polotnoConverter';
@@ -133,9 +137,6 @@ export { loadFontFamily, getFontFallbackStack, isFontLoaded, preloadFonts } from
 export { getGoogleFontCatalog, getFontDefinition, GOOGLE_FONT_CATALOG } from './lib/fontCatalog';
 export { spansToHtml, spansToPlainText } from './lib/richText';
 export { extractSvgPalette, applySvgColorReplacements } from './lib/svgColorUtils';
-
-// ─── Design Templates ─────────────────────────────────────────────────────────
-export { DESIGN_TEMPLATES, TEMPLATE_CATEGORIES } from './design-templates';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 export { shapeCategories, getAllShapes, getShapeById } from './config/shapesConfig';
