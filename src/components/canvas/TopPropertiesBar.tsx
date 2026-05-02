@@ -44,6 +44,7 @@ import {
 import { TableBorderButton } from './shared/TableBorderButton';
 import { FontFamilyPicker } from './FontFamilyPicker';
 import { RemoveBgDialog } from '@sabi-canvas/components/RemoveBgDialog';
+import { DrawPenIcon, DrawMarkerIcon, DrawHighlighterIcon } from '@sabi-canvas/components/icons/DrawIcons';
 import { cn } from '@sabi-canvas/lib/utils';
 import { Button } from '@sabi-canvas/ui/button';
 import { Separator } from '@sabi-canvas/ui/separator';
@@ -102,10 +103,10 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
         <Separator orientation="vertical" className="mx-1 h-6" />
         {/* Tool switcher */}
         {([
-          { id: 'pen' as const,         label: 'Pen',         icon: '/icons/draw-pen.svg' },
-          { id: 'marker' as const,      label: 'Marker',      icon: '/icons/draw-marker.svg' },
-          { id: 'highlighter' as const, label: 'Highlighter', icon: '/icons/draw-highlighter.svg' },
-        ] as const).map(({ id, label, icon }) => (
+          { id: 'pen' as const,         label: 'Pen',         Icon: DrawPenIcon },
+          { id: 'marker' as const,      label: 'Marker',      Icon: DrawMarkerIcon },
+          { id: 'highlighter' as const, label: 'Highlighter', Icon: DrawHighlighterIcon },
+        ] as const).map(({ id, label, Icon }) => (
           <Button
             key={id}
             variant={drawTool === id ? 'secondary' : 'ghost'}
@@ -114,7 +115,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
             onClick={() => setDrawTool(id)}
             title={label}
           >
-            <img src={icon} alt={label} className="h-4 w-4 object-contain dark:brightness-0 dark:invert" />
+            <Icon className="h-4 w-4" />
             <span>{label}</span>
           </Button>
         ))}

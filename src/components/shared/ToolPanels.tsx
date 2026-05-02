@@ -13,7 +13,6 @@ import { TextTemplatesPanel } from '../panels/text/TextTemplatesPanel';
 import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
 import { TextObject, createDefaultObject } from '@sabi-canvas/types/canvas-objects';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@sabi-canvas/ui/tabs';
-import { ScrollArea } from '@sabi-canvas/ui/scroll-area';
 
 interface ToolPanelProps {
   activeTool: string | null;
@@ -137,34 +136,32 @@ export const TextPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   return (
-    <Tabs defaultValue="text" className="w-full flex flex-col min-h-0 flex-1">
+    <Tabs defaultValue="text" className="w-full flex flex-col h-full">
       <TabsList className="w-full h-8 mb-3 flex-shrink-0">
         <TabsTrigger value="text" className="flex-1 text-xs">Text</TabsTrigger>
         <TabsTrigger value="fonts" className="flex-1 text-xs">My Fonts</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="text" className="mt-0 flex-1 min-h-0">
-        <ScrollArea className="h-full">
-          <div className="space-y-2 pb-4">
-            {textStyles.map((style) => (
-              <button
-                key={style.id}
-                onClick={() => handleAddText(style.preset)}
-                className="w-full text-center px-3 py-1 rounded-sm border border-border hover:bg-muted/50 transition-colors"
-              >
-                <span className={style.className}>{style.label}</span>
-              </button>
-            ))}
+      <TabsContent value="text" className="mt-0 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="space-y-2 pb-4">
+          {textStyles.map((style) => (
+            <button
+              key={style.id}
+              onClick={() => handleAddText(style.preset)}
+              className="w-full text-center px-3 py-1 rounded-sm border border-border hover:bg-muted/50 transition-colors"
+            >
+              <span className={style.className}>{style.label}</span>
+            </button>
+          ))}
 
-            <div className="pt-2">
-              <p className="text-[11px] font-medium text-muted-foreground mb-2">Templates</p>
-              <TextTemplatesPanel onClose={onClose} />
-            </div>
+          <div className="pt-2">
+            <p className="text-[11px] font-medium text-muted-foreground mb-2">Templates</p>
+            <TextTemplatesPanel onClose={onClose} />
           </div>
-        </ScrollArea>
+        </div>
       </TabsContent>
 
-      <TabsContent value="fonts" className="mt-0 flex-1 min-h-0">
+      <TabsContent value="fonts" className="mt-0 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         <MyFontsPanel onClose={onClose} />
       </TabsContent>
     </Tabs>

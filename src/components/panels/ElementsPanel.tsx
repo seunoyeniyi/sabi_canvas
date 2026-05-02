@@ -15,7 +15,7 @@ import {
 import { IconsGrid } from './elements/IconsGrid';
 import { GraphicsGrid } from './elements/GraphicsGrid';
 import { TablePresetGrid } from './elements/TablePresetGrid';
-
+import { DrawPenIcon, DrawMarkerIcon, DrawHighlighterIcon } from '../icons/DrawIcons';
 
 
 interface ElementsPanelProps {
@@ -142,10 +142,10 @@ export const ElementsPanel: React.FC<ElementsPanelProps> = ({ onClose }) => {
               </h4>
               <div className="grid grid-cols-3 gap-2">
                 {([
-                  { id: 'pen' as const,         label: 'Pen',         icon: '/icons/draw-pen.svg' },
-                  { id: 'marker' as const,      label: 'Marker',      icon: '/icons/draw-marker.svg' },
-                  { id: 'highlighter' as const, label: 'Highlighter', icon: '/icons/draw-highlighter.svg' },
-                ]).map(({ id, label, icon }) => (
+                  { id: 'pen' as const,         label: 'Pen',         Icon: DrawPenIcon },
+                  { id: 'marker' as const,      label: 'Marker',      Icon: DrawMarkerIcon },
+                  { id: 'highlighter' as const, label: 'Highlighter', Icon: DrawHighlighterIcon },
+                ]).map(({ id, label, Icon }) => (
                   <button
                     key={id}
                     onClick={() => handleSelectDrawTool(id)}
@@ -153,7 +153,7 @@ export const ElementsPanel: React.FC<ElementsPanelProps> = ({ onClose }) => {
                     title={label}
                   >
                     <div className="w-full h-7 flex items-center justify-center">
-                      <img src={icon} alt={label} className="h-6 w-6 object-contain dark:brightness-0 dark:invert" />
+                      <Icon className="h-6 w-6" />
                     </div>
                     <span className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                       {label}
