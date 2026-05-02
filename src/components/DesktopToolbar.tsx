@@ -50,7 +50,7 @@ export const DesktopToolbar: React.FC<DesktopToolbarProps> = ({
   const closePanel = () => setActiveToolPanel(null);
 
   return (
-    <div className={cn('hidden lg:flex flex-row items-start gap-1 h-full', className)}>
+    <div className={cn('flex max-lg:hidden flex-row items-start gap-1 h-full', className)}>
       {/* Toolbar column */}
       <motion.div
         initial={false}

@@ -83,7 +83,7 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
   // On desktop, show persistent mini drawer with expandable panel
   if (isDesktop) {
     return (
-      <div className="hidden lg:flex h-full">
+      <div className="flex max-lg:hidden h-full">
         {/* Icon sidebar */}
         <motion.aside
           initial={false}
