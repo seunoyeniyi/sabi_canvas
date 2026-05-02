@@ -1,3 +1,5 @@
+import "./index.css";
+
 /**
  * Sabi Canvas — Public API
  *
