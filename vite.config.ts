@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import dts from "vite-plugin-dts";
 import path from "node:path";
-import { readFileSync } from "node:fs";
+import { readFileSync, copyFileSync } from "node:fs";
 
 const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8"));
 
@@ -33,6 +33,15 @@ export default defineConfig({
       outDir: "dist",
       insertTypesEntry: true,
     }),
+    {
+      name: "copy-style-dts",
+      closeBundle() {
+        copyFileSync(
+          path.resolve(__dirname, "src/style.d.ts"),
+          path.resolve(__dirname, "dist/style.d.ts")
+        );
+      },
+    },
   ],
   resolve: {
     alias: {
