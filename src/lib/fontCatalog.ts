@@ -1,3 +1,5 @@
+import { getSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
+
 export interface GoogleFontDefinition {
   family: string;
   weights: number[];
@@ -198,11 +200,11 @@ const writeCachedGoogleFonts = (fonts: GoogleFontDefinition[]): void => {
 };
 
 const hasGoogleFontsApiKey = (): boolean => {
-  return Boolean(import.meta.env.VITE_GOOGLE_FONTS_API_KEY);
+  return Boolean(getSabiCanvasConfig().googleFontsApiKey);
 };
 
 const fetchGoogleFontsFromApi = async (): Promise<GoogleFontDefinition[]> => {
-  const apiKey = import.meta.env.VITE_GOOGLE_FONTS_API_KEY;
+  const apiKey = getSabiCanvasConfig().googleFontsApiKey;
   const response = await fetch(`https://www.googleapis.com/webfonts/v1/webfonts?sort=popularity&key=${apiKey}`);
 
   if (!response.ok) {

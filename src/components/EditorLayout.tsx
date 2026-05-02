@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { EditorProvider, useEditor } from '@sabi-canvas/contexts/EditorContext';
 import { CanvasObjectsProvider, useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
 import { CustomFontsProvider, useCustomFonts } from '@sabi-canvas/contexts/CustomFontsContext';
+import { SabiCanvasProvider, useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
+import type { SabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 import { TopPropertiesBarWrapper } from './canvas/TopPropertiesBarWrapper';
 import { AppBar } from './AppBar';
 import { BottomToolbar } from './BottomToolbar';
@@ -33,6 +35,12 @@ export interface EditorLayoutProps {
   templateId?: string;
   isBlank?: boolean;
   hideTitle?: boolean;
+  /**
+   * Optional: pass API keys directly on <EditorLayout> instead of wrapping
+   * your app with <SabiCanvasProvider>. When provided, this overrides any
+   * ancestor SabiCanvasProvider for the editor subtree.
+   */
+  config?: SabiCanvasConfig;
 }
 
 const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle }) => {
@@ -451,15 +459,21 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
   );
 };
 
-export const EditorLayout: React.FC<EditorLayoutProps> = (props) => {
+export const EditorLayout: React.FC<EditorLayoutProps> = ({ config, ...props }) => {
+  const ancestorConfig = useSabiCanvasConfig();
+  // Use the prop-level config if provided, otherwise fall through to ancestor provider
+  const resolvedConfig = config ?? ancestorConfig;
+
   return (
-    <EditorProvider>
-      <CanvasObjectsProvider>
-        <CustomFontsProvider>
-          <EditorLayoutContent {...props} />
-        </CustomFontsProvider>
-      </CanvasObjectsProvider>
-    </EditorProvider>
+    <SabiCanvasProvider config={resolvedConfig}>
+      <EditorProvider>
+        <CanvasObjectsProvider>
+          <CustomFontsProvider>
+            <EditorLayoutContent {...props} />
+          </CustomFontsProvider>
+        </CanvasObjectsProvider>
+      </EditorProvider>
+    </SabiCanvasProvider>
   );
 };
 

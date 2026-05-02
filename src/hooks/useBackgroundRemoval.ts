@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import type { ImageObject } from '@sabi-canvas/types/canvas-objects';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 
 type BackgroundRemovalStage = 'idle' | 'uploading' | 'processing' | 'done' | 'error';
 
@@ -50,13 +51,14 @@ const waitForDerivedImage = async (src: string) => {
 export const useBackgroundRemoval = () => {
   const [stage, setStage] = useState<BackgroundRemovalStage>('idle');
   const [error, setError] = useState<string | null>(null);
+  const { cloudinaryCloudName, cloudinaryUploadPreset } = useSabiCanvasConfig();
 
   const removeBackground = useCallback(async (image: ImageObject): Promise<BackgroundRemovalSuccess | BackgroundRemovalError> => {
-    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+    const cloudName = cloudinaryCloudName;
+    const uploadPreset = cloudinaryUploadPreset;
 
     if (!cloudName || !uploadPreset) {
-      const message = 'Cloudinary is not configured. Set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET.';
+      const message = 'Cloudinary is not configured. Pass cloudinaryCloudName and cloudinaryUploadPreset to SabiCanvasProvider.';
       setStage('error');
       setError(message);
       return { message };
@@ -97,7 +99,7 @@ export const useBackgroundRemoval = () => {
       setError(message);
       return { message };
     }
-  }, []);
+  }, [cloudinaryCloudName, cloudinaryUploadPreset]);
 
   const reset = useCallback(() => {
     setStage('idle');

@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 
 export interface UnsplashImage {
   id: string;
@@ -32,7 +33,7 @@ const PER_PAGE = 20;
  * Handles both the default state (latest photos or a default search) and active searches.
  */
 export function usePhotosQuery(query: string, defaultSearch?: string) {
-  const apiKey = import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
+  const { unsplashAccessKey: apiKey } = useSabiCanvasConfig();
 
   return useInfiniteQuery<UnsplashImage[]>({
     queryKey: ['photos', query, defaultSearch],

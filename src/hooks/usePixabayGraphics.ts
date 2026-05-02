@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 
 export interface PixabayHit {
   id: number;
@@ -27,7 +28,7 @@ const PER_PAGE = 20;
  * Handles infinite scrolling, search queries, and caching.
  */
 export function usePixabayGraphics(query: string) {
-  const apiKey = import.meta.env.VITE_PIXABAY_API_KEY;
+  const { pixabayApiKey: apiKey } = useSabiCanvasConfig();
 
   return useInfiniteQuery<PixabayResponse>({
     queryKey: ['pixabay-graphics', query],

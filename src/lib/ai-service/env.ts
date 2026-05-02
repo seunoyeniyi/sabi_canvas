@@ -1,3 +1,4 @@
+import { getSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 import type { AIProvider, AIProviderConfig } from './types';
 
 const DEFAULT_MODELS: Record<AIProvider, string> = {
@@ -20,48 +21,50 @@ const toProvider = (value?: string): AIProvider | undefined => {
 };
 
 export const getConfiguredAIProvider = (): AIProvider => {
-  return toProvider(import.meta.env.VITE_AI_PROVIDER) ?? 'openai';
+  const { ai } = getSabiCanvasConfig();
+  return toProvider(ai?.provider) ?? 'openai';
 };
 
 export const getProviderConfig = (provider: AIProvider): AIProviderConfig => {
-  const globalModel = import.meta.env.VITE_AI_MODEL;
+  const { ai } = getSabiCanvasConfig();
+  const globalModel = ai?.model;
 
   if (provider === 'openai') {
     return {
-      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-      model: import.meta.env.VITE_OPENAI_MODEL ?? globalModel ?? DEFAULT_MODELS.openai,
-      baseUrl: import.meta.env.VITE_OPENAI_BASE_URL,
+      apiKey: ai?.openai?.apiKey,
+      model: ai?.openai?.model ?? globalModel ?? DEFAULT_MODELS.openai,
+      baseUrl: ai?.openai?.baseUrl,
     };
   }
 
   if (provider === 'gemini') {
     return {
-      apiKey: import.meta.env.VITE_GEMINI_API_KEY,
-      model: import.meta.env.VITE_GEMINI_MODEL ?? globalModel ?? DEFAULT_MODELS.gemini,
-      baseUrl: import.meta.env.VITE_GEMINI_BASE_URL,
+      apiKey: ai?.gemini?.apiKey,
+      model: ai?.gemini?.model ?? globalModel ?? DEFAULT_MODELS.gemini,
+      baseUrl: ai?.gemini?.baseUrl,
     };
   }
 
   if (provider === 'claude') {
     return {
-      apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
-      model: import.meta.env.VITE_ANTHROPIC_MODEL ?? globalModel ?? DEFAULT_MODELS.claude,
-      baseUrl: import.meta.env.VITE_ANTHROPIC_BASE_URL,
+      apiKey: ai?.claude?.apiKey,
+      model: ai?.claude?.model ?? globalModel ?? DEFAULT_MODELS.claude,
+      baseUrl: ai?.claude?.baseUrl,
     };
   }
 
   if (provider === 'deepseek') {
     return {
-      apiKey: import.meta.env.VITE_DEEPSEEK_API_KEY,
-      model: import.meta.env.VITE_DEEPSEEK_MODEL ?? globalModel ?? DEFAULT_MODELS.deepseek,
-      baseUrl: import.meta.env.VITE_DEEPSEEK_BASE_URL,
+      apiKey: ai?.deepseek?.apiKey,
+      model: ai?.deepseek?.model ?? globalModel ?? DEFAULT_MODELS.deepseek,
+      baseUrl: ai?.deepseek?.baseUrl,
     };
   }
 
   return {
-    apiKey: import.meta.env.VITE_GROK_API_KEY,
-    model: import.meta.env.VITE_GROK_MODEL ?? globalModel ?? DEFAULT_MODELS.grok,
-    baseUrl: import.meta.env.VITE_GROK_BASE_URL,
+    apiKey: ai?.grok?.apiKey,
+    model: ai?.grok?.model ?? globalModel ?? DEFAULT_MODELS.grok,
+    baseUrl: ai?.grok?.baseUrl,
   };
 };
 
