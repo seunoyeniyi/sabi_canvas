@@ -155,11 +155,11 @@ interface SabiCanvasConfig {
     /** Global model override — used when a provider-specific model is not set */
     model?: string;
 
-    openai?:    { apiKey?: string; model?: string; baseUrl?: string };
-    gemini?:    { apiKey?: string; model?: string; baseUrl?: string };
-    claude?:    { apiKey?: string; model?: string; baseUrl?: string };
-    deepseek?:  { apiKey?: string; model?: string; baseUrl?: string };
-    grok?:      { apiKey?: string; model?: string; baseUrl?: string };
+    openai?:    { apiKey?: string; model?: string };
+    gemini?:    { apiKey?: string; model?: string };
+    claude?:    { apiKey?: string; model?: string };
+    deepseek?:  { apiKey?: string; model?: string };
+    grok?:      { apiKey?: string; model?: string };
   };
 }
 ```
@@ -186,7 +186,6 @@ VITE_AI_PROVIDER=openai          # openai | gemini | claude | deepseek | grok
 # OpenAI
 VITE_OPENAI_API_KEY=...
 VITE_OPENAI_MODEL=gpt-4o-mini    # optional, default: gpt-4o-mini
-VITE_OPENAI_BASE_URL=...         # optional, for custom/proxy endpoints
 
 # Google Gemini
 VITE_GEMINI_API_KEY=...

@@ -3,7 +3,6 @@ import React, { createContext, useContext } from 'react';
 export interface SabiCanvasAIProviderConfig {
   apiKey?: string;
   model?: string;
-  baseUrl?: string;
 }
 
 export interface SabiCanvasAIConfig {

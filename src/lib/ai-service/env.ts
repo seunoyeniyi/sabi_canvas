@@ -33,7 +33,6 @@ export const getProviderConfig = (provider: AIProvider): AIProviderConfig => {
     return {
       apiKey: ai?.openai?.apiKey,
       model: ai?.openai?.model ?? globalModel ?? DEFAULT_MODELS.openai,
-      baseUrl: ai?.openai?.baseUrl,
     };
   }
 
@@ -41,7 +40,6 @@ export const getProviderConfig = (provider: AIProvider): AIProviderConfig => {
     return {
       apiKey: ai?.gemini?.apiKey,
       model: ai?.gemini?.model ?? globalModel ?? DEFAULT_MODELS.gemini,
-      baseUrl: ai?.gemini?.baseUrl,
     };
   }
 
@@ -49,7 +47,6 @@ export const getProviderConfig = (provider: AIProvider): AIProviderConfig => {
     return {
       apiKey: ai?.claude?.apiKey,
       model: ai?.claude?.model ?? globalModel ?? DEFAULT_MODELS.claude,
-      baseUrl: ai?.claude?.baseUrl,
     };
   }
 
@@ -57,14 +54,12 @@ export const getProviderConfig = (provider: AIProvider): AIProviderConfig => {
     return {
       apiKey: ai?.deepseek?.apiKey,
       model: ai?.deepseek?.model ?? globalModel ?? DEFAULT_MODELS.deepseek,
-      baseUrl: ai?.deepseek?.baseUrl,
     };
   }
 
   return {
     apiKey: ai?.grok?.apiKey,
     model: ai?.grok?.model ?? globalModel ?? DEFAULT_MODELS.grok,
-    baseUrl: ai?.grok?.baseUrl,
   };
 };
 

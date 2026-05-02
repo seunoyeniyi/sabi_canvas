@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { EditorLayout } from './EditorLayout';
+import type { SabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,9 +18,14 @@ interface EditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   productName?: string;
+  /**
+   * Optional: pass API keys directly on <EditorModal> instead of using an
+   * ancestor <SabiCanvasProvider>. Passed through to the inner EditorLayout.
+   */
+  config?: SabiCanvasConfig;
 }
 
-export const EditorModal: React.FC<EditorModalProps> = ({ isOpen, onClose, productName }) => {
+export const EditorModal: React.FC<EditorModalProps> = ({ isOpen, onClose, productName, config }) => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   // Body scroll lock
@@ -90,7 +96,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ isOpen, onClose, produ
               {productName ?? 'Back to product'}
             </button>
 
-            <EditorLayout hideTitle={true} />
+            <EditorLayout hideTitle={true} config={config} />
           </motion.div>
         )}
       </AnimatePresence>
