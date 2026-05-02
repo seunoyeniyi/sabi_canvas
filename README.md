@@ -41,7 +41,6 @@ npm install react react-dom react-konva konva framer-motion lucide-react react-r
 
 ```tsx
 import { EditorLayout } from 'sabi-canvas';
-import 'sabi-canvas/styles';
 
 function DesignEditorPage() {
   return (
@@ -50,17 +49,6 @@ function DesignEditorPage() {
     </div>
   );
 }
-```
-
----
-
-## CSS Setup
-
-Import the pre-built stylesheet once in the file that renders the editor (not globally, to avoid polluting your app's base styles):
-
-```tsx
-// e.g. DesignEditor.tsx or ProductDetail.tsx
-import 'sabi-canvas/styles';
 ```
 
 ---
@@ -75,7 +63,6 @@ Pass your API keys to `<EditorLayout>` via the `config` prop. Vite resolves `imp
 
 ```tsx
 import { EditorLayout } from 'sabi-canvas';
-import 'sabi-canvas/styles';
 
 const editorConfig = {
   unsplashAccessKey:       import.meta.env.VITE_UNSPLASH_ACCESS_KEY,
@@ -244,10 +231,6 @@ import {
   CanvasObjectsProvider, useCanvasObjects,
   CustomFontsProvider, useCustomFonts,
 } from 'sabi-canvas';
-
-// CSS
-import 'sabi-canvas/styles';
-```
 
 ---
 
