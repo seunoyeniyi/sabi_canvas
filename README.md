@@ -202,9 +202,124 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 | `config` | `SabiCanvasConfig` | — | Runtime API keys (see above) |
 | `isBlank` | `boolean` | `false` | Start with a blank canvas |
 | `templateId` | `string` | — | Load a built-in template by ID |
+| `projectId` | `string` | — | Backend design ID. When set, auto-save calls `onSave` instead of writing to localStorage |
+| `initialProject` | `Project` | — | Pre-loaded design data to hydrate the editor (e.g. fetched from your API on open) |
+| `onSave` | `(project: Project) => Promise<void>` | — | Called on every auto-save. Receives the full project object. Use to PATCH your backend |
 | `hideTitle` | `boolean` | `false` | Hide the project title in the app bar |
 | `enableJsonDevTools` | `boolean` | `false` | Show JSON inspector panel (dev only) |
 | `className` | `string` | — | Extra CSS class on the root element |
+
+---
+
+## Backend / Cloud Save Integration
+
+`sabi-canvas` supports saving to a backend API instead of (or in addition to) localStorage. Use the `projectId`, `initialProject`, and `onSave` props together.
+
+### How it works
+
+- **`projectId`** — tells the editor which backend record to update. When set, auto-save routes through `onSave` rather than localStorage.
+- **`initialProject`** — hydrates the editor with existing design data fetched from your API before opening.
+- **`onSave`** — called after each debounced change (1.5 s). Receives a `Project` object containing `pages`, `thumbnail`, `canvasSize`, `activePageId`, `customFonts`, and `isMockupEnabled`.
+
+> **Important**: `onSave` is only called once `projectId` is a non-null string. If `projectId` is not yet set (e.g. while the backend record is being created), auto-save is suppressed to prevent writes with no valid target.
+
+### Example
+
+```tsx
+import { useState, useEffect } from 'react';
+import { EditorLayout } from 'sabi-canvas';
+import type { Project } from 'sabi-canvas';
+
+function DesignEditor({ designId }: { designId: string }) {
+  const [initialProject, setInitialProject] = useState<Project | undefined>();
+
+  // 1. Fetch existing design data on mount
+  useEffect(() => {
+    fetch(`/api/canvas/designs/${designId}`)
+      .then((r) => r.json())
+      .then((data) => setInitialProject(data)); // map to Project shape if needed
+  }, [designId]);
+
+  // 2. Handle auto-save — called every ~1.5 s after a change
+  const handleSave = async (project: Project) => {
+    await fetch(`/api/canvas/designs/${designId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title:          project.title,
+        thumbnail:      project.thumbnail,
+        canvasSize:     project.canvasSize,
+        pages:          project.pages,
+        activePageId:   project.activePageId,
+        customFonts:    project.customFonts,
+        isMockupEnabled: project.isMockupEnabled,
+      }),
+    });
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0 }}>
+      <EditorLayout
+        config={editorConfig}
+        projectId={designId}
+        initialProject={initialProject}
+        onSave={handleSave}
+      />
+    </div>
+  );
+}
+```
+
+### Opening a template with a backend record
+
+When you want to open a built-in template and immediately persist it to your backend, create the backend record first, then pass both `projectId` and `templateId`:
+
+```tsx
+// 1. Create the backend record (empty pages at this point)
+const design = await fetch('/api/canvas/designs', { method: 'POST', ... }).then(r => r.json());
+
+// 2. Open editor with both props — template loads visually, auto-save
+//    writes to the correct backend record from the first save onward.
+<EditorLayout
+  config={editorConfig}
+  projectId={design._id}
+  templateId="house-for-sale"
+  onSave={handleSave}
+/>
+```
+
+> **NestJS / class-transformer note**: If your backend uses `ValidationPipe` with `enableImplicitConversion: true`, the `pages` array elements (plain objects) can be coerced to `[]` by class-transformer's implicit `Array.from()` conversion. Override this in your controller by reading `pages` and `customFonts` directly from `req.body` before the DTO is used:
+> ```ts
+> if (Array.isArray(req.body?.pages)) dto.pages = req.body.pages;
+> if (Array.isArray(req.body?.customFonts)) dto.customFonts = req.body.customFonts;
+> ```
+
+### `Project` type reference
+
+```ts
+interface Project {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  thumbnail?: string;         // base64 JPEG data URL
+  pages: ProjectPage[];
+  activePageId: string;
+  canvasSize: { width: number; height: number };
+  customFonts?: CustomFont[];
+  isMockupEnabled?: boolean;
+}
+
+interface ProjectPage {
+  id: string;
+  name: string;
+  order: number;
+  size?: { width: number; height: number };
+  objects: CanvasObject[];
+  selectedIds: string[];
+  background?: Background;
+}
+```
 
 ---
 
