@@ -52,6 +52,10 @@ export const pageToProjectPage = (page: CanvasPage): ProjectPage => ({
 /** Hydrate a ProjectPage into a full CanvasPage (empty history) */
 export const projectPageToCanvasPage = (page: ProjectPage): CanvasPage => ({
   ...page,
+  // Guard: stored pages may be missing objects if they were saved during a race
+  // condition or by an older version of the package.
+  objects: page.objects ?? [],
+  viewState: page.viewState ?? { zoom: 1, position: { x: 0, y: 0 } },
   selectedIds: [],
   past: [],
   future: [],

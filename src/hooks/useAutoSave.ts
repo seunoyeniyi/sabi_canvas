@@ -15,6 +15,13 @@ interface UseAutoSaveOptions {
   getStage: () => Konva.Stage | null;
   onProjectCreated: (id: string) => void;
   onSaved?: () => void;
+  /**
+   * Optional external save handler. When provided the hook calls this instead
+   * of writing to localStorage, enabling cloud/backend storage.
+   * Receives the fully-built Project object. Returning a rejected promise is
+   * treated as a non-fatal error (auto-save continues on next change).
+   */
+  onSave?: (project: Project) => Promise<void>;
   customFonts?: CustomFont[];
   isMockupEnabled?: boolean;
 }
@@ -27,6 +34,7 @@ export const useAutoSave = ({
   getStage,
   onProjectCreated,
   onSaved,
+  onSave,
   customFonts,
   isMockupEnabled,
 }: UseAutoSaveOptions): void => {
@@ -34,6 +42,9 @@ export const useAutoSave = ({
   const projectIdRef = useRef<string | null>(projectId);
   const isFirstMountRef = useRef(true);
   const createdAtRef = useRef<number>(Date.now());
+  const onSaveRef = useRef<((project: Project) => Promise<void>) | undefined>(onSave);
+  useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
+
   const customFontsRef = useRef<CustomFont[] | undefined>(customFonts);
   useEffect(() => { customFontsRef.current = customFonts; }, [customFonts]);
 
@@ -74,10 +85,16 @@ export const useAutoSave = ({
       return;
     }
 
-    const totalObjects = pagesRef.current.reduce((sum, p) => sum + p.objects.length, 0);
+    const totalObjects = pagesRef.current.reduce((sum, p) => sum + (p.objects?.length ?? 0), 0);
 
     // Guard: don't create a brand-new project if canvas is still empty
     if (projectIdRef.current === null && totalObjects === 0) {
+      return;
+    }
+
+    // Guard: if an external onSave handler is registered but projectId is null,
+    // we have no valid backend ID to write to — skip until projectId is available.
+    if (onSaveRef.current && projectIdRef.current === null) {
       return;
     }
 
@@ -141,7 +158,8 @@ export const useAutoSave = ({
       };
 
       // For existing projects, preserve original createdAt from storage
-      if (!isNew) {
+      // (only needed for the localStorage path)
+      if (!isNew && !onSaveRef.current) {
         try {
           const stored = localStorage.getItem('ca_projects');
           if (stored) {
@@ -155,9 +173,19 @@ export const useAutoSave = ({
         }
       }
 
-      saveProject(project);
-      setLastProjectId(currentProjectId);
-      onSaved?.();
+      if (onSaveRef.current) {
+        // External (cloud) save path — caller owns storage
+        onSaveRef.current(project).then(() => {
+          onSaved?.();
+        }).catch(() => {
+          // Non-fatal; will retry on next content change
+        });
+      } else {
+        // Local-storage fallback path (backward compatible)
+        saveProject(project);
+        setLastProjectId(currentProjectId);
+        onSaved?.();
+      }
     }, DEBOUNCE_MS);
   // contentKey changes only when objects/background/page-structure change — not on zoom/pan
   // projectTitle and isMockupEnabled are tracked via refs for the callback but also in deps to trigger saves

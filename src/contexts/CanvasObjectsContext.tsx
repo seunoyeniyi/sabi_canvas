@@ -1253,20 +1253,21 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
   );
 
   const exportActivePageJson = useCallback((): ActivePageJsonPayload => {
+    const vs = activePage.viewState ?? { zoom: 1, position: { x: 0, y: 0 } };
     return {
       version: 1,
       pageName: activePage.name,
       viewState: {
-        zoom: activePage.viewState.zoom,
+        zoom: vs.zoom,
         position: {
-          x: activePage.viewState.position.x,
-          y: activePage.viewState.position.y,
+          x: vs.position?.x ?? 0,
+          y: vs.position?.y ?? 0,
         },
       },
       objects: activePage.objects.map(cloneCanvasObject),
       background: activePage.background,
     };
-  }, [activePage.name, activePage.objects, activePage.viewState.position.x, activePage.viewState.position.y, activePage.viewState.zoom, cloneCanvasObject]);
+  }, [activePage.name, activePage.objects, activePage.viewState?.position?.x, activePage.viewState?.position?.y, activePage.viewState?.zoom, cloneCanvasObject]);
 
   const importActivePageJson = useCallback(
     (payload: unknown): ActivePageImportResult => {

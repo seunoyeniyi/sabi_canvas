@@ -41,9 +41,26 @@ export interface EditorLayoutProps {
    * ancestor SabiCanvasProvider for the editor subtree.
    */
   config?: SabiCanvasConfig;
+  /**
+   * External project ID (e.g. a backend MongoDB ID). When provided this is
+   * used as the initial `projectId` state so auto-save can PATCH the correct
+   * backend record instead of generating a new local ID.
+   */
+  projectId?: string;
+  /**
+   * Pre-loaded Project data. When provided the editor loads from this instead
+   * of falling back to localStorage. Takes priority over templateId / isBlank.
+   */
+  initialProject?: Project;
+  /**
+   * Custom save callback. When provided, called instead of localStorage on
+   * every debounced auto-save. Enables cloud / backend storage.
+   * A rejected promise is treated as non-fatal.
+   */
+  onSave?: (project: Project) => Promise<void>;
 }
 
-const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle }) => {
+const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, onSave }) => {
   useKeyboardShortcuts();
 
   const {
@@ -85,7 +102,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
   const hasSelection = selectedIds && selectedIds.length > 0;
 
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(externalProjectId ?? null);
   const [projectTitle, setProjectTitle] = useState<string>(DEFAULT_PROJECT_TITLE);
   const stageRef = useRef<React.RefObject<Konva.Stage> | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
@@ -93,7 +110,20 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
 
   // Load last project on mount
   useEffect(() => {
-    // 0. Handle intentional blank canvas creation
+    // 0. Load from externally provided project data (backend / cloud)
+    if (initialProject) {
+      const canvasPages = initialProject.pages.map(projectPageToCanvasPage);
+      loadProjectData(canvasPages, initialProject.activePageId, initialProject.canvasSize);
+      setProjectId(externalProjectId ?? initialProject.id);
+      setProjectTitle(initialProject.title);
+      setMockupEnabled(initialProject.isMockupEnabled ?? false);
+      if (initialProject.customFonts?.length) {
+        loadProjectFonts(initialProject.customFonts);
+      }
+      return;
+    }
+
+    // 1. Handle intentional blank canvas creation
     if (isBlank) {
       handleNewProject();
       return;
@@ -121,7 +151,12 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
         ];
 
         loadProjectData(canvasPages, pageId, templateSize);
-        setProjectId(null); // Treat as new project
+        // Only reset to null when there is no external (backend) projectId.
+        // If externalProjectId is provided the auto-save must keep using that ID
+        // so the PATCH always targets the correct backend record.
+        if (!externalProjectId) {
+          setProjectId(null);
+        }
         setProjectTitle(template.name);
         setMockupEnabled(false);
         return; // Skip loading from localStorage
@@ -155,6 +190,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     projectTitle,
     getStage,
     onProjectCreated: setProjectId,
+    onSave,
     customFonts,
     isMockupEnabled,
   });
