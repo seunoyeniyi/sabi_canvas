@@ -58,9 +58,30 @@ export interface EditorLayoutProps {
    * A rejected promise is treated as non-fatal.
    */
   onSave?: (project: Project) => Promise<void>;
+  /**
+   * External projects list for the Projects panel. When provided, the panel
+   * shows these designs instead of reading from localStorage. Pass an empty
+   * array while loading.
+   */
+  externalProjects?: Project[];
+  /** Show a loading spinner in the Projects panel while fetching. */
+  isLoadingProjects?: boolean;
+  /**
+   * Called when the user confirms deletion from the Projects panel.
+   * The host app is responsible for removing the item from `externalProjects`.
+   */
+  onDeleteProject?: (projectId: string) => Promise<void> | void;
+  /** Called on Projects panel mount (and manual refresh) to trigger a fetch. */
+  onRefreshProjects?: () => void;
+  /**
+   * When provided, clicking a project in the panel calls this instead of
+   * loading it into the current canvas. Use it to navigate to another design
+   * from the host application.
+   */
+  onSelectProject?: (project: Project) => void;
 }
 
-const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, onSave }) => {
+const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject }) => {
   useKeyboardShortcuts();
 
   const {
@@ -420,6 +441,11 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
           side="left"
           onOpenProject={handleOpenProject}
           onNewProject={handleNewProject}
+          externalProjects={externalProjects}
+          isLoadingProjects={isLoadingProjects}
+          onDeleteProject={onDeleteProject}
+          onRefreshProjects={onRefreshProjects}
+          onSelectProject={onSelectProject}
         >
           {/* Additional drawer content can go here */}
         </EditorDrawer>

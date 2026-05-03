@@ -53,6 +53,26 @@ export interface EditorDrawerProps {
   className?: string;
   onOpenProject?: (project: import('./project').Project) => void;
   onNewProject?: () => void;
+  /**
+   * External projects list. When provided, the Projects panel displays these
+   * instead of reading from localStorage. Pass an empty array while loading.
+   */
+  externalProjects?: import('./project').Project[];
+  /** Show a loading spinner in the Projects panel while fetching. */
+  isLoadingProjects?: boolean;
+  /**
+   * Called when the user confirms deletion of a project from the panel.
+   * The host app is responsible for removing it from `externalProjects`.
+   */
+  onDeleteProject?: (projectId: string) => Promise<void> | void;
+  /** Called once on panel mount (and on manual refresh) to trigger a fetch. */
+  onRefreshProjects?: () => void;
+  /**
+   * When provided, clicking a project in the panel calls this instead of
+   * loading the project into the current canvas. Use this to navigate to
+   * a different design from the host application.
+   */
+  onSelectProject?: (project: import('./project').Project) => void;
 }
 
 // Toolbar Types

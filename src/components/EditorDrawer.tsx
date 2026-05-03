@@ -40,6 +40,11 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
   className,
   onOpenProject,
   onNewProject,
+  externalProjects,
+  isLoadingProjects,
+  onDeleteProject,
+  onRefreshProjects,
+  onSelectProject,
 }) => {
   const isDesktop = useIsDesktop();
   const { activeSidebarPanel, toggleSidebarPanel } = useEditor();
@@ -65,6 +70,14 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
               onNewProject?.();
               toggleSidebarPanel('projects');
             }}
+            externalProjects={externalProjects}
+            isLoading={isLoadingProjects}
+            onDeleteProject={onDeleteProject}
+            onRefresh={onRefreshProjects}
+            onSelectProject={onSelectProject ? (project: Project) => {
+              onSelectProject(project);
+              toggleSidebarPanel('projects');
+            } : undefined}
           />
         );
       case 'uploads':

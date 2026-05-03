@@ -205,9 +205,40 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 | `projectId` | `string` | — | Backend design ID. When set, auto-save calls `onSave` instead of writing to localStorage |
 | `initialProject` | `Project` | — | Pre-loaded design data to hydrate the editor (e.g. fetched from your API on open) |
 | `onSave` | `(project: Project) => Promise<void>` | — | Called on every auto-save. Receives the full project object. Use to PATCH your backend |
+| `externalProjects` | `Project[]` | — | External projects list for the sidebar Projects panel. When provided, replaces localStorage. Pass `[]` while loading |
+| `isLoadingProjects` | `boolean` | `false` | Show a loading spinner in the Projects panel while fetching |
+| `onDeleteProject` | `(id: string) => Promise<void> \| void` | — | Called when the user confirms deletion from the Projects panel. Remove the item from `externalProjects` in your handler |
+| `onRefreshProjects` | `() => void` | — | Called on Projects panel mount and when the user clicks the refresh button |
+| `onSelectProject` | `(project: Project) => void` | — | When provided, clicking a project calls this instead of loading it into the current canvas. Use to navigate to another design |
 | `hideTitle` | `boolean` | `false` | Hide the project title in the app bar |
 | `enableJsonDevTools` | `boolean` | `false` | Show JSON inspector panel (dev only) |
 | `className` | `string` | — | Extra CSS class on the root element |
+
+---
+
+## Projects Panel — External Data
+
+By default the Projects panel reads from **localStorage**. To replace it with a backend-driven list, pass `externalProjects`:
+
+```tsx
+<EditorLayout
+  projectId={currentDesignId}
+  externalProjects={designs}          // Project[] from your API
+  isLoadingProjects={isLoading}
+  onRefreshProjects={loadDesigns}     // called on panel mount / refresh button
+  onDeleteProject={async (id) => {
+    await api.deleteDesign(id);
+    await loadDesigns();              // re-fetch or remove from local state
+  }}
+  onSelectProject={(project) => {
+    // navigate to a different design without reloading the page
+    openDesign(project.id);
+  }}
+  onSave={handleSave}
+/>
+```
+
+When `externalProjects` is provided the panel **never touches localStorage**. When it is omitted the original localStorage behaviour is preserved — so package consumers who don't use a backend are unaffected.
 
 ---
 
