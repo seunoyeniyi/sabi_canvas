@@ -53,7 +53,7 @@ export const useDragDropImages = ({
 
   const { processImage } = useImageUpload({
     onImageLoaded: handleImageLoaded,
-    maxSize: 800,
+    maxSize: 1000,
     accept: 'image/*, .svg',
   });
 

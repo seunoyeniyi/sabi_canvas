@@ -8,6 +8,7 @@ import { cn } from '@sabi-canvas/lib/utils';
 import { GoogleFontDefinition, GOOGLE_FONT_CATALOG, getGoogleFontCatalog, getTopFontPreload, isCustomFont } from '@sabi-canvas/lib/fontCatalog';
 import { getFontFallbackStack, loadFontFamily, preloadFonts } from '@sabi-canvas/lib/fontLoader';
 import { useCustomFonts } from '@sabi-canvas/contexts/CustomFontsContext';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 import { CUSTOM_FONT_ACCEPT, deriveFontFamilyFromFileName } from '@sabi-canvas/types/custom-fonts';
 
 interface FontFamilyPickerProps {
@@ -64,6 +65,33 @@ export const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const { customFonts, addCustomFont } = useCustomFonts();
+  const { uploadFontFile } = useSabiCanvasConfig();
+
+  const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read font file'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const remoteUrlToDataUrl = async (url: string, mimeType: string): Promise<string> => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch uploaded font file');
+    }
+
+    const blob = await response.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    return `data:${mimeType};base64,${base64}`;
+  };
 
   useEffect(() => {
     setRecentFonts(readRecentFonts());
@@ -258,12 +286,13 @@ export const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
     setUploading(true);
     for (const file of files) {
       try {
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = () => reject(new Error('Failed to read font file'));
-          reader.readAsDataURL(file);
-        });
+        let dataUrl: string;
+        if (uploadFontFile) {
+          const uploaded = await uploadFontFile(file);
+          dataUrl = await remoteUrlToDataUrl(uploaded.src, file.type || 'font/ttf');
+        } else {
+          dataUrl = await fileToDataUrl(file);
+        }
         const family = deriveFontFamilyFromFileName(file.name);
         const font = await addCustomFont({
           family,
@@ -271,7 +300,6 @@ export const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
           mimeType: file.type || 'font/ttf',
           dataUrl,
         });
-        toast.success(`Font "${font.family}" added.`);
         // Select the newly uploaded font immediately
         setRecentFonts((prev) => {
           const next = [font.family, ...prev.filter((f) => f !== font.family)].slice(0, MAX_RECENT_FONTS);

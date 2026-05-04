@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Konva from 'konva';
-import { Download, FileCode2, FileDown, FileUp, Share2, Printer, Frame } from 'lucide-react';
+import { Download, FileCode2, FileDown, FileUp, Printer, Frame } from 'lucide-react';
 import { convertPolotnoDesign } from '@sabi-canvas/lib/polotnoConverter';
 import { toast } from 'sonner';
 import { EditorProvider, useEditor } from '@sabi-canvas/contexts/EditorContext';
@@ -79,9 +79,23 @@ export interface EditorLayoutProps {
    * from the host application.
    */
   onSelectProject?: (project: Project) => void;
+  /**
+   * When provided, clicking the theme toggle button in the AppBar calls this
+   * instead of the editor's internal toggle. Wire this to your application's
+   * theme system (e.g. next-themes setTheme, zustand store, etc.) so the
+   * canvas stays in sync with the rest of your UI.
+   */
+  onThemeToggle?: () => void;
+  /**
+   * Custom logo to display in the drawer header. Pass any React node
+   * (e.g. <img>, SVG, or a styled component).
+   */
+  logo?: React.ReactNode;
+  /** App/brand name shown next to the logo in the drawer header. */
+  drawerTitle?: string;
 }
 
-const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject }) => {
+const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onThemeToggle, logo, drawerTitle }) => {
   useKeyboardShortcuts();
 
   const {
@@ -390,7 +404,6 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
   // App bar actions
   const appBarActions: AppBarAction[] = [
     { id: 'download', icon: <Download className="h-4.5 w-4.5" />, label: 'Download', onClick: () => setIsDownloadOpen(true) },
-    { id: 'share', icon: <Share2 className="h-4.5 w-4.5" />, label: 'Share', onClick: () => console.log('Share') },
     { id: 'mockup-toggle', icon: <Printer className={cn('h-4.5 w-4.5', isMockupEnabled && 'text-primary')} />, label: isMockupEnabled ? 'Disable Mockup' : 'Enable Mockup', onClick: toggleMockupEnabled },
     ...(enableJsonDevTools
       ? [
@@ -430,6 +443,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
         actions={appBarActions}
         centerContent={appBarCenterContent}
         hideTitle={hideTitle}
+        onThemeToggle={onThemeToggle}
       />
 
       {/* Main Content Area */}
@@ -439,6 +453,8 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
           isOpen={isDrawerOpen}
           onClose={toggleDrawer}
           side="left"
+          logo={logo}
+          title={drawerTitle}
           onOpenProject={handleOpenProject}
           onNewProject={handleNewProject}
           externalProjects={externalProjects}

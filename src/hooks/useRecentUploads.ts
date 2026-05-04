@@ -1,4 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 
 const RECENT_UPLOADS_KEY = 'canvas_recent_uploads';
 const MAX_UPLOADS = 10;
@@ -11,74 +13,115 @@ export interface RecentImage {
 }
 
 export const useRecentUploads = () => {
-  const [uploads, setUploads] = useState<RecentImage[]>([]);
+  const { disableRecentUploadsLocalStorage, listRecentUploads } = useSabiCanvasConfig();
+  const queryClient = useQueryClient();
+  const queryKey = ['sabi-canvas', 'recent-uploads', disableRecentUploadsLocalStorage, Boolean(listRecentUploads)] as const;
 
-  const loadUploads = useCallback(() => {
+  const loadUploads = useCallback(async (): Promise<RecentImage[]> => {
+    if (listRecentUploads) {
+      try {
+        const remote = await listRecentUploads({ limit: MAX_UPLOADS });
+        return (remote ?? [])
+          .filter((item) => typeof item?.src === 'string' && item.src.length > 0)
+          .map((item, index) => ({
+            id: item.id || `${Date.now()}_${index}`,
+            src: item.src,
+            width: item.width ?? 300,
+            height: item.height ?? 300,
+          }))
+          .slice(0, MAX_UPLOADS);
+      } catch (e) {
+        console.warn('Failed to load remote recent uploads', e);
+        return [];
+      }
+    }
+
+    if (disableRecentUploadsLocalStorage) {
+      return [];
+    }
+
     try {
       const stored = localStorage.getItem(RECENT_UPLOADS_KEY);
-      if (stored) {
-        setUploads(JSON.parse(stored));
-      }
+      return stored ? (JSON.parse(stored) as RecentImage[]) : [];
     } catch (e) {
       console.warn('Failed to load recent uploads', e);
+      return [];
     }
-  }, []);
+  }, [disableRecentUploadsLocalStorage, listRecentUploads]);
+
+  const {
+    data: uploads = [],
+    isLoading: isLoadingUploads,
+  } = useQuery<RecentImage[]>({
+    queryKey,
+    queryFn: loadUploads,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
 
   useEffect(() => {
-    loadUploads();
-    
-    // Listen for custom event inside the same window
-    const handleStorageChange = () => loadUploads();
+    const handleStorageChange = () => {
+      void queryClient.invalidateQueries({ queryKey });
+    };
+
     window.addEventListener('recent_uploads_changed', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('recent_uploads_changed', handleStorageChange);
     };
-  }, [loadUploads]);
+  }, [queryClient, queryKey]);
 
   const addUpload = useCallback((src: string, width: number, height: number) => {
+    const current = (queryClient.getQueryData<RecentImage[]>(queryKey) ?? []);
+
+    const isDuplicate = current.some((item) => item.src === src);
+    if (isDuplicate) return current;
+
+    const newUpload: RecentImage = {
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+      src,
+      width,
+      height,
+    };
+
+    const next = [newUpload, ...current].slice(0, MAX_UPLOADS);
+
+    if (disableRecentUploadsLocalStorage) {
+      queryClient.setQueryData(queryKey, next);
+      void queryClient.invalidateQueries({ queryKey });
+      return next;
+    }
+
     try {
-      const stored = localStorage.getItem(RECENT_UPLOADS_KEY);
-      const prev: RecentImage[] = stored ? JSON.parse(stored) : [];
-      
-      const isDuplicate = prev.some(item => item.src === src);
-      if (isDuplicate) return prev;
-      
-      const newUpload = {
-        id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-        src,
-        width,
-        height,
-      };
-      
-      let next = [newUpload, ...prev].slice(0, MAX_UPLOADS);
-      
+      let persistable = [...next];
       let saved = false;
-      while (!saved && next.length > 0) {
+      while (!saved && persistable.length > 0) {
         try {
-          localStorage.setItem(RECENT_UPLOADS_KEY, JSON.stringify(next));
+          localStorage.setItem(RECENT_UPLOADS_KEY, JSON.stringify(persistable));
           saved = true;
         } catch (e) {
           console.warn('LocalStorage quota might be exceeded, dropping oldest item');
-          next = next.slice(0, next.length - 1);
+          persistable = persistable.slice(0, persistable.length - 1);
         }
       }
 
       if (!saved) {
         // The item itself is too large to store — skip silently
-        return prev;
+        return current;
       }
 
-      // Update local state and notify others
-      setUploads(next);
+      queryClient.setQueryData(queryKey, persistable);
       window.dispatchEvent(new Event('recent_uploads_changed'));
-      
-      return next;
+      void queryClient.invalidateQueries({ queryKey });
+
+      return persistable;
     } catch (e) {
       console.error('Failed to add upload', e);
-      return [];
+      return current;
     }
-  }, []);
+  }, [disableRecentUploadsLocalStorage, queryClient, queryKey]);
 
-  return { uploads, addUpload };
+  return { uploads, addUpload, isLoadingUploads };
 };

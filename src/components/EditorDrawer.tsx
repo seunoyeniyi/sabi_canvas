@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Home, FolderOpen, Image, Settings, HelpCircle, Star } from 'lucide-react';
 import { EditorDrawerProps, SidebarPanelId } from '@sabi-canvas/types/editor';
@@ -6,6 +6,7 @@ import type { Project } from '@sabi-canvas/types/project';
 import { Button } from '@sabi-canvas/ui/button';
 import { ScrollArea } from '@sabi-canvas/ui/scroll-area';
 import { Separator } from '@sabi-canvas/ui/separator';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@sabi-canvas/ui/sheet';
 import { cn } from '@sabi-canvas/lib/utils';
 import { useIsDesktop } from '@sabi-canvas/hooks/useMediaQuery';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
@@ -38,6 +39,8 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
   side = 'left',
   children,
   className,
+  logo,
+  title = 'Sabi Canvas',
   onOpenProject,
   onNewProject,
   externalProjects,
@@ -47,11 +50,38 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
   onSelectProject,
 }) => {
   const isDesktop = useIsDesktop();
-  const { activeSidebarPanel, toggleSidebarPanel } = useEditor();
+  const { activeSidebarPanel, setActiveSidebarPanel } = useEditor();
+  const [lastDesktopPanel, setLastDesktopPanel] = useState<Exclude<SidebarPanelId, null> | null>(null);
+  const wasDesktopDrawerOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (!isDesktop) {
+      wasDesktopDrawerOpenRef.current = false;
+      return;
+    }
+
+    const justOpened = isOpen && !wasDesktopDrawerOpenRef.current;
+
+    if (justOpened && !activeSidebarPanel && lastDesktopPanel) {
+      setActiveSidebarPanel(lastDesktopPanel);
+    }
+
+    if (activeSidebarPanel) {
+      setLastDesktopPanel(activeSidebarPanel);
+    }
+
+    wasDesktopDrawerOpenRef.current = isOpen;
+  }, [isDesktop, isOpen, activeSidebarPanel, lastDesktopPanel, setActiveSidebarPanel]);
 
   const handleItemClick = (item: DrawerMenuItem) => {
     if (item.hasPanel) {
-      toggleSidebarPanel(item.id);
+      setActiveSidebarPanel(item.id);
+      if (isDesktop) {
+        setLastDesktopPanel(item.id as Exclude<SidebarPanelId, null>);
+      }
+      if (!isDesktop) {
+        onClose();
+      }
     }
   };
 
@@ -64,11 +94,9 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
           <ProjectsPanel
             onOpenProject={(project: Project) => {
               onOpenProject?.(project);
-              toggleSidebarPanel('projects');
             }}
             onNewProject={() => {
               onNewProject?.();
-              toggleSidebarPanel('projects');
             }}
             externalProjects={externalProjects}
             isLoading={isLoadingProjects}
@@ -76,7 +104,6 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
             onRefresh={onRefreshProjects}
             onSelectProject={onSelectProject ? (project: Project) => {
               onSelectProject(project);
-              toggleSidebarPanel('projects');
             } : undefined}
           />
         );
@@ -93,133 +120,87 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
     }
   };
 
-  // On desktop, show persistent mini drawer with expandable panel
-  if (isDesktop) {
-    return (
-      <div className="flex max-lg:hidden h-full">
-        {/* Icon sidebar */}
-        <motion.aside
-          initial={false}
-          animate={{ width: 72 }}
-          className={cn(
-            'flex flex-col',
-            'h-full bg-card border-r border-panel-border z-20',
-            'overflow-hidden',
-            className
-          )}
-        >
-          <ScrollArea className="flex-1">
-            <div className="py-3">
-              {menuItems.map((item) => (
-                <DrawerItem
-                  key={item.id}
-                  item={item}
-                  collapsed={true}
-                  isActive={activeSidebarPanel === item.id}
-                  onClick={() => handleItemClick(item)}
-                />
-              ))}
-            </div>
-          </ScrollArea>
+  const activePanelLabel =
+    menuItems.find((i) => i.id === activeSidebarPanel)?.label ||
+    bottomMenuItems.find((i) => i.id === activeSidebarPanel)?.label ||
+    '';
 
-          <div className="border-t border-panel-border py-3">
-            {bottomMenuItems.map((item) => (
-              <DrawerItem
-                key={item.id}
-                item={item}
-                collapsed={true}
-                isActive={activeSidebarPanel === item.id}
-                onClick={() => handleItemClick(item)}
-              />
-            ))}
-          </div>
-        </motion.aside>
-
-        {/* Expandable panel */}
-        <AnimatePresence>
-          {activeSidebarPanel && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 280, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="h-full bg-card border-r border-panel-border overflow-hidden"
-            >
-              <div className="w-[280px] h-full flex flex-col">
-                <div className="flex items-center justify-between h-12 px-4 border-b border-panel-border">
-                  <h3 className="font-semibold text-sm">
-                    {menuItems.find(i => i.id === activeSidebarPanel)?.label ||
-                      bottomMenuItems.find(i => i.id === activeSidebarPanel)?.label}
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => toggleSidebarPanel(activeSidebarPanel)}
-                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  {renderPanelContent()}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  }
-
-  // On mobile/tablet, show overlay drawer
+  // Menu-triggered drawer on all viewports; panel content is rendered separately.
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-[160] bg-background/80 backdrop-blur-sm lg:hidden"
-          />
-
-          {/* Drawer Panel */}
-          <motion.aside
-            initial={{ x: side === 'left' ? '-100%' : '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: side === 'left' ? '-100%' : '100%' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className={cn(
-              'fixed top-0 z-[165] h-full w-72',
-              'flex flex-col bg-card shadow-editor-lg',
-              side === 'left' ? 'left-0 border-r' : 'right-0 border-l',
-              'border-panel-border',
-              'lg:hidden',
-              className
-            )}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between h-14 px-4 border-b border-panel-border">
-              <div className="flex items-center gap-3">
-                <img src="/app-icon.png" alt="Logo" className="h-8 w-8" />
-                <span className="font-semibold">Sabi Canvas</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
+    <>
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            {!isDesktop && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 onClick={onClose}
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
+                className="fixed inset-0 z-[160] bg-background/80 backdrop-blur-sm"
+              />
+            )}
 
-            {/* Content */}
-            <ScrollArea className="flex-1">
-              <div className="py-3">
-                {menuItems.map((item) => (
+            {/* Drawer Panel */}
+            <motion.aside
+              initial={{ x: side === 'left' ? '-100%' : '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: side === 'left' ? '-100%' : '100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className={cn(
+                'fixed top-0 z-[165] h-full w-[min(22rem,90vw)]',
+                'flex flex-col bg-card shadow-editor-lg',
+                side === 'left' ? 'left-0 border-r' : 'right-0 border-l',
+                'border-panel-border',
+                className
+              )}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between h-14 px-4 border-b border-panel-border">
+                <div className="flex items-center gap-3">
+                  {logo ?? (
+                    <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-primary-foreground">SC</span>
+                    </div>
+                  )}
+                  <span className="font-semibold">{title}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+
+              {/* Content */}
+              <ScrollArea className="flex-1">
+                <div className="py-3">
+                  {menuItems.map((item) => (
+                    <DrawerItem
+                      key={item.id}
+                      item={item}
+                      collapsed={false}
+                      isActive={activeSidebarPanel === item.id}
+                      onClick={() => handleItemClick(item)}
+                    />
+                  ))}
+
+                  {children && (
+                    <>
+                      <Separator className="my-3" />
+                      {children}
+                    </>
+                  )}
+                </div>
+              </ScrollArea>
+
+              {/* Footer */}
+              <div className="border-t border-panel-border py-3">
+                {bottomMenuItems.map((item) => (
                   <DrawerItem
                     key={item.id}
                     item={item}
@@ -228,32 +209,67 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
                     onClick={() => handleItemClick(item)}
                   />
                 ))}
-
-                {children && (
-                  <>
-                    <Separator className="my-3" />
-                    {children}
-                  </>
-                )}
               </div>
-            </ScrollArea>
+            </motion.aside>
 
-            {/* Footer */}
-            <div className="border-t border-panel-border py-3">
-              {bottomMenuItems.map((item) => (
-                <DrawerItem
-                  key={item.id}
-                  item={item}
-                  collapsed={false}
-                  isActive={activeSidebarPanel === item.id}
-                  onClick={() => handleItemClick(item)}
-                />
-              ))}
-            </div>
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
+            {/* Desktop: panel replaces the right-side backdrop area */}
+            <AnimatePresence>
+              {isDesktop && (
+                <motion.section
+                  initial={{ opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 24 }}
+                  transition={{ type: 'spring', stiffness: 280, damping: 28 }}
+                  className="fixed top-0 left-[min(22rem,90vw)] right-0 z-[164] h-full bg-card border-l border-panel-border shadow-editor-lg"
+                >
+                  <div className="h-full flex flex-col">
+                    <div className="flex items-center justify-between h-14 px-4 border-b border-panel-border">
+                      <h3 className="font-semibold text-sm">
+                        {activeSidebarPanel ? activePanelLabel : 'Select a menu item'}
+                      </h3>
+                      {activeSidebarPanel && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setActiveSidebarPanel(null)}
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                      {activeSidebarPanel ? (
+                        renderPanelContent()
+                      ) : (
+                        <DesktopPanelPlaceholder />
+                      )}
+                    </div>
+                  </div>
+                </motion.section>
+              )}
+            </AnimatePresence>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile/tablet: sidebar panels open as bottom sheet */}
+      <Sheet
+        open={!isDesktop && !!activeSidebarPanel}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveSidebarPanel(null);
+          }
+        }}
+      >
+        <SheetContent side="bottom" className="h-[70vh] !gap-y-0 rounded-t-2xl px-0 flex flex-col">
+          <SheetHeader className="flex-shrink-0 px-4 pb-2 border-b border-border">
+            <SheetTitle className="text-left">{activePanelLabel}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">{renderPanelContent()}</div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 };
 
@@ -321,6 +337,14 @@ const PlaceholderPanel: React.FC<{ title: string; description: string }> = ({ ti
   <div className="p-4">
     <p className="text-sm text-muted-foreground">{description}</p>
     <p className="text-xs text-muted-foreground/60 mt-2">Panel content coming soon...</p>
+  </div>
+);
+
+const DesktopPanelPlaceholder: React.FC = () => (
+  <div className="h-full flex flex-col items-center justify-center text-center px-6">
+    <FolderOpen className="h-10 w-10 text-muted-foreground/30" />
+    <p className="mt-4 text-sm font-medium text-foreground">Choose a section from the left menu</p>
+    <p className="mt-1 text-xs text-muted-foreground">Select an item to open its panel here.</p>
   </div>
 );
 

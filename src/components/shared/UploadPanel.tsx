@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { Upload, Cloud, HardDrive, MoreVertical, RefreshCw } from 'lucide-react';
+import { Upload, Cloud, HardDrive, MoreVertical, RefreshCw, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@sabi-canvas/ui/button';
 import { useCanvasActions } from '@sabi-canvas/hooks/useCanvasActions';
 import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
@@ -7,6 +8,7 @@ import { useRecentUploads } from '@sabi-canvas/hooks/useRecentUploads';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
 import { useImageUpload } from '@sabi-canvas/hooks/useImageUpload';
 import { ScrollArea } from '@sabi-canvas/ui/scroll-area';
+import { Skeleton } from '@sabi-canvas/ui/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,16 +16,31 @@ import {
   DropdownMenuTrigger,
 } from "@sabi-canvas/ui/dropdown-menu";
 import { CanvasObject } from '@sabi-canvas/types/canvas-objects';
+import { isSvgSrc } from '@sabi-canvas/lib/svgColorUtils';
+
+/** If src is an SVG HTTP URL, fetch it and return a data URI so SVG color
+ * editing utilities can operate on it. Returns the original src on failure. */
+async function resolveToSvgDataUrl(src: string): Promise<string> {
+  if (!isSvgSrc(src) || src.startsWith('data:')) return src;
+  try {
+    const res = await fetch(src);
+    const text = await res.text();
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(text)));
+  } catch {
+    return src;
+  }
+}
 
 interface UploadPanelProps {
   onClose: () => void;
 }
 
 export const UploadPanel: React.FC<UploadPanelProps> = ({ onClose }) => {
-  const { uploadImage } = useCanvasActions();
+  const { uploadImage, isUploadingImage, uploadError } = useCanvasActions();
   const { addImage, updateObject } = useCanvasObjects();
-  const { uploads, addUpload } = useRecentUploads();
+  const { uploads, addUpload, isLoadingUploads } = useRecentUploads();
   const { replacingImageId, setReplacingImageId } = useEditor();
+  const [isReplaceUploading, setIsReplaceUploading] = React.useState(false);
 
   const isReplaceMode = !!replacingImageId;
 
@@ -53,6 +70,11 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onClose }) => {
     };
   }, [handleClose]);
 
+  React.useEffect(() => {
+    if (!uploadError) return;
+    toast.error(uploadError);
+  }, [uploadError]);
+
   // Handler for replace-mode image load (upload picker)
   const handleReplaceLoaded = useCallback((src: string, width: number, height: number) => {
     if (!replacingImageId) return;
@@ -73,8 +95,19 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onClose }) => {
 
   const { openFilePicker: openReplacePicker } = useImageUpload({
     onImageLoaded: handleReplaceLoaded,
-    maxSize: 800,
+    maxSize: 2200,
+    onUploadStart: () => {
+      setIsReplaceUploading(true);
+    },
+    onUploadComplete: () => {
+      setIsReplaceUploading(false);
+    },
+    onUploadError: (error) => {
+      toast.error(error.message || 'Upload failed');
+    },
   });
+
+  const isUploading = isReplaceMode ? isReplaceUploading : isUploadingImage;
 
   const handleDeviceUpload = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -88,11 +121,14 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onClose }) => {
     // It will close automatically via the 'canvas_image_added' event above.
   };
 
-  const handleRecentClick = (e: React.MouseEvent, src: string, width: number, height: number) => {
+  const handleRecentClick = useCallback(async (e: React.MouseEvent, src: string, width: number, height: number) => {
     e.stopPropagation();
+    // If the stored src is a remote SVG URL, convert it to a data URI so that
+    // SVG color-editing (palette extraction, color replacement) works on canvas.
+    const resolvedSrc = await resolveToSvgDataUrl(src);
     if (isReplaceMode && replacingImageId) {
       updateObject(replacingImageId, {
-        src,
+        src: resolvedSrc,
         removedBgSrc: undefined,
         naturalWidth: undefined,
         naturalHeight: undefined,
@@ -103,7 +139,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onClose }) => {
       } as Partial<CanvasObject>);
       setReplacingImageId(null);
     } else {
-      addImage(src, undefined, { width, height });
+      addImage(resolvedSrc, undefined, { width, height });
     }
     // Use a small timeout before closing so the click event finishes
     // processing. This prevents the canvas underneath from receiving
@@ -111,7 +147,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onClose }) => {
     setTimeout(() => {
       handleClose();
     }, 50);
-  };
+  }, [addImage, handleClose, isReplaceMode, replacingImageId, setReplacingImageId, updateObject]);
 
   return (
     <div className="space-y-3 flex flex-col h-full">
@@ -128,9 +164,10 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onClose }) => {
         <Button
           className="flex-1 gap-2"
           onClick={handleDeviceUpload}
+          disabled={isUploading}
         >
-          <Upload className="h-4 w-4" />
-          {isReplaceMode ? 'Upload New' : 'Upload'}
+          {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {isUploading ? 'Uploading...' : isReplaceMode ? 'Upload New' : 'Upload'}
         </Button>
 
         <DropdownMenu>
@@ -159,7 +196,18 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onClose }) => {
       <div className="space-y-3 flex-1 overflow-hidden flex flex-col min-h-0">
         {/* <h3 className="text-sm font-medium shrink-0">Recent Uploads</h3> */}
 
-        {uploads.length > 0 ? (
+        {isLoadingUploads ? (
+          <ScrollArea className="flex-1 -mx-4 px-5 overflow-y-auto min-h-0 pointer-events-none">
+            <div className="grid grid-cols-3 gap-2 py-2 px-1">
+              {Array.from({ length: 18 }).map((_, index) => (
+                <Skeleton
+                  key={index}
+                  className="aspect-square rounded-md animate-pulse"
+                />
+              ))}
+            </div>
+          </ScrollArea>
+        ) : uploads.length > 0 ? (
           <ScrollArea className="flex-1 -mx-4 px-5 overflow-y-auto min-h-0">
             <div className="grid grid-cols-3 gap-2 py-2 px-1">
               {uploads.map((img) => (

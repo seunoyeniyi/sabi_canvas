@@ -148,6 +148,43 @@ interface SabiCanvasConfig {
     deepseek?:  { apiKey?: string; model?: string };
     grok?:      { apiKey?: string; model?: string };
   };
+
+  /**
+   * Optional upload adapter for image uploads (toolbar upload, drag-drop,
+   * replace image, background upload).
+   *
+   * When provided, sabi-canvas sends File objects to this callback and expects
+   * a hosted URL in return. When omitted, sabi-canvas falls back to local
+   * in-browser processing/data URLs for maximum backward compatibility.
+   */
+  uploadImageFile?: (
+    file: File,
+    options?: { maxSize?: number }
+  ) => Promise<{
+    src: string;
+    width?: number;
+    height?: number;
+  }>;
+
+  /**
+   * Optional recent uploads adapter for Upload panel history.
+   * Return most-recent items first.
+   */
+  listRecentUploads?: (
+    options?: { limit?: number }
+  ) => Promise<Array<{
+    id?: string;
+    src: string;
+    width?: number;
+    height?: number;
+    createdAt?: string;
+  }>>;
+
+  /**
+   * Disable localStorage for recent uploads (memory-only list).
+   * Useful when your platform policy disallows local persistence.
+   */
+  disableRecentUploadsLocalStorage?: boolean;
 }
 ```
 
@@ -211,6 +248,9 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 | `onRefreshProjects` | `() => void` | — | Called on Projects panel mount and when the user clicks the refresh button |
 | `onSelectProject` | `(project: Project) => void` | — | When provided, clicking a project calls this instead of loading it into the current canvas. Use to navigate to another design |
 | `hideTitle` | `boolean` | `false` | Hide the project title in the app bar |
+| `config.uploadImageFile` | `(file, options?) => Promise<{ src; width?; height?; }>` | — | Optional host upload adapter. Use your own backend/cloud provider and return a hosted image URL |
+| `config.listRecentUploads` | `({ limit? }) => Promise<Array<{ src; width?; height?; ... }>>` | — | Optional adapter to load Upload panel history from your backend |
+| `config.disableRecentUploadsLocalStorage` | `boolean` | `false` | Disable localStorage for recent uploads and keep the list memory-only |
 | `enableJsonDevTools` | `boolean` | `false` | Show JSON inspector panel (dev only) |
 | `className` | `string` | — | Extra CSS class on the root element |
 
@@ -239,6 +279,67 @@ By default the Projects panel reads from **localStorage**. To replace it with a 
 ```
 
 When `externalProjects` is provided the panel **never touches localStorage**. When it is omitted the original localStorage behaviour is preserved — so package consumers who don't use a backend are unaffected.
+
+---
+
+## Backend-Powered Image Uploads (Optional)
+
+sabi-canvas is platform-agnostic by default. To route image uploads through your own backend, provide `config.uploadImageFile`.
+
+This adapter is used by:
+
+- Upload panel device uploads
+- Replace-image flow
+- Drag-and-drop image uploads
+- Background image uploads
+
+### Adapter example
+
+```tsx
+import { EditorLayout } from 'sabi-canvas';
+import axios from 'axios';
+
+const editorConfig = {
+  uploadImageFile: async (file: File, options?: { maxSize?: number }) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Optional hint to your backend image optimizer
+    if (options?.maxSize) {
+      formData.append('width', String(options.maxSize));
+    }
+
+    const { data } = await axios.post('/api/upload/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return {
+      src: data.secure_url ?? data.url,
+      width: data.width,
+      height: data.height,
+    };
+  },
+
+  // Optional: load recent uploads from your backend
+  listRecentUploads: async ({ limit } = {}) => {
+    const { data } = await axios.get('/api/upload/recent', {
+      params: { limit: limit ?? 50 },
+    });
+    return data;
+  },
+
+  // Optional: avoid localStorage for recent uploads
+  disableRecentUploadsLocalStorage: true,
+};
+
+<EditorLayout isBlank config={editorConfig} />
+```
+
+Notes:
+
+- If `uploadImageFile` is omitted, sabi-canvas keeps its legacy local fallback behavior.
+- The package does not assume Axios, Fetch, Cloudinary, NestJS, or any specific backend.
+- Your backend should optimize uploaded images for canvas performance (for example width cap + good-quality compression).
 
 ---
 

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
 import { useImageUpload } from '@sabi-canvas/hooks/useImageUpload';
 import { useRecentUploads } from '@sabi-canvas/hooks/useRecentUploads';
@@ -11,6 +11,8 @@ import { CanvasObjectType } from '@sabi-canvas/types/canvas-objects';
 export const useCanvasActions = () => {
   const { addShape, addImage } = useCanvasObjects();
   const { addUpload } = useRecentUploads();
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleImageLoaded = useCallback((src: string, width: number, height: number) => {
     addImage(src, undefined, { width, height });
@@ -23,7 +25,17 @@ export const useCanvasActions = () => {
 
   const { openFilePicker } = useImageUpload({
     onImageLoaded: handleImageLoaded,
-    maxSize: 800,
+    maxSize: 1000,
+    onUploadStart: () => {
+      setUploadError(null);
+      setIsUploadingImage(true);
+    },
+    onUploadComplete: () => {
+      setIsUploadingImage(false);
+    },
+    onUploadError: (error) => {
+      setUploadError(error.message || 'Upload failed');
+    },
   });
 
   const handleAddShape = useCallback((type: CanvasObjectType) => {
@@ -57,6 +69,8 @@ export const useCanvasActions = () => {
     addEllipse: handleAddEllipse,
     addText: handleAddText,
     uploadImage: handleUploadImage,
+    isUploadingImage,
+    uploadError,
   };
 };
 

@@ -12,7 +12,13 @@ export { EditorLayout } from './components/EditorLayout';
 
 // ─── Config Provider ──────────────────────────────────────────────────────────
 export { SabiCanvasProvider, useSabiCanvasConfig, getSabiCanvasConfig } from './contexts/SabiCanvasConfigContext';
-export type { SabiCanvasConfig, SabiCanvasAIConfig, SabiCanvasAIProviderConfig, SabiCanvasProviderProps } from './contexts/SabiCanvasConfigContext';
+export type {
+  SabiCanvasConfig,
+  SabiCanvasAIConfig,
+  SabiCanvasAIProviderConfig,
+  SabiCanvasProviderProps,
+  SabiCanvasUploadedImage,
+} from './contexts/SabiCanvasConfigContext';
 
 // ─── Top-level Editor Components ──────────────────────────────────────────────
 export { AppBar } from './components/AppBar';

@@ -19,6 +19,12 @@ export interface AppBarProps {
   centerContent?: React.ReactNode;
   className?: string;
   hideTitle?: boolean;
+  /**
+   * When provided, clicking the theme toggle calls this instead of the
+   * editor's internal toggle. Wire to your app's theme system to keep the
+   * canvas in sync with the rest of your UI.
+   */
+  onThemeToggle?: () => void;
 }
 
 export interface AppBarAction {
@@ -51,6 +57,14 @@ export interface EditorDrawerProps {
   side?: 'left' | 'right';
   children?: React.ReactNode;
   className?: string;
+  /**
+   * Custom logo to display in the drawer header. Pass any React node
+   * (e.g. <img>, SVG, or a styled component). When omitted, a default
+   * text-based placeholder is shown.
+   */
+  logo?: React.ReactNode;
+  /** App/brand name shown next to the logo in the drawer header. Defaults to "Sabi Canvas". */
+  title?: string;
   onOpenProject?: (project: import('./project').Project) => void;
   onNewProject?: () => void;
   /**

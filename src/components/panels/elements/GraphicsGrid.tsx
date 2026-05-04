@@ -99,7 +99,7 @@ export const GraphicsGrid: React.FC<GraphicsGridProps> = ({ onClose }) => {
           <ScrollArea className="flex-1 -mx-4 px-5 overflow-hidden min-h-0 pointer-events-none">
             <div className="grid grid-cols-2 gap-3 pb-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className={`w-full rounded-xl bg-muted/40 animate-pulse ${i % 3 === 0 ? 'h-32' : 'h-40'}`} />
+                <Skeleton key={i} className={`w-full rounded-xl animate-pulse ${i % 3 === 0 ? 'h-32' : 'h-40'}`} />
               ))}
             </div>
           </ScrollArea>

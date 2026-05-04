@@ -11,6 +11,7 @@ import { cn } from '@sabi-canvas/lib/utils';
 import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
 import { toast } from 'sonner';
 import type { CanvasBackground } from '@sabi-canvas/types/pages';
+import { useRecentUploads } from '@sabi-canvas/hooks/useRecentUploads';
 
 interface BackgroundPanelProps {
   onClose: () => void;
@@ -48,11 +49,10 @@ const GRADIENT_PRESETS: GradientPreset[] = [
   { id: 'radial-cosmos', label: 'Cosmos', type: 'radial-gradient', angle: 0, colors: ['#a78bfa', '#1e1b4b'], css: 'radial-gradient(circle, #a78bfa, #1e1b4b)' },
 ];
 
-const MAX_IMAGE_SIZE = 4000;
-
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
 import { useDebounce } from '@sabi-canvas/hooks/use-debounce';
 import { usePhotosQuery } from '@sabi-canvas/hooks/usePhotosQuery';
+import { useImageUpload } from '@sabi-canvas/hooks/useImageUpload';
 
 // ─── Unsplash background section ──────────────────────────────────────────────
 
@@ -147,7 +147,7 @@ const UnsplashBackgroundSection: React.FC<UnsplashBackgroundSectionProps> = ({
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="mb-2 break-inside-avoid">
               <Skeleton
-                className={`w-full rounded-xl bg-muted/40 animate-pulse ${i % 3 === 0 ? 'h-32' : i % 2 === 0 ? 'h-48' : 'h-24'}`}
+                className={`w-full rounded-xl animate-pulse ${i % 3 === 0 ? 'h-32' : i % 2 === 0 ? 'h-48' : 'h-24'}`}
               />
             </div>
           ))}
@@ -222,9 +222,11 @@ const UnsplashBackgroundSection: React.FC<UnsplashBackgroundSectionProps> = ({
 
 export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => {
   const { activePage, updatePageBackground } = useCanvasObjects();
+  const { addUpload } = useRecentUploads();
   const currentBg = activePage.background;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingBackground, setIsUploadingBackground] = useState(false);
 
   const currentColor =
     currentBg?.type === 'solid' ? currentBg.color : '#ffffff';
@@ -247,35 +249,39 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
     updatePageBackground({ type: 'solid', color });
   };
 
+  const handleBackgroundImageLoaded = useCallback(
+    (src: string, width: number, height: number) => {
+      updatePageBackground({ type: 'image', src });
+      addUpload(src, width, height);
+      setTimeout(() => onClose(), 50);
+    },
+    [updatePageBackground, addUpload, onClose]
+  );
+
+  const { processImage } = useImageUpload({
+    onImageLoaded: handleBackgroundImageLoaded,
+    maxSize: 2200,
+    accept: 'image/*, .svg',
+    onUploadStart: () => {
+      setIsUploadingBackground(true);
+    },
+    onUploadComplete: () => {
+      setIsUploadingBackground(false);
+    },
+    onUploadError: (error) => {
+      setIsUploadingBackground(false);
+      toast.error(error.message || 'Upload failed');
+    },
+  });
+
   const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target?.result as string;
-        const img = new window.Image();
-        img.onload = () => {
-          let { width, height } = img;
-          if (width > MAX_IMAGE_SIZE || height > MAX_IMAGE_SIZE) {
-            const ratio = Math.min(MAX_IMAGE_SIZE / width, MAX_IMAGE_SIZE / height);
-            width = Math.round(width * ratio);
-            height = Math.round(height * ratio);
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          canvas.getContext('2d')?.drawImage(img, 0, 0, width, height);
-          updatePageBackground({ type: 'image', src: canvas.toDataURL('image/jpeg', 0.9) });
-          setTimeout(() => onClose(), 50);
-        };
-        img.src = dataUrl;
-      };
-      reader.readAsDataURL(file);
+      await processImage(file);
       if (fileInputRef.current) fileInputRef.current.value = '';
     },
-    [updatePageBackground, onClose]
+    [processImage]
   );
 
   const isTransparent = currentBg?.type === 'transparent';
@@ -429,9 +435,14 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
                 size="sm"
                 className="w-full gap-1.5"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingBackground}
               >
-                <ImageIcon className="h-3.5 w-3.5" />
-                Replace
+                {isUploadingBackground ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ImageIcon className="h-3.5 w-3.5" />
+                )}
+                {isUploadingBackground ? 'Uploading...' : 'Replace'}
               </Button>
             </div>
           ) : (
@@ -440,9 +451,14 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
               size="sm"
               className="w-full gap-1.5"
               onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingBackground}
             >
-              <Upload className="h-3.5 w-3.5" />
-              Upload image
+              {isUploadingBackground ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Upload className="h-3.5 w-3.5" />
+              )}
+              {isUploadingBackground ? 'Uploading...' : 'Upload image'}
             </Button>
           )}
           <input

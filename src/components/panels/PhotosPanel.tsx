@@ -113,7 +113,7 @@ export const PhotosPanel: React.FC<PhotosPanelProps> = ({ onClose }) => {
             <div className="columns-2 gap-2 pb-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="mb-2 break-inside-avoid">
-                  <Skeleton className={`w-full rounded-xl bg-muted/40 animate-pulse ${i % 3 === 0 ? 'h-32' : i % 2 === 0 ? 'h-48' : 'h-24'}`} />
+                  <Skeleton className={`w-full rounded-xl animate-pulse ${i % 3 === 0 ? 'h-32' : i % 2 === 0 ? 'h-48' : 'h-24'}`} />
                 </div>
               ))}
             </div>

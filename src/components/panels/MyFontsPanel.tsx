@@ -9,6 +9,7 @@ import { getFontFallbackStack } from '@sabi-canvas/lib/fontLoader';
 import { createDefaultObject } from '@sabi-canvas/types/canvas-objects';
 import type { TextObject } from '@sabi-canvas/types/canvas-objects';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 
 interface MyFontsPanelProps {
   onClose: () => void;
@@ -18,8 +19,35 @@ export const MyFontsPanel: React.FC<MyFontsPanelProps> = ({ onClose }) => {
   const { customFonts, addCustomFont, removeCustomFont } = useCustomFonts();
   const { activePage, updateObject, addObject } = useCanvasObjects();
   const { canvasSize } = useEditor();
+  const { uploadFontFile } = useSabiCanvasConfig();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+
+  const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read font file'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const remoteUrlToDataUrl = async (url: string, mimeType: string): Promise<string> => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch uploaded font file');
+    }
+
+    const blob = await response.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    return `data:${mimeType};base64,${base64}`;
+  };
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -34,12 +62,13 @@ export const MyFontsPanel: React.FC<MyFontsPanelProps> = ({ onClose }) => {
     setUploading(true);
     for (const file of files) {
       try {
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = () => reject(new Error('Failed to read font file'));
-          reader.readAsDataURL(file);
-        });
+        let dataUrl: string;
+        if (uploadFontFile) {
+          const uploaded = await uploadFontFile(file);
+          dataUrl = await remoteUrlToDataUrl(uploaded.src, file.type || 'font/ttf');
+        } else {
+          dataUrl = await fileToDataUrl(file);
+        }
         const family = deriveFontFamilyFromFileName(file.name);
         await addCustomFont({
           family,
@@ -47,7 +76,6 @@ export const MyFontsPanel: React.FC<MyFontsPanelProps> = ({ onClose }) => {
           mimeType: file.type || 'font/ttf',
           dataUrl,
         });
-        toast.success(`Font "${family}" added.`);
       } catch {
         toast.error(`Failed to upload "${file.name}".`);
       }

@@ -4,13 +4,11 @@ import {
   Menu,
   Undo2,
   Redo2,
-  Settings,
   User,
   ChevronDown,
   Sun,
   Moon,
   MoreHorizontal,
-  Share2,
   FileBox
 } from 'lucide-react';
 import { AppBarProps } from '@sabi-canvas/types/editor';
@@ -41,9 +39,26 @@ export const AppBar: React.FC<AppBarProps> = ({
   centerContent,
   className,
   hideTitle = false,
+  onThemeToggle,
 }) => {
   const isMobile = useIsMobile();
   const { theme, setTheme } = useTheme();
+
+  // DOM-based theme detection — reactive to host app theme changes (e.g. next-themes)
+  const [domTheme, setDomTheme] = useState<'dark' | 'light'>(() =>
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  );
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setDomTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    });
+    observer.observe(document.documentElement, { attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const handleThemeToggle = onThemeToggle
+    ? onThemeToggle
+    : () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editValue, setEditValue] = useState(title);
@@ -78,7 +93,6 @@ export const AppBar: React.FC<AppBarProps> = ({
 
   // Helper to find specific actions
   const downloadAction = actions.find(a => a.id === 'download');
-  const shareAction = actions.find(a => a.id === 'share');
   const devActions = actions.filter(a => a.id.includes('json-dev'));
   const otherActions = actions.filter(a =>
     a.id !== 'download' &&
@@ -121,7 +135,7 @@ export const AppBar: React.FC<AppBarProps> = ({
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={commitTitle}
               onKeyDown={handleTitleKeyDown}
-              className="font-medium text-sm px-2 py-1 rounded-md bg-toolbar-hover border border-input outline-none focus:ring-1 focus:ring-ring min-w-0 w-[120px] md:w-[200px] text-foreground"
+              className="font-medium text-sm px-2 py-1 rounded-md border border-input outline-none focus:ring-1 focus:ring-ring min-w-0 w-[120px] md:w-[200px] text-foreground bg-transparent"
               maxLength={80}
             />
           ) : (
@@ -186,37 +200,16 @@ export const AppBar: React.FC<AppBarProps> = ({
           <>
             {/* Standard Desktop Actions */}
             {downloadAction && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={downloadAction.onClick}
-                    disabled={downloadAction.disabled}
-                    className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-toolbar-hover"
-                  >
-                    {downloadAction.icon}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{downloadAction.label}</TooltipContent>
-              </Tooltip>
-            )}
-
-            {shareAction && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={shareAction.onClick}
-                    disabled={shareAction.disabled}
-                    className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-toolbar-hover"
-                  >
-                    {shareAction.icon}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{shareAction.label}</TooltipContent>
-              </Tooltip>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={downloadAction.onClick}
+                disabled={downloadAction.disabled}
+                className="h-8 gap-1.5 px-3 text-xs font-medium"
+              >
+                {downloadAction.icon}
+                <span>{downloadAction.label}</span>
+              </Button>
             )}
 
             {/* Combined JSON Dev Actions */}
@@ -272,19 +265,6 @@ export const AppBar: React.FC<AppBarProps> = ({
               </Tooltip>
             ))}
 
-            {/* Desktop Settings */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-toolbar-hover"
-                >
-                  <Settings className="h-4.5 w-4.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Settings</TooltipContent>
-            </Tooltip>
           </>
         ) : (
           /* MOBILE VIEW */
@@ -314,16 +294,8 @@ export const AppBar: React.FC<AppBarProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                {shareAction && (
-                  <DropdownMenuItem onClick={shareAction.onClick} className="gap-2">
-                    <Share2 className="h-4 w-4 opacity-70" />
-                    Share Project
-                  </DropdownMenuItem>
-                )}
-
                 {devActions.length > 0 && (
                   <>
-                    <DropdownMenuSeparator />
                     <DropdownMenuLabel>JSON Dev Tools</DropdownMenuLabel>
                     {devActions.map((action) => (
                       <DropdownMenuItem
@@ -336,23 +308,17 @@ export const AppBar: React.FC<AppBarProps> = ({
                         {action.label}
                       </DropdownMenuItem>
                     ))}
+                    <DropdownMenuSeparator />
                   </>
                 )}
 
-                <DropdownMenuSeparator />
-
                 {/* Theme Toggle (Mobile) */}
                 <DropdownMenuItem
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  onClick={handleThemeToggle}
                   className="gap-2"
                 >
-                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  {domTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                   Toggle Theme
-                </DropdownMenuItem>
-
-                <DropdownMenuItem className="gap-2">
-                  <Settings className="h-4 w-4 opacity-70" />
-                  Settings
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -364,11 +330,13 @@ export const AppBar: React.FC<AppBarProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={handleThemeToggle}
             className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-toolbar-hover"
           >
-            <Sun className="h-4.5 w-4.5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4.5 w-4.5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            {domTheme === 'dark'
+              ? <Sun className="h-4.5 w-4.5" />
+              : <Moon className="h-4.5 w-4.5" />
+            }
             <span className="sr-only">Toggle theme</span>
           </Button>
         )}
@@ -378,7 +346,7 @@ export const AppBar: React.FC<AppBarProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 ml-1 rounded-full bg-gradient-to-br from-tool-blue to-tool-purple text-white hover:opacity-90"
+            className="h-9 w-9 ml-1 rounded-full bg-primary text-white hover:opacity-90"
           >
             <User className="h-4 w-4" />
           </Button>

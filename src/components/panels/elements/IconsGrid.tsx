@@ -197,7 +197,7 @@ export const IconsGrid: React.FC<IconsGridProps> = ({ onClose }) => {
           <ScrollArea className="flex-1 -mx-4 px-5 overflow-hidden min-h-0 pointer-events-none">
             <div className="grid grid-cols-4 gap-3 pb-4">
               {Array.from({ length: 16 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-square rounded-xl bg-muted/40 animate-pulse" />
+                <Skeleton key={i} className="aspect-square rounded-xl animate-pulse" />
               ))}
             </div>
           </ScrollArea>

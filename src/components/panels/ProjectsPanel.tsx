@@ -1,10 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FolderOpen, Plus, Trash2, Pencil, Loader2, RefreshCw } from 'lucide-react';
+import { FolderOpen, Plus, Trash2, Pencil, Loader2, RefreshCw, MoreVertical } from 'lucide-react';
 import { Project } from '@sabi-canvas/types/project';
 import { deleteProject, loadAllProjects } from '@sabi-canvas/hooks/useProjectManager';
 import { Button } from '@sabi-canvas/ui/button';
 import { ScrollArea } from '@sabi-canvas/ui/scroll-area';
 import { cn } from '@sabi-canvas/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@sabi-canvas/ui/dropdown-menu';
 
 interface ProjectsPanelProps {
   onOpenProject?: (project: Project) => void;
@@ -62,7 +68,6 @@ export const ProjectsPanel: React.FC<ProjectsPanelProps> = ({
 
   // Local state only used in localStorage mode
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const refreshLocal = useCallback(() => {
@@ -91,13 +96,6 @@ export const ProjectsPanel: React.FC<ProjectsPanelProps> = ({
   };
 
   const handleDelete = async (id: string) => {
-    if (confirmDeleteId !== id) {
-      setConfirmDeleteId(id);
-      return;
-    }
-
-    setConfirmDeleteId(null);
-
     if (isExternal && onDeleteProject) {
       setDeletingId(id);
       try {
@@ -111,19 +109,14 @@ export const ProjectsPanel: React.FC<ProjectsPanelProps> = ({
     }
   };
 
-  const cancelDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setConfirmDeleteId(null);
-  };
-
   return (
     <div className="flex flex-col h-full">
       {/* New Project Button */}
-      <div className="px-3 py-3 border-b border-panel-border flex items-center gap-2">
+      <div className="px-3 py-3 border-b border-panel-border flex items-center sm:justify-end gap-2">
         <Button
           variant="outline"
           size="sm"
-          className="flex-1 gap-2 text-sm"
+          className="flex-1 sm:flex-none gap-2 text-sm"
           onClick={onNewProject}
         >
           <Plus className="h-4 w-4" />
@@ -156,21 +149,25 @@ export const ProjectsPanel: React.FC<ProjectsPanelProps> = ({
                 ? 'No designs found. Create one to get started.'
                 : 'No saved projects yet. Start creating and your work will be saved automatically.'}
             </p>
+            <Button variant="outline" size="sm" onClick={onNewProject} className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Project
+            </Button>
           </div>
         ) : (
-          <div className="p-2 flex flex-col gap-2">
+          <div
+            className={cn(
+              'p-2 grid gap-2',
+              'grid-cols-2 md:grid-cols-3 xl:grid-cols-4'
+            )}
+          >
             {displayProjects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
-                isConfirmingDelete={confirmDeleteId === project.id}
                 isDeleting={deletingId === project.id}
                 onOpen={() => handleOpen(project)}
-                onDelete={(e) => {
-                  e.stopPropagation();
-                  handleDelete(project.id);
-                }}
-                onCancelDelete={cancelDelete}
+                onDelete={() => handleDelete(project.id)}
               />
             ))}
           </div>
@@ -182,20 +179,16 @@ export const ProjectsPanel: React.FC<ProjectsPanelProps> = ({
 
 interface ProjectCardProps {
   project: Project;
-  isConfirmingDelete: boolean;
   isDeleting: boolean;
   onOpen: () => void;
-  onDelete: (e: React.MouseEvent) => void;
-  onCancelDelete: (e: React.MouseEvent) => void;
+  onDelete: () => void;
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({
   project,
-  isConfirmingDelete,
   isDeleting,
   onOpen,
   onDelete,
-  onCancelDelete,
 }) => {
   const pageCount = project.pages.length;
   const objectCount = project.pages.reduce((sum, p) => sum + p.objects.length, 0);
@@ -203,7 +196,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   return (
     <div
       className={cn(
-        'group relative rounded-lg border border-panel-border bg-card overflow-hidden',
+        'relative rounded-lg border border-panel-border bg-card overflow-hidden',
         'hover:border-ring/50 transition-colors cursor-pointer',
         isDeleting && 'opacity-50 pointer-events-none'
       )}
@@ -215,7 +208,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           <img
             src={project.thumbnail}
             alt={project.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
             draggable={false}
           />
         ) : (
@@ -239,49 +232,41 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
         >
           {isDeleting ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          ) : isConfirmingDelete ? (
-            <>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={onDelete}
-              >
-                Delete
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={onCancelDelete}
-              >
-                Cancel
-              </Button>
-            </>
           ) : (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpen();
-                }}
-                title="Open project"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                onClick={onDelete}
-                title="Delete project"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 border"
+                  title="More actions"
+                >
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-36">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpen();
+                  }}
+                  className="gap-2"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="gap-2 text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>

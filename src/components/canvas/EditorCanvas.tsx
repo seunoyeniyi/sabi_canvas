@@ -20,7 +20,7 @@ import { Check, RotateCcw, X } from 'lucide-react';
 import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
 import { useSelectedObject } from '@sabi-canvas/hooks/useSelectedObject';
 import { useSmartAlignment } from '@sabi-canvas/hooks/useSmartAlignment';
-import { useTheme } from '@sabi-canvas/providers/theme-provider';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 import { ImageObject, TextObject } from '@sabi-canvas/types/canvas-objects';
 import { createDrawObject } from '@sabi-canvas/types/canvas-objects';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
@@ -28,6 +28,7 @@ import { getFontFallbackStack, loadFontFamily } from '@sabi-canvas/lib/fontLoade
 import { isSvgSrc } from '@sabi-canvas/lib/svgColorUtils';
 import { getListContinuationPrefix, applyListStyleToSpans, stripListStyleFromSpans } from './hooks/useToolbarState';
 import { useIsMobile } from '@sabi-canvas/hooks/use-mobile';
+import { useIsDesktop } from '@sabi-canvas/hooks/useMediaQuery';
 import { domToSpans, spansToHtml, isPlainSpans, spansToPlainText, normalizeSpans } from '@sabi-canvas/lib/richText';
 import { useDragDropImages } from '@sabi-canvas/hooks/useDragDropImages';
 import type { TextSpan } from '@sabi-canvas/types/canvas-objects';
@@ -63,8 +64,19 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
   const { selectedIds, updateObject, objects, selectObjects, deselectAll, activePage, addObject } = useCanvasObjects();
   const selectedObject = useSelectedObject();
   const [hoveredId, setHoveredId] = React.useState<string | null>(null);
-  const { resolvedTheme } = useTheme();
-  const { editingTextId, startTextEdit, stopTextEdit, editingShapeTextId, startShapeTextEdit, stopShapeTextEdit, isCropMode, setIsCropMode, setActiveSidebarPanel, setActiveToolPanel, editingTableCell, startTableCellEdit, stopTableCellEdit, setSelectedTableCells, setInlineTextSelectionState, registerApplyInlineStyleFn, registerCropActions, drawColor, drawSize, drawTension, drawTool, editorMode, isMockupEnabled } = useEditor();
+  const canvasConfig = useSabiCanvasConfig();
+  const [domResolvedTheme, setDomResolvedTheme] = useState<'dark' | 'light'>(() =>
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  );
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setDomResolvedTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    });
+    observer.observe(document.documentElement, { attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+  const resolvedTheme = canvasConfig.resolvedTheme ?? domResolvedTheme;
+  const { editingTextId, startTextEdit, stopTextEdit, editingShapeTextId, startShapeTextEdit, stopShapeTextEdit, isCropMode, setIsCropMode, editingTableCell, startTableCellEdit, stopTableCellEdit, setSelectedTableCells, setInlineTextSelectionState, registerApplyInlineStyleFn, registerCropActions, drawColor, drawSize, drawTension, drawTool, editorMode, isMockupEnabled, activeToolPanel, setActiveToolPanel } = useEditor();
   const [isObjectDragging, setIsObjectDragging] = useState(false);
   const [isTouchStagePanning, setIsTouchStagePanning] = useState(false);
   const [isStageZooming, setIsStageZooming] = useState(false);
@@ -85,6 +97,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
   const contentBlurTimeoutRef = useRef<number | null>(null);
   const shapeBlurTimeoutRef = useRef<number | null>(null);
   const isMobile = useIsMobile();
+  const isDesktop = useIsDesktop();
   const [isTouchGestureLocked, setIsTouchGestureLocked] = useState(false);
   const zoomHideTimeoutRef = useRef<number | null>(null);
   const previousZoomRef = useRef<number | null>(null);
@@ -975,9 +988,13 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
       commitInlineCellEdit(editingCellValue);
     }
 
-    // Close any open sidebar panels or tool panels when clicking on the stage
-    setActiveSidebarPanel(null);
-    setActiveToolPanel(null);
+    // Keep side/tool panels open while interacting with the stage.
+
+    const pointerStage = e.target.getStage();
+    const clickedInsideStage = Boolean(pointerStage);
+    if (isDesktop && activeToolPanel && clickedInsideStage) {
+      setActiveToolPanel(null);
+    }
 
     // Route two-finger touch input exclusively to viewport pan/zoom.
     if (e.type === 'touchstart' && interactive && handleTouchStart) {
@@ -1025,9 +1042,8 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
     if (mode === 'draw') {
       // Only allow left click / single touch
       if (e.evt instanceof MouseEvent && e.evt.button !== 0) return;
-      const stage = e.target.getStage();
-      if (!stage) return;
-      const pos = stage.getRelativePointerPosition();
+      if (!pointerStage) return;
+      const pos = pointerStage.getRelativePointerPosition();
       if (!pos) return;
       // Convert stage coordinates to canvas coordinates
       const cx = (pos.x - safeAreaRect.x) / dimensions.scale;
@@ -1046,9 +1062,8 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
     const clickedOnEmpty = e.target === e.target.getStage() || e.target.name() === 'safe-area' || e.target.name() === 'safe-area-overlay';
     if (!clickedOnEmpty) return;
 
-    const stage = e.target.getStage();
-    if (!stage) return;
-    const pos = stage.getRelativePointerPosition();
+    if (!pointerStage) return;
+    const pos = pointerStage.getRelativePointerPosition();
     if (!pos) return;
 
     setSelectionRect({
@@ -1058,7 +1073,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
       currentX: pos.x,
       currentY: pos.y,
     });
-  }, [editingTextId, editingValue, commitInlineTextEdit, editingShapeTextId, commitInlineShapeTextEdit, mode, interactive, handleTouchStart, isTouchGestureLocked, isMobile, isNodeWithinSelection, cancelActiveObjectDrags, safeAreaRect, dimensions, deselectAll]);
+  }, [editingTextId, editingValue, commitInlineTextEdit, editingShapeTextId, commitInlineShapeTextEdit, mode, interactive, handleTouchStart, isTouchGestureLocked, isMobile, isDesktop, isNodeWithinSelection, cancelActiveObjectDrags, safeAreaRect, dimensions, deselectAll, activeToolPanel, setActiveToolPanel]);
 
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (editingTextId) return; // move events are fine to skip — the pointerDown already committed the edit
@@ -1376,6 +1391,9 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
                 }
                 if (editingTableCell) {
                   commitInlineCellEdit(editingCellValue);
+                }
+                if (isDesktop && activeToolPanel) {
+                  setActiveToolPanel(null);
                 }
               }}
               isInteractionLocked={isTouchGestureLocked}

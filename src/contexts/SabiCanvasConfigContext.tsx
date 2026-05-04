@@ -17,6 +17,21 @@ export interface SabiCanvasAIConfig {
   grok?: SabiCanvasAIProviderConfig;
 }
 
+export interface SabiCanvasUploadedImage {
+  src: string;
+  width?: number;
+  height?: number;
+}
+
+export interface SabiCanvasUploadedAsset {
+  src: string;
+}
+
+export interface SabiCanvasRecentUpload extends SabiCanvasUploadedImage {
+  id?: string;
+  createdAt?: string;
+}
+
 export interface SabiCanvasConfig {
   /** Unsplash API access key — for photo search/browse in the editor */
   unsplashAccessKey?: string;
@@ -30,6 +45,32 @@ export interface SabiCanvasConfig {
   cloudinaryUploadPreset?: string;
   /** AI writing assistant configuration */
   ai?: SabiCanvasAIConfig;
+  /**
+   * The resolved theme ('dark' | 'light') from the host application.
+   * When provided, overrides the editor's internal DOM-based theme detection
+   * for canvas overlay colours and theme-sensitive rendering. Use this when
+   * your app manages its own theme state (e.g. next-themes).
+   */
+  resolvedTheme?: 'dark' | 'light';
+  /**
+   * Optional upload adapter. When provided, image uploads in the editor
+   * are sent through this callback instead of being converted to local data URLs.
+   */
+  uploadImageFile?: (file: File, options?: { maxSize?: number }) => Promise<SabiCanvasUploadedImage>;
+  /**
+   * Optional font upload adapter. When provided, My Fonts uploads can be routed
+   * through your backend uploader before being registered in the editor.
+   */
+  uploadFontFile?: (file: File) => Promise<SabiCanvasUploadedAsset>;
+  /**
+   * Optional recent-uploads adapter. When provided, Upload panel recent items
+   * are fetched from this callback (e.g. backend history) instead of only localStorage.
+   */
+  listRecentUploads?: (options?: { limit?: number }) => Promise<SabiCanvasRecentUpload[]>;
+  /**
+   * Disable localStorage usage for recent uploads and keep them in memory only.
+   */
+  disableRecentUploadsLocalStorage?: boolean;
 }
 
 // ---------------------------------------------------------------------------
