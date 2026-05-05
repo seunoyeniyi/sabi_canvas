@@ -37,7 +37,7 @@ import type { AIWriteAction } from '@sabi-canvas/hooks/useAIWrite';
 export interface ToolbarTooltipProps {
   label: string;
   side?: 'top' | 'bottom' | 'left' | 'right';
-  children: React.ReactElement;
+  children: React.ReactElement<any>;
 }
 
 export const ToolbarTooltip: React.FC<ToolbarTooltipProps> = ({ label, side = 'top', children }) => {
@@ -60,7 +60,7 @@ export const ToolbarTooltip: React.FC<ToolbarTooltipProps> = ({ label, side = 't
   const triggerWithTouchHandlers = useMemo(() => {
     if (!isTouchLikeDevice) return children;
 
-    return React.cloneElement(children, {
+    return React.cloneElement(children as React.ReactElement<any>, {
       onPointerDown: (event: React.PointerEvent) => {
         children.props.onPointerDown?.(event);
         if (event.pointerType !== 'touch') return;
@@ -157,7 +157,7 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
             <div
               className="absolute inset-1.5 flex items-center justify-center"
             >
-              {icon && React.cloneElement(icon as React.ReactElement, {
+              {icon && React.cloneElement(icon as React.ReactElement<any>, {
                 className: cn("h-3 w-3", (color === '#ffffff' || !color) ? "" : "text-background/80 mix-blend-difference"),
               })}
             </div>
