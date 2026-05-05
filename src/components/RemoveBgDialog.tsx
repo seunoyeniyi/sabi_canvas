@@ -34,11 +34,21 @@ export const RemoveBgDialog: React.FC<RemoveBgDialogProps> = ({
 }) => {
   const { error, isProcessing, removeBackground, reset } = useBackgroundRemoval();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPreparingPreview, setIsPreparingPreview] = useState(false);
+
+  const waitForImageLoad = (src: string): Promise<void> =>
+    new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error('Failed to load processed image preview.'));
+      image.src = src;
+    });
 
   useEffect(() => {
     if (!open) {
       reset();
       setPreviewUrl(null);
+      setIsPreparingPreview(false);
       return;
     }
 
@@ -53,9 +63,16 @@ export const RemoveBgDialog: React.FC<RemoveBgDialogProps> = ({
       return;
     }
 
-    const result = await removeBackground(imageObject);
-    if ('resultUrl' in result) {
-      setPreviewUrl(result.resultUrl);
+    setIsPreparingPreview(true);
+
+    try {
+      const result = await removeBackground(imageObject);
+      if ('resultUrl' in result) {
+        await waitForImageLoad(result.resultUrl);
+        setPreviewUrl(result.resultUrl);
+      }
+    } finally {
+      setIsPreparingPreview(false);
     }
   };
 
@@ -107,14 +124,18 @@ export const RemoveBgDialog: React.FC<RemoveBgDialogProps> = ({
               <Button
                 type="button"
                 onClick={handleGenerate}
-                disabled={!imageObject || isProcessing}
+                disabled={!imageObject || isProcessing || isPreparingPreview}
               >
-                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isProcessing ? 'Removing background...' : 'Remove background'}
+                {(isProcessing || isPreparingPreview) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isProcessing
+                  ? 'Removing background...'
+                  : isPreparingPreview
+                    ? 'Preparing preview...'
+                    : 'Remove background'}
               </Button>
             )}
             {canConfirm && (
-              <Button type="button" onClick={handleConfirm} disabled={isProcessing}>
+              <Button type="button" onClick={handleConfirm} disabled={isProcessing || isPreparingPreview}>
                 Confirm
               </Button>
             )}

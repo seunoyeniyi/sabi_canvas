@@ -129,7 +129,7 @@ export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ onClose }) => {
         <div className="h-full flex flex-col overflow-hidden">
             {/* Category pills — sticky, never scrolls away */}
             <div className="flex-shrink-0 pb-2 space-y-2">
-                <div className="w-full overflow-x-auto pb-1">
+                <div className="w-full overflow-x-auto pb-1 hide-scrollbar scroll-smooth">
                     <div className="flex items-center gap-1.5 pr-2 min-w-max">
                         {TEMPLATE_CATEGORIES.map((cat) => (
                             <button

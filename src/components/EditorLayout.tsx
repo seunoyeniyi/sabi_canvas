@@ -19,6 +19,7 @@ import { CanvasContainer } from './CanvasContainer';
 import { DownloadDialog } from './DownloadDialog';
 import { cn } from '@sabi-canvas/lib/utils';
 import { AppBarAction } from '@sabi-canvas/types/editor';
+import type { AppBarSaveAction } from '@sabi-canvas/types/editor';
 import { useKeyboardShortcuts } from '@sabi-canvas/hooks/useKeyboardShortcuts';
 import { useAutoSave } from '@sabi-canvas/hooks/useAutoSave';
 import { getLastProjectId, getProject, setLastProjectId } from '@sabi-canvas/hooks/useProjectManager';
@@ -80,12 +81,30 @@ export interface EditorLayoutProps {
    */
   onSelectProject?: (project: Project) => void;
   /**
+   * Called when the user clicks 'Create New Design' in the Home or Projects panel.
+   * Host apps can use this to navigate to a new design route or make an API call
+   * to create a backend record.
+   */
+  onNewProject?: () => void;
+  /**
    * When provided, clicking the theme toggle button in the AppBar calls this
    * instead of the editor's internal toggle. Wire this to your application's
    * theme system (e.g. next-themes setTheme, zustand store, etc.) so the
    * canvas stays in sync with the rest of your UI.
    */
   onThemeToggle?: () => void;
+  /**
+   * When provided, renders a prominent action button in the AppBar just before
+   * the Download button. Designed for Save / Publish workflows. The label and
+   * click handler are fully controlled by the host application.
+   *
+   * @example
+   * saveAction={{
+   *   label: template.status === 'published' ? 'Save' : 'Publish',
+   *   onClick: openTemplateForm,
+   * }}
+   */
+  saveAction?: AppBarSaveAction;
   /**
    * Custom logo to display in the drawer header. Pass any React node
    * (e.g. <img>, SVG, or a styled component).
@@ -95,7 +114,7 @@ export interface EditorLayoutProps {
   drawerTitle?: string;
 }
 
-const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onThemeToggle, logo, drawerTitle }) => {
+const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction }) => {
   useKeyboardShortcuts();
 
   const {
@@ -143,12 +162,58 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
   const polotnoImportInputRef = useRef<HTMLInputElement | null>(null);
 
+  const initializeBlankProject = useCallback(() => {
+    const freshPage: CanvasPage = {
+      id: `page_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+      name: 'Page 1',
+      order: 0,
+      size: canvasSize,
+      objects: [],
+      selectedIds: [],
+      past: [],
+      future: [],
+      viewState: { zoom: 1, position: { x: 0, y: 0 } },
+      background: { type: 'solid', color: '#ffffff' },
+    };
+
+    loadProjectData([freshPage], freshPage.id);
+    // Important: when host already created a backend design record and passes
+    // externalProjectId, keep it so auto-save PATCHes that existing record.
+    if (externalProjectId) {
+      setProjectId(externalProjectId);
+      setLastProjectId(externalProjectId);
+    } else {
+      setProjectId(null);
+      setLastProjectId(null);
+    }
+    setProjectTitle(DEFAULT_PROJECT_TITLE);
+    setMockupEnabled(false);
+  }, [canvasSize, externalProjectId, loadProjectData, setMockupEnabled]);
+
   // Load last project on mount
   useEffect(() => {
     // 0. Load from externally provided project data (backend / cloud)
     if (initialProject) {
-      const canvasPages = initialProject.pages.map(projectPageToCanvasPage);
-      loadProjectData(canvasPages, initialProject.activePageId, initialProject.canvasSize);
+      let canvasPages = initialProject.pages.map(projectPageToCanvasPage);
+      // When the project has no pages yet (e.g. a brand-new template), create a
+      // blank page using the template's canvas size so the editor opens at the
+      // correct dimensions instead of falling back to the default size.
+      if (canvasPages.length === 0) {
+        const freshPage: CanvasPage = {
+          id: `page_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+          name: 'Page 1',
+          order: 0,
+          size: initialProject.canvasSize,
+          objects: [],
+          selectedIds: [],
+          past: [],
+          future: [],
+          viewState: { zoom: 1, position: { x: 0, y: 0 } },
+          background: { type: 'solid', color: '#ffffff' },
+        };
+        canvasPages = [freshPage];
+      }
+      loadProjectData(canvasPages, initialProject.activePageId || canvasPages[0].id, initialProject.canvasSize);
       setProjectId(externalProjectId ?? initialProject.id);
       setProjectTitle(initialProject.title);
       setMockupEnabled(initialProject.isMockupEnabled ?? false);
@@ -160,7 +225,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
 
     // 1. Handle intentional blank canvas creation
     if (isBlank) {
-      handleNewProject();
+      initializeBlankProject();
       return;
     }
 
@@ -246,6 +311,14 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
   );
 
   const handleNewProject = useCallback(() => {
+    // If a host application controls project creation (e.g. backend routes), let them handle it.
+    if (onHostNewProject) {
+      onHostNewProject();
+      if (isDrawerOpen) toggleDrawer();
+      return;
+    }
+
+    // Default internal fallback:
     const freshPage: CanvasPage = {
       id: `page_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       name: 'Page 1',
@@ -263,7 +336,10 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     setProjectTitle(DEFAULT_PROJECT_TITLE);
     setLastProjectId(null);
     setMockupEnabled(false);
-  }, [loadProjectData, canvasSize, setMockupEnabled]);
+    
+    // Ensure the drawer closes when switching projects internally
+    if (isDrawerOpen) toggleDrawer();
+  }, [onHostNewProject, loadProjectData, canvasSize, setMockupEnabled, isDrawerOpen, toggleDrawer]);
 
   const handleStageRefReady = useCallback((ref: React.RefObject<Konva.Stage>) => {
     stageRef.current = ref;
@@ -441,6 +517,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
         canUndo={canUndo}
         canRedo={canRedo}
         actions={appBarActions}
+        saveAction={saveAction}
         centerContent={appBarCenterContent}
         hideTitle={hideTitle}
         onThemeToggle={onThemeToggle}

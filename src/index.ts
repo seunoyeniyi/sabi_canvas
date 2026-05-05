@@ -7,6 +7,8 @@
  * @packageDocumentation
  */
 
+import './styles.css';
+
 // ─── Main Entry Component ─────────────────────────────────────────────────────
 export { EditorLayout } from './components/EditorLayout';
 
@@ -44,7 +46,9 @@ export {
   ProjectsPanel,
   ResizePanel,
   TemplatesPanel,
+  sizePresets,
 } from './components/panels';
+export type { SizePreset } from './components/panels';
 
 // ─── Canvas Components ────────────────────────────────────────────────────────
 export {
@@ -96,6 +100,7 @@ export type {
   InteractionMode as EditorInteractionMode,
   AppBarProps,
   AppBarAction,
+  AppBarSaveAction,
   ToolbarProps,
   ToolItem,
   EditorDrawerProps,

@@ -11,6 +11,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@sabi-canvas/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@sabi-canvas/ui/alert-dialog';
 
 interface ProjectsPanelProps {
   onOpenProject?: (project: Project) => void;
@@ -69,6 +79,7 @@ export const ProjectsPanel: React.FC<ProjectsPanelProps> = ({
   // Local state only used in localStorage mode
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<Project | null>(null);
 
   const refreshLocal = useCallback(() => {
     if (!isExternal) {
@@ -107,6 +118,16 @@ export const ProjectsPanel: React.FC<ProjectsPanelProps> = ({
       deleteProject(id);
       refreshLocal();
     }
+  };
+
+  const handleRequestDelete = (project: Project) => {
+    setDeleteCandidate(project);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteCandidate) return;
+    await handleDelete(deleteCandidate.id);
+    setDeleteCandidate(null);
   };
 
   return (
@@ -167,12 +188,43 @@ export const ProjectsPanel: React.FC<ProjectsPanelProps> = ({
                 project={project}
                 isDeleting={deletingId === project.id}
                 onOpen={() => handleOpen(project)}
-                onDelete={() => handleDelete(project.id)}
+                onDelete={() => handleRequestDelete(project)}
               />
             ))}
           </div>
         )}
       </ScrollArea>
+
+      <AlertDialog
+        open={deleteCandidate !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) {
+            setDeleteCandidate(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this design?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteCandidate
+                ? `"${deleteCandidate.title}" will be permanently deleted and cannot be recovered.`
+                : 'This design will be permanently deleted and cannot be recovered.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(deletingId)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={Boolean(deletingId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Delete design
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
@@ -190,9 +242,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   onOpen,
   onDelete,
 }) => {
-  const pageCount = project.pages.length;
-  const objectCount = project.pages.reduce((sum, p) => sum + p.objects.length, 0);
-
   return (
     <div
       className={cn(
@@ -203,12 +252,12 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
       onClick={onOpen}
     >
       {/* Thumbnail */}
-      <div className="w-full aspect-video bg-muted/30 overflow-hidden flex items-center justify-center">
+      <div className="w-full aspect-video bg-[#f3f3f3] dark:bg-[#1e1e1e] overflow-hidden flex items-center justify-center">
         {project.thumbnail ? (
           <img
             src={project.thumbnail}
             alt={project.title}
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-contain p-1.5"
             draggable={false}
           />
         ) : (

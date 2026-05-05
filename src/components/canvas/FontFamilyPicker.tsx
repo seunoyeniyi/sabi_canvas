@@ -49,6 +49,11 @@ const writeRecentFonts = (fonts: string[]): void => {
   }
 };
 
+const persistRecentFonts = (fonts: string[], disabled: boolean): void => {
+  if (disabled) return;
+  writeRecentFonts(fonts);
+};
+
 export const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
   value,
   onChange,
@@ -65,7 +70,7 @@ export const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const { customFonts, addCustomFont } = useCustomFonts();
-  const { uploadFontFile } = useSabiCanvasConfig();
+  const { uploadFontFile, disableRecentFontsLocalStorage = false } = useSabiCanvasConfig();
 
   const fileToDataUrl = (file: File): Promise<string> => {
     return new Promise<string>((resolve, reject) => {
@@ -94,8 +99,12 @@ export const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
   };
 
   useEffect(() => {
+    if (disableRecentFontsLocalStorage) {
+      setRecentFonts([]);
+      return;
+    }
     setRecentFonts(readRecentFonts());
-  }, []);
+  }, [disableRecentFontsLocalStorage]);
 
   useEffect(() => {
     let mounted = true;
@@ -287,8 +296,12 @@ export const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
     for (const file of files) {
       try {
         let dataUrl: string;
+        let assetSrc: string | undefined;
+        let assetPublicId: string | undefined;
         if (uploadFontFile) {
           const uploaded = await uploadFontFile(file);
+          assetSrc = uploaded.src;
+          assetPublicId = uploaded.publicId;
           dataUrl = await remoteUrlToDataUrl(uploaded.src, file.type || 'font/ttf');
         } else {
           dataUrl = await fileToDataUrl(file);
@@ -299,11 +312,13 @@ export const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
           fileName: file.name,
           mimeType: file.type || 'font/ttf',
           dataUrl,
+          assetSrc,
+          assetPublicId,
         });
         // Select the newly uploaded font immediately
         setRecentFonts((prev) => {
           const next = [font.family, ...prev.filter((f) => f !== font.family)].slice(0, MAX_RECENT_FONTS);
-          writeRecentFonts(next);
+          persistRecentFonts(next, disableRecentFontsLocalStorage);
           return next;
         });
         onChange(font.family);
@@ -375,7 +390,7 @@ export const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
                     onClick={() => {
                       setRecentFonts((prev) => {
                         const next = [font.family, ...prev.filter((item) => item !== font.family)].slice(0, MAX_RECENT_FONTS);
-                        writeRecentFonts(next);
+                        persistRecentFonts(next, disableRecentFontsLocalStorage);
                         return next;
                       });
                       if (!isCustom) {

@@ -249,10 +249,79 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 | `onSelectProject` | `(project: Project) => void` | — | When provided, clicking a project calls this instead of loading it into the current canvas. Use to navigate to another design |
 | `hideTitle` | `boolean` | `false` | Hide the project title in the app bar |
 | `config.uploadImageFile` | `(file, options?) => Promise<{ src; width?; height?; }>` | — | Optional host upload adapter. Use your own backend/cloud provider and return a hosted image URL |
+| `config.uploadFontFile` | `(file) => Promise<{ src; publicId?; }>` | — | Optional host font upload adapter. Return a hosted URL and optional backend file id |
+| `config.deleteFontFile` | `({ src?, publicId? }) => Promise<void>` | — | Optional host font delete adapter. Called when a custom font is deleted |
 | `config.listRecentUploads` | `({ limit? }) => Promise<Array<{ src; width?; height?; ... }>>` | — | Optional adapter to load Upload panel history from your backend |
+| `config.deleteRecentUpload` | `(upload) => Promise<void>` | — | Optional adapter used by the drawer Uploads panel to delete a backend upload by metadata (e.g. publicId/resourceType) |
 | `config.disableRecentUploadsLocalStorage` | `boolean` | `false` | Disable localStorage for recent uploads and keep the list memory-only |
+| `config.disableCustomFontsLocalStorage` | `boolean` | `false` | Disable localStorage for custom fonts state in sabi_canvas |
+| `config.disableRecentFontsLocalStorage` | `boolean` | `false` | Disable localStorage for recent font picks in FontFamilyPicker |
+| `saveAction` | `AppBarSaveAction` | — | Optional custom action button rendered in the app bar before the Download button. Useful for "Save", "Publish", or any app-specific primary action. See below. |
 | `enableJsonDevTools` | `boolean` | `false` | Show JSON inspector panel (dev only) |
 | `className` | `string` | — | Extra CSS class on the root element |
+
+---
+
+## App Bar Custom Action (`saveAction`)
+
+The `saveAction` prop lets you inject a custom button into the editor app bar — immediately before the Download button — without modifying the package. Use it for app-level actions like "Save", "Publish", or "Submit for Review".
+
+### `AppBarSaveAction` type
+
+```ts
+interface AppBarSaveAction {
+  /** Button label text. */
+  label: string;
+  /** Called when the button is clicked. */
+  onClick: () => void;
+  /** Optional icon element (e.g. a Lucide icon). Rendered before the label. */
+  icon?: React.ReactNode;
+  /** Disable the button (e.g. while a save is in progress). */
+  disabled?: boolean;
+  /**
+   * shadcn/ui button variant.
+   * Default: 'outline'
+   */
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  /** Extra CSS class applied to the button. */
+  className?: string;
+}
+```
+
+### Example — dynamic Save / Publish button
+
+```tsx
+import { Save } from 'lucide-react';
+import { EditorLayout } from 'sabi-canvas';
+import type { AppBarSaveAction } from 'sabi-canvas';
+
+function DesignEditor({ design, onPublish, onSave }) {
+  const saveAction: AppBarSaveAction = {
+    label: design.status === 'published' ? 'Save' : 'Publish',
+    icon: <Save className="h-3.5 w-3.5" />,
+    onClick: () => {
+      if (design.status === 'published') {
+        onSave();
+      } else {
+        onPublish();
+      }
+    },
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0 }}>
+      <EditorLayout
+        projectId={design._id}
+        initialProject={design.project}
+        onSave={handleAutoSave}
+        saveAction={saveAction}
+      />
+    </div>
+  );
+}
+```
+
+The button is also rendered in the mobile toolbar with the icon visible and the label hidden (screen-reader accessible via `sr-only`). No configuration required.
 
 ---
 
@@ -464,6 +533,9 @@ import { EditorLayout, EditorModal } from 'sabi-canvas';
 // Config provider (app-level setup)
 import { SabiCanvasProvider, useSabiCanvasConfig, getSabiCanvasConfig } from 'sabi-canvas';
 import type { SabiCanvasConfig, SabiCanvasAIConfig } from 'sabi-canvas';
+
+// App bar
+import type { AppBarSaveAction } from 'sabi-canvas';
 
 // Individual panels (for custom layouts)
 import {

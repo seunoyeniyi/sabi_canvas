@@ -10,7 +10,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@sabi-canvas/ui/sh
 import { cn } from '@sabi-canvas/lib/utils';
 import { useIsDesktop } from '@sabi-canvas/hooks/useMediaQuery';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
+import { HomePanel } from './panels/HomePanel';
 import { ProjectsPanel } from './panels/ProjectsPanel';
+import { UploadsPanel } from './panels/UploadsPanel';
 
 interface DrawerMenuItem {
   id: SidebarPanelId;
@@ -51,7 +53,7 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
 }) => {
   const isDesktop = useIsDesktop();
   const { activeSidebarPanel, setActiveSidebarPanel } = useEditor();
-  const [lastDesktopPanel, setLastDesktopPanel] = useState<Exclude<SidebarPanelId, null> | null>(null);
+  const [lastSelectedPanel, setLastSelectedPanel] = useState<Exclude<SidebarPanelId, null> | null>(null);
   const wasDesktopDrawerOpenRef = useRef(false);
 
   useEffect(() => {
@@ -62,42 +64,71 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
 
     const justOpened = isOpen && !wasDesktopDrawerOpenRef.current;
 
-    if (justOpened && !activeSidebarPanel && lastDesktopPanel) {
-      setActiveSidebarPanel(lastDesktopPanel);
+    if (justOpened && !activeSidebarPanel) {
+      setActiveSidebarPanel(lastSelectedPanel ?? 'home');
     }
 
     if (activeSidebarPanel) {
-      setLastDesktopPanel(activeSidebarPanel);
+      setLastSelectedPanel(activeSidebarPanel);
     }
 
     wasDesktopDrawerOpenRef.current = isOpen;
-  }, [isDesktop, isOpen, activeSidebarPanel, lastDesktopPanel, setActiveSidebarPanel]);
+  }, [isDesktop, isOpen, activeSidebarPanel, lastSelectedPanel, setActiveSidebarPanel]);
+
+  const handleCloseDrawer = () => {
+    // On desktop, keep active panel during the drawer exit animation so both
+    // drawer and panel dismiss together without a stagger.
+    if (!isDesktop) {
+      setActiveSidebarPanel(null);
+    }
+    onClose();
+  };
 
   const handleItemClick = (item: DrawerMenuItem) => {
     if (item.hasPanel) {
       setActiveSidebarPanel(item.id);
-      if (isDesktop) {
-        setLastDesktopPanel(item.id as Exclude<SidebarPanelId, null>);
-      }
+      setLastSelectedPanel(item.id as Exclude<SidebarPanelId, null>);
       if (!isDesktop) {
         onClose();
       }
     }
   };
 
+  const handleCreateNewDesign = () => {
+    handleCloseDrawer();
+    onNewProject?.();
+  };
+
+  const handleAssetInserted = () => {
+    handleCloseDrawer();
+  };
+
   const renderPanelContent = () => {
     switch (activeSidebarPanel) {
       case 'home':
-        return <PlaceholderPanel title="Home" description="Welcome to the editor" />;
+        return (
+          <HomePanel
+            onNewProject={handleCreateNewDesign}
+            onOpenProjectsPanel={() => setActiveSidebarPanel('projects')}
+            onOpenUploadsPanel={() => setActiveSidebarPanel('uploads')}
+            onOpenProject={(project: Project) => {
+              onOpenProject?.(project);
+            }}
+            onSelectProject={onSelectProject ? (project: Project) => {
+              onSelectProject(project);
+            } : undefined}
+            externalProjects={externalProjects}
+            isLoadingProjects={isLoadingProjects}
+            onRefreshProjects={onRefreshProjects}
+          />
+        );
       case 'projects':
         return (
           <ProjectsPanel
             onOpenProject={(project: Project) => {
               onOpenProject?.(project);
             }}
-            onNewProject={() => {
-              onNewProject?.();
-            }}
+            onNewProject={handleCreateNewDesign}
             externalProjects={externalProjects}
             isLoading={isLoadingProjects}
             onDeleteProject={onDeleteProject}
@@ -108,7 +139,7 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
           />
         );
       case 'uploads':
-        return <PlaceholderPanel title="Uploads" description="Your uploaded files" />;
+        return <UploadsPanel onAssetInserted={handleAssetInserted} />;
       case 'favorites':
         return <PlaceholderPanel title="Favorites" description="Your favorite designs" />;
       case 'settings':
@@ -137,8 +168,8 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={onClose}
-                className="fixed inset-0 z-[160] bg-background/80 backdrop-blur-sm"
+                onClick={handleCloseDrawer}
+                className="fixed inset-0 z-[160] backdrop-blur-sm"
               />
             )}
 
@@ -147,9 +178,9 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
               initial={{ x: side === 'left' ? '-100%' : '100%' }}
               animate={{ x: 0 }}
               exit={{ x: side === 'left' ? '-100%' : '100%' }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
               className={cn(
-                'fixed top-0 z-[165] h-full w-[min(22rem,90vw)]',
+                'fixed top-0 z-[165] h-full w-[min(18rem,60vw)] md:w-[16rem]',
                 'flex flex-col bg-card shadow-editor-lg',
                 side === 'left' ? 'left-0 border-r' : 'right-0 border-l',
                 'border-panel-border',
@@ -169,7 +200,7 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={onClose}
+                  onClick={handleCloseDrawer}
                   className="h-8 w-8 text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-5 w-5" />
@@ -213,42 +244,40 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
             </motion.aside>
 
             {/* Desktop: panel replaces the right-side backdrop area */}
-            <AnimatePresence>
-              {isDesktop && (
-                <motion.section
-                  initial={{ opacity: 0, x: 24 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 24 }}
-                  transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-                  className="fixed top-0 left-[min(22rem,90vw)] right-0 z-[164] h-full bg-card border-l border-panel-border shadow-editor-lg"
-                >
-                  <div className="h-full flex flex-col">
-                    <div className="flex items-center justify-between h-14 px-4 border-b border-panel-border">
-                      <h3 className="font-semibold text-sm">
-                        {activeSidebarPanel ? activePanelLabel : 'Select a menu item'}
-                      </h3>
-                      {activeSidebarPanel && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setActiveSidebarPanel(null)}
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                    <div className="flex-1 min-h-0 overflow-hidden">
-                      {activeSidebarPanel ? (
-                        renderPanelContent()
-                      ) : (
-                        <DesktopPanelPlaceholder />
-                      )}
-                    </div>
+            {isDesktop && (
+              <motion.section
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 24 }}
+                transition={{ duration: 0.22, ease: 'easeInOut' }}
+                className="fixed top-0 left-[16rem] right-0 z-[164] h-full bg-card border-l border-panel-border shadow-editor-lg"
+              >
+                <div className="h-full flex flex-col">
+                  <div className="flex items-center justify-between h-14 px-4 border-b border-panel-border">
+                    <h3 className="font-semibold text-sm">
+                      {activeSidebarPanel ? activePanelLabel : 'Select a menu item'}
+                    </h3>
+                    {activeSidebarPanel && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleCloseDrawer}
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
-                </motion.section>
-              )}
-            </AnimatePresence>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    {activeSidebarPanel ? (
+                      renderPanelContent()
+                    ) : (
+                      <DesktopPanelPlaceholder />
+                    )}
+                  </div>
+                </div>
+              </motion.section>
+            )}
           </>
         )}
       </AnimatePresence>

@@ -12,6 +12,30 @@ import {
 const MIN_TEXT_WIDTH = 40;
 const TRANSFORMER_STROKE = 'hsl(217, 91%, 60%)';
 
+/**
+ * Measures the pixel width of the longest word in a TextObject at its current
+ * font size. Used as the minimum allowed box width so no word ever overflows.
+ */
+function computeMinTextWidth(textObject: TextObject): number {
+  const plainText = (textObject.richText?.length
+    ? textObject.richText.map((s) => s.text).join('')
+    : textObject.text) ?? '';
+  if (!plainText.trim()) return MIN_TEXT_WIDTH;
+  try {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return MIN_TEXT_WIDTH;
+    const bold = textObject.fontStyle?.includes('bold') ? 'bold' : 'normal';
+    const italic = textObject.fontStyle?.includes('italic') ? 'italic' : 'normal';
+    ctx.font = `${italic} ${bold} ${textObject.fontSize}px ${textObject.fontFamily}`;
+    const words = plainText.split(/\s+/).filter(Boolean);
+    const maxWordWidth = Math.max(...words.map((w) => ctx.measureText(w).width));
+    return Math.max(MIN_TEXT_WIDTH, Math.ceil(maxWordWidth));
+  } catch {
+    return MIN_TEXT_WIDTH;
+  }
+}
+
 interface CanvasTransformerProps {
   selectedIds: string[];
   objects: CanvasObject[];
@@ -66,6 +90,13 @@ export const CanvasTransformer: React.FC<CanvasTransformerProps> = ({
     }, 0);
     return { minTableWidth: minWidth, minTableHeight: minHeight };
   }, [selectedIds, objects]);
+
+  // Minimum allowed text box width = the pixel width of the longest word at the
+  // current font size. Enforced in boundBoxFunc (during drag) and transformEnd.
+  const minTextWidth = useMemo(() => {
+    if (!isSingleTextSelection) return MIN_TEXT_WIDTH;
+    return computeMinTextWidth(selectedObjects[0] as TextObject);
+  }, [isSingleTextSelection, selectedObjects]);
 
   const updateSizeClass = useCallback(() => {
     const transformer = transformerRef.current;
@@ -369,17 +400,45 @@ export const CanvasTransformer: React.FC<CanvasTransformerProps> = ({
         }
 
         if (isHorizontalSideResize) {
-          const newWidth = Math.max(MIN_TEXT_WIDTH, textObject.width * Math.abs(node.scaleX()));
-          const textUpdates = {
-            ...updates,
-            width: newWidth,
-            scaleX: 1,
-            scaleY: 1,
-          } as Partial<TextObject>;
+          // Clamp to minimum (longest word width) so text never overflows its box.
+          const rawWidth = textObject.width * Math.abs(node.scaleX());
+          const newWidth = Math.max(minTextWidth, rawWidth);
+
+          const group = node as Konva.Group;
+          const childText = group.findOne('Text') as Konva.Text | null;
+          const childShape = group.findOne('Shape') as Konva.Shape | null;
+
+          let newHeight = textObject.height;
+
+          if (childText) {
+            // Reset counter-scale applied during live drag.
+            childText.scaleX(1);
+            childText.scaleY(1);
+            childText.width(newWidth);
+            // Remove the height constraint so Konva Text auto-measures at newWidth.
+            // When height is unset, childText.height() returns the natural wrap height.
+            childText.setAttr('height', undefined);
+            newHeight = Math.max(1, childText.height());
+            childText.height(newHeight);
+          } else if (childShape) {
+            // Rich text / curved shape: reset counter-scale and set new width.
+            // Height auto-updates via richLayout recomputation after parent re-renders.
+            childShape.scaleX(1);
+            childShape.scaleY(1);
+            childShape.width(newWidth);
+          }
 
           node.scaleX(1);
           node.scaleY(1);
-          applyToInnerChild(newWidth, textObject.height);
+          transformer.forceUpdate();
+
+          const textUpdates = {
+            ...updates,
+            width: newWidth,
+            height: newHeight,
+            scaleX: 1,
+            scaleY: 1,
+          } as Partial<TextObject>;
 
           onTransformEnd(id, textUpdates as Partial<CanvasObject>);
           return;
@@ -484,7 +543,10 @@ export const CanvasTransformer: React.FC<CanvasTransformerProps> = ({
     const transformer = transformerRef.current;
     if (!transformer) return;
 
-    updateSizeClass();
+    // NOTE: Do NOT call updateSizeClass() here. It triggers setState → React re-renders
+    // CanvasText → the inner <Text width={object.width}> prop resets the Konva node's
+    // width back to the original on every drag frame, causing the width to blink.
+    // updateSizeClass() is called in handleTransformEnd instead.
 
     const activeAnchor = transformer.getActiveAnchor();
     const isHorizontalSideResize = activeAnchor === 'middle-left' || activeAnchor === 'middle-right';
@@ -498,18 +560,24 @@ export const CanvasTransformer: React.FC<CanvasTransformerProps> = ({
 
       const nodeClass = node.getClassName();
 
-      // Text: live width update on horizontal resize only
+      // Text horizontal resize: update child width and counter-scale it so the text
+      // reflows live without visual stretching, while group.scaleX stays intact for
+      // Konva's drag tracking (resetting it would cause blink).
+      // Math: visual_width = child.width × child.scaleX × group.scaleX
+      //                    = nextWidth × (1/absSx) × absSx = nextWidth ✓
       if (obj.type === 'text' && isHorizontalSideResize) {
         const textObj = obj as TextObject;
-        const nextWidth = Math.max(MIN_TEXT_WIDTH, textObj.width * Math.abs(node.scaleX()));
-        // CanvasText renders inside a Group — update the inner Text or Shape child directly
+        const absSx = Math.abs(node.scaleX());
+        const absSy = Math.abs(node.scaleY());
+        if (absSx < 0.001) return;
+        const nextWidth = Math.max(minTextWidth, textObj.width * absSx);
         const childNode = (node as Konva.Group).findOne('Text') as Konva.Text | null
           ?? (node as Konva.Group).findOne('Shape') as Konva.Shape | null;
         if (childNode) {
           childNode.width(nextWidth);
+          childNode.scaleX(1 / absSx);
+          childNode.scaleY(absSy > 0.001 ? 1 / absSy : 1);
         }
-        node.scaleX(1);
-        node.scaleY(1);
         return;
       }
 
@@ -574,7 +642,7 @@ export const CanvasTransformer: React.FC<CanvasTransformerProps> = ({
           };
         }
 
-        if (isSingleTextSelection && newBox.width < MIN_TEXT_WIDTH) {
+        if (isSingleTextSelection && newBox.width < minTextWidth) {
           return oldBox;
         }
 

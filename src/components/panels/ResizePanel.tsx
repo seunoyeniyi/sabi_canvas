@@ -28,7 +28,7 @@ export interface SizePreset {
   category: 'social' | 'print' | 'screen' | 'custom';
 }
 
-const sizePresets: SizePreset[] = [
+export const sizePresets: SizePreset[] = [
   // Social Media
   { id: 'instagram-post', name: 'Instagram Post', width: 1080, height: 1080, icon: <Instagram className="h-4 w-4" />, category: 'social' },
   { id: 'instagram-story', name: 'Instagram Reel', width: 1080, height: 1920, icon: <Instagram className="h-4 w-4" />, category: 'social' },
@@ -50,7 +50,7 @@ const sizePresets: SizePreset[] = [
   // Print
   { id: 'a4', name: 'A4 Document', width: 2480, height: 3508, icon: <FileText className="h-4 w-4" />, category: 'print' },
   { id: 'letter', name: 'US Letter', width: 2550, height: 3300, icon: <FileText className="h-4 w-4" />, category: 'print' },
-  { id: 'poster', name: 'Poster (18×24)', width: 5400, height: 7200, icon: <Image className="h-4 w-4" />, category: 'print' },
+  { id: 'poster', name: 'Poster', width: 5400, height: 7200, icon: <Image className="h-4 w-4" />, category: 'print' },
   { id: 'business-card', name: 'Business Card', width: 1050, height: 600, icon: <FileText className="h-4 w-4" />, category: 'print' },
 ];
 

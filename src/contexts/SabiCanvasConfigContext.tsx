@@ -25,11 +25,14 @@ export interface SabiCanvasUploadedImage {
 
 export interface SabiCanvasUploadedAsset {
   src: string;
+  publicId?: string;
 }
 
 export interface SabiCanvasRecentUpload extends SabiCanvasUploadedImage {
   id?: string;
   createdAt?: string;
+  publicId?: string;
+  resourceType?: 'image' | 'video' | 'raw';
 }
 
 export interface SabiCanvasConfig {
@@ -63,14 +66,32 @@ export interface SabiCanvasConfig {
    */
   uploadFontFile?: (file: File) => Promise<SabiCanvasUploadedAsset>;
   /**
+   * Optional font delete adapter. When provided, custom font deletion can also
+   * delete the hosted backend asset (e.g. Cloudinary raw file).
+   */
+  deleteFontFile?: (asset: { src?: string; publicId?: string }) => Promise<void>;
+  /**
    * Optional recent-uploads adapter. When provided, Upload panel recent items
    * are fetched from this callback (e.g. backend history) instead of only localStorage.
    */
   listRecentUploads?: (options?: { limit?: number }) => Promise<SabiCanvasRecentUpload[]>;
   /**
+   * Optional recent-upload delete adapter for backend-powered upload libraries.
+   * Called by Uploads drawer panel before removing the item from local UI cache.
+   */
+  deleteRecentUpload?: (upload: SabiCanvasRecentUpload) => Promise<void>;
+  /**
    * Disable localStorage usage for recent uploads and keep them in memory only.
    */
   disableRecentUploadsLocalStorage?: boolean;
+  /**
+   * Disable localStorage usage for custom fonts state in the package.
+   */
+  disableCustomFontsLocalStorage?: boolean;
+  /**
+   * Disable localStorage usage for recent font picks in FontFamilyPicker.
+   */
+  disableRecentFontsLocalStorage?: boolean;
 }
 
 // ---------------------------------------------------------------------------

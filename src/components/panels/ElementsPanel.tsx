@@ -111,7 +111,7 @@ export const ElementsPanel: React.FC<ElementsPanelProps> = ({ onClose }) => {
     <div className="flex flex-col h-full gap-x-4 gap-y-0">
       {/* Categories Row */}
       <div className="relative mb-2">
-        <div className="flex items-center overflow-x-auto hide-scrollbar scroll-smooth pb-2">
+        <div className="flex items-center overflow-x-auto hide-scrollbar scroll-smooth pb-1">
           <div className="flex flex-nowrap gap-2 pr-10">
             {CATEGORIES.map((category) => (
               <Badge

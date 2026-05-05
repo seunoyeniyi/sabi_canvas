@@ -1,9 +1,12 @@
 export { ResizePanel } from './ResizePanel';
+export { HomePanel } from './HomePanel';
 export { ElementsPanel } from './ElementsPanel';
 export { BackgroundPanel } from './BackgroundPanel';
 export { LayersPanel } from './LayersPanel';
 export { ProjectsPanel } from './ProjectsPanel';
 export { MyFontsPanel } from './MyFontsPanel';
 export { PhotosPanel } from './PhotosPanel';
+export { UploadsPanel } from './UploadsPanel';
 export { TemplatesPanel } from './TemplatesPanel';
 export type { SizePreset } from './ResizePanel';
+export { sizePresets } from './ResizePanel';

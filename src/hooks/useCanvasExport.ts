@@ -100,6 +100,75 @@ async function addExportBackground(
   }
 }
 
+/**
+ * Captures a low-resolution thumbnail of only the design's safe area (drawing area).
+ * Unlike `stage.toDataURL()`, this excludes the grey viewport outside the canvas.
+ *
+ * Mirrors the clipping logic in `exportUsingClipping` but at thumbnail resolution
+ * and without font-loading overhead — suitable for auto-save previews.
+ */
+export async function captureSafeAreaThumbnail(
+  stage: Konva.Stage,
+  canvasSize: { width: number; height: number },
+  background?: CanvasBackground,
+): Promise<string | null> {
+  const { width: designWidth, height: designHeight } = canvasSize;
+  const pixelRatio = 0.3;
+
+  const exportWidth = Math.max(1, Math.round(designWidth * pixelRatio));
+  const exportHeight = Math.max(1, Math.round(designHeight * pixelRatio));
+
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+  document.body.appendChild(container);
+
+  const exportStage = new Konva.Stage({ container, width: exportWidth, height: exportHeight });
+  const exportLayer = new Konva.Layer();
+  exportStage.add(exportLayer);
+
+  await addExportBackground(exportLayer, background, exportWidth, exportHeight, false);
+
+  const exportContentGroup = new Konva.Group({
+    scaleX: pixelRatio,
+    scaleY: pixelRatio,
+    clipX: 0,
+    clipY: 0,
+    clipWidth: designWidth,
+    clipHeight: designHeight,
+  });
+
+  const contentLayer = stage.getLayers()[0];
+  for (const child of contentLayer?.getChildren() ?? []) {
+    if (!(child instanceof Konva.Group)) continue;
+    if (child.name() === 'safe-area') continue;
+    for (const node of child.getChildren()) {
+      exportContentGroup.add(node.clone());
+    }
+  }
+
+  exportLayer.add(exportContentGroup);
+  exportLayer.draw();
+
+  try {
+    // Suppress Konva's internal error logger — tainted cross-origin canvas nodes
+    // cause Konva to log a SecurityError but it handles it gracefully internally.
+    const originalKonvaError = Konva.Util.error.bind(Konva.Util);
+    Konva.Util.error = () => undefined;
+    let dataUrl: string;
+    try {
+      dataUrl = exportStage.toDataURL({ mimeType: 'image/jpeg', quality: 0.3 });
+    } finally {
+      Konva.Util.error = originalKonvaError;
+    }
+    return dataUrl?.startsWith('data:image/') ? dataUrl : null;
+  } finally {
+    exportStage.destroy();
+    container.remove();
+  }
+}
+
 export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf';
 
 export interface ExportOptions {

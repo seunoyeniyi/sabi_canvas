@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import Konva from 'konva';
+import { captureSafeAreaThumbnail } from '@sabi-canvas/hooks/useCanvasExport';
 import { CanvasPage } from '@sabi-canvas/types/pages';
 import { Project, generateProjectId, pageToProjectPage } from '@sabi-canvas/types/project';
 import { saveProject, setLastProjectId } from '@sabi-canvas/hooks/useProjectManager';
@@ -77,6 +78,23 @@ export const useAutoSave = ({
       .join('||');
   }, [pages]);
 
+  // Track font list changes explicitly so uploading/deleting custom fonts
+  // also triggers a save even when canvas objects did not change.
+  const customFontsKey = useMemo(() => {
+    if (!customFonts || customFonts.length === 0) return '[]';
+    return JSON.stringify(
+      customFonts.map((font) => ({
+        id: font.id,
+        family: font.family,
+        fileName: font.fileName,
+        mimeType: font.mimeType,
+        createdAt: font.createdAt,
+        assetSrc: font.assetSrc,
+        assetPublicId: font.assetPublicId,
+      }))
+    );
+  }, [customFonts]);
+
   useEffect(() => {
     // Skip the very first mount render — we don't want to overwrite a project
     // the moment the editor mounts before the parent has a chance to load a project from storage.
@@ -102,7 +120,7 @@ export const useAutoSave = ({
       clearTimeout(timerRef.current);
     }
 
-    timerRef.current = setTimeout(() => {
+    timerRef.current = setTimeout(async () => {
       timerRef.current = null;
 
       const pages = pagesRef.current;
@@ -121,23 +139,13 @@ export const useAutoSave = ({
         onProjectCreated(currentProjectId);
       }
 
+      // Capture thumbnail cropped to the safe area (design area only, not the whole viewport).
       let thumbnail: string | undefined;
       try {
         const stage = getStage();
         if (stage) {
-          // Temporarily suppress Konva's internal error logger so a tainted canvas
-          // (cross-origin image with missing CORS headers) doesn't spam the console.
-          // Konva catches the SecurityError itself and returns '' — our catch won't fire.
-          const originalKonvaError = Konva.Util.error.bind(Konva.Util);
-          Konva.Util.error = () => undefined;
-          try {
-            const result = stage.toDataURL({ mimeType: 'image/jpeg', quality: 0.3, pixelRatio: 0.3 });
-            if (result && result.startsWith('data:image/')) {
-              thumbnail = result;
-            }
-          } finally {
-            Konva.Util.error = originalKonvaError;
-          }
+          const result = await captureSafeAreaThumbnail(stage, canvasSize, activePage?.background);
+          if (result) thumbnail = result;
         }
       } catch {
         // Thumbnail capture failure is non-fatal
@@ -188,9 +196,10 @@ export const useAutoSave = ({
       }
     }, DEBOUNCE_MS);
   // contentKey changes only when objects/background/page-structure change — not on zoom/pan
+  // customFontsKey ensures custom font add/delete is persisted even without object edits
   // projectTitle and isMockupEnabled are tracked via refs for the callback but also in deps to trigger saves
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contentKey, projectTitle, isMockupEnabled]);
+  }, [contentKey, customFontsKey, projectTitle, isMockupEnabled]);
 
   // Cleanup timer on unmount
   useEffect(() => {

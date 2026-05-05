@@ -16,6 +16,11 @@ export interface AppBarProps {
   canUndo?: boolean;
   canRedo?: boolean;
   actions?: AppBarAction[];
+  /**
+   * When provided, renders a primary action button just before the Download
+   * button. Designed for Save / Publish workflows.
+   */
+  saveAction?: AppBarSaveAction;
   centerContent?: React.ReactNode;
   className?: string;
   hideTitle?: boolean;
@@ -33,6 +38,28 @@ export interface AppBarAction {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+}
+
+/**
+ * Configuration for the primary save/publish action button rendered in the
+ * AppBar just before the Download button. The label and behaviour are fully
+ * controlled by the host application — a typical pattern is "Publish" when the
+ * item is a draft and "Save" when it is already published.
+ */
+export interface AppBarSaveAction {
+  /** Button label text, e.g. "Save", "Publish", "Save & Publish". */
+  label: string;
+  onClick: () => void;
+  /** Optional leading icon element. */
+  icon?: React.ReactNode;
+  disabled?: boolean;
+  /**
+   * shadcn/ui Button variant. Defaults to `"outline"`.
+   * Pass any valid variant (e.g. `"default"`, `"secondary"`, `"ghost"`, `"destructive"`).
+   */
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  /** Extra Tailwind classes merged on top of the base button classes. */
+  className?: string;
 }
 
 // Bottom Navigation Types

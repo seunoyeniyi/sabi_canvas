@@ -9,6 +9,10 @@ export interface CustomFont {
   mimeType: string;
   /** Full base64 data URL, e.g. "data:font/ttf;base64,..." */
   dataUrl: string;
+  /** Optional hosted asset URL from the host uploader/backend. */
+  assetSrc?: string;
+  /** Optional hosted asset public ID (e.g. Cloudinary public_id). */
+  assetPublicId?: string;
   createdAt: number;
 }
 

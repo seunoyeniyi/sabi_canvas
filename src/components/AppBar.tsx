@@ -9,7 +9,8 @@ import {
   Sun,
   Moon,
   MoreHorizontal,
-  FileBox
+  FileBox,
+  PenLine
 } from 'lucide-react';
 import { AppBarProps } from '@sabi-canvas/types/editor';
 import { Button } from '@sabi-canvas/ui/button';
@@ -36,6 +37,7 @@ export const AppBar: React.FC<AppBarProps> = ({
   canUndo = false,
   canRedo = false,
   actions = [],
+  saveAction,
   centerContent,
   className,
   hideTitle = false,
@@ -198,6 +200,20 @@ export const AppBar: React.FC<AppBarProps> = ({
         {!isMobile ? (
           /* DESKTOP VIEW */
           <>
+            {/* Save / Publish primary action */}
+            {saveAction && (
+              <Button
+                variant={saveAction.variant ?? 'outline'}
+                size="sm"
+                onClick={saveAction.onClick}
+                disabled={saveAction.disabled}
+                className={cn('h-8 gap-1.5 px-3 text-xs font-medium', saveAction.className)}
+              >
+                {saveAction.icon}
+                <span>{saveAction.label}</span>
+              </Button>
+            )}
+
             {/* Standard Desktop Actions */}
             {downloadAction && (
               <Button
@@ -269,6 +285,20 @@ export const AppBar: React.FC<AppBarProps> = ({
         ) : (
           /* MOBILE VIEW */
           <>
+            {/* Save / Publish primary action */}
+            {saveAction && (
+              <Button
+                variant={saveAction.variant ?? 'outline'}
+                size="sm"
+                onClick={saveAction.onClick}
+                disabled={saveAction.disabled}
+                className={cn('h-8 gap-1.5 px-3 text-xs font-medium', saveAction.className)}
+              >
+                {saveAction.icon || <PenLine className="h-4 w-4" />}
+                <span className="hidden md:inline">{saveAction.label}</span>
+              </Button>
+            )}
+
             {/* Show only Download on mobile initially */}
             {downloadAction && (
               <Button

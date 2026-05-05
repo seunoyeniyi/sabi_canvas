@@ -10,10 +10,13 @@ export interface RecentImage {
   src: string;
   width: number;
   height: number;
+  createdAt?: string;
+  publicId?: string;
+  resourceType?: 'image' | 'video' | 'raw';
 }
 
 export const useRecentUploads = () => {
-  const { disableRecentUploadsLocalStorage, listRecentUploads } = useSabiCanvasConfig();
+  const { disableRecentUploadsLocalStorage, listRecentUploads, deleteRecentUpload } = useSabiCanvasConfig();
   const queryClient = useQueryClient();
   const queryKey = ['sabi-canvas', 'recent-uploads', disableRecentUploadsLocalStorage, Boolean(listRecentUploads)] as const;
 
@@ -28,6 +31,9 @@ export const useRecentUploads = () => {
             src: item.src,
             width: item.width ?? 300,
             height: item.height ?? 300,
+            createdAt: item.createdAt,
+            publicId: item.publicId,
+            resourceType: item.resourceType,
           }))
           .slice(0, MAX_UPLOADS);
       } catch (e) {
@@ -90,6 +96,7 @@ export const useRecentUploads = () => {
 
     if (disableRecentUploadsLocalStorage) {
       queryClient.setQueryData(queryKey, next);
+      window.dispatchEvent(new Event('recent_uploads_changed'));
       void queryClient.invalidateQueries({ queryKey });
       return next;
     }
@@ -123,5 +130,49 @@ export const useRecentUploads = () => {
     }
   }, [disableRecentUploadsLocalStorage, queryClient, queryKey]);
 
-  return { uploads, addUpload, isLoadingUploads };
+  const removeUpload = useCallback(async (upload: RecentImage) => {
+    const current = (queryClient.getQueryData<RecentImage[]>(queryKey) ?? []);
+    const next = current.filter((item) => item.id !== upload.id && item.src !== upload.src);
+
+    // Optimistic UI removal
+    queryClient.setQueryData(queryKey, next);
+
+    if (deleteRecentUpload) {
+      try {
+        await deleteRecentUpload({
+          id: upload.id,
+          src: upload.src,
+          width: upload.width,
+          height: upload.height,
+          createdAt: upload.createdAt,
+          publicId: upload.publicId,
+          resourceType: upload.resourceType,
+        });
+      } catch (e) {
+        // Roll back optimistic update on backend failure
+        queryClient.setQueryData(queryKey, current);
+        throw e;
+      }
+
+      window.dispatchEvent(new Event('recent_uploads_changed'));
+      void queryClient.invalidateQueries({ queryKey });
+      return;
+    }
+
+    if (disableRecentUploadsLocalStorage) {
+      window.dispatchEvent(new Event('recent_uploads_changed'));
+      void queryClient.invalidateQueries({ queryKey });
+      return;
+    }
+
+    try {
+      localStorage.setItem(RECENT_UPLOADS_KEY, JSON.stringify(next));
+      window.dispatchEvent(new Event('recent_uploads_changed'));
+      void queryClient.invalidateQueries({ queryKey });
+    } catch (e) {
+      console.warn('Failed to remove upload from storage', e);
+    }
+  }, [deleteRecentUpload, disableRecentUploadsLocalStorage, queryClient, queryKey]);
+
+  return { uploads, addUpload, removeUpload, isLoadingUploads };
 };

@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { CustomFont } from '@sabi-canvas/types/custom-fonts';
 import { registerCustomFont, registerCustomFonts, unregisterCustomFont } from '@sabi-canvas/lib/customFontLoader';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 
 const CUSTOM_FONTS_STORAGE_KEY = 'ca_custom_fonts';
 
@@ -40,18 +41,21 @@ const writeFonts = (fonts: CustomFont[]): void => {
 export const CustomFontsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [customFonts, setCustomFonts] = useState<CustomFont[]>([]);
   const initializedRef = useRef(false);
+  const { disableCustomFontsLocalStorage } = useSabiCanvasConfig();
 
   // Load and register persisted fonts once on mount
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
 
+    if (disableCustomFontsLocalStorage) return;
+
     const stored = readStoredFonts();
     if (stored.length > 0) {
       setCustomFonts(stored);
       registerCustomFonts(stored);
     }
-  }, []);
+  }, [disableCustomFontsLocalStorage]);
 
   const addCustomFont = useCallback(
     async (data: Omit<CustomFont, 'id' | 'createdAt'>): Promise<CustomFont> => {
@@ -63,12 +67,14 @@ export const CustomFontsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       await registerCustomFont(font);
       setCustomFonts((prev) => {
         const next = [font, ...prev];
-        writeFonts(next);
+        if (!disableCustomFontsLocalStorage) {
+          writeFonts(next);
+        }
         return next;
       });
       return font;
     },
-    []
+    [disableCustomFontsLocalStorage]
   );
 
   const removeCustomFont = useCallback((id: string): void => {
@@ -76,10 +82,12 @@ export const CustomFontsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const font = prev.find((f) => f.id === id);
       if (font) unregisterCustomFont(font.family);
       const next = prev.filter((f) => f.id !== id);
-      writeFonts(next);
+      if (!disableCustomFontsLocalStorage) {
+        writeFonts(next);
+      }
       return next;
     });
-  }, []);
+  }, [disableCustomFontsLocalStorage]);
 
   const loadProjectFonts = useCallback((fonts: CustomFont[]): void => {
     if (!fonts.length) return;
@@ -93,10 +101,12 @@ export const CustomFontsProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
       if (newFonts.length === 0) return prev;
       const next = [...newFonts, ...prev];
-      writeFonts(next);
+      if (!disableCustomFontsLocalStorage) {
+        writeFonts(next);
+      }
       return next;
     });
-  }, []);
+  }, [disableCustomFontsLocalStorage]);
 
   return (
     <CustomFontsContext.Provider value={{ customFonts, addCustomFont, removeCustomFont, loadProjectFonts }}>
