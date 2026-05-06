@@ -32,7 +32,6 @@ export { PropertyPanel } from './components/PropertyPanel';
 export { EffectsPanel } from './components/EffectsPanel';
 export { CanvasContainer } from './components/CanvasContainer';
 export { EditorDialog } from './components/EditorDialog';
-export { EditorModal } from './components/EditorModal';
 export { DownloadDialog } from './components/DownloadDialog';
 export { RemoveBgDialog } from './components/RemoveBgDialog';
 

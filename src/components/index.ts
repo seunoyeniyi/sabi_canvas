@@ -9,7 +9,6 @@ export { PropertyPanel } from './PropertyPanel';
 export { CanvasContainer } from './CanvasContainer';
 export { EditorDialog } from './EditorDialog';
 export { EditorLayout } from './EditorLayout';
-export { EditorModal } from './EditorModal';
 export { DownloadDialog } from './DownloadDialog';
 export { ResizePanel } from './panels';
 
