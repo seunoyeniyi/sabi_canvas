@@ -107,7 +107,7 @@ function App() {
   return (
     <SabiCanvasProvider config={config}>
       <Router>
-        {/* EditorLayout and EditorModal will automatically pick up the config */}
+        {/* EditorLayout will automatically pick up the config */}
         <Routes>...</Routes>
       </Router>
     </SabiCanvasProvider>
@@ -550,117 +550,7 @@ import {
   CanvasObjectsProvider, useCanvasObjects,
   CustomFontsProvider, useCustomFonts,
 } from 'sabi-canvas';
-
 ---
-
-## Building Your Own Modal
-
-`EditorModal` has been removed from the package (v0.3.7+). You now own the modal shell and simply render `<EditorLayout>` inside it. This gives you full control over enter/exit animations, confirmation dialogs, scroll-lock, and route handling.
-
-Here is the reference implementation you can copy and adapt:
-
-```tsx
-import React, { useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
-import { EditorLayout } from 'sabi-canvas';
-import type { SabiCanvasConfig } from 'sabi-canvas';
-
-interface EditorModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  productName?: string;
-  config?: SabiCanvasConfig;
-}
-
-export function EditorModal({ isOpen, onClose, productName, config }: EditorModalProps) {
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  // Body scroll lock
-  useEffect(() => {
-    document.body.style.overflow = isOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [isOpen]);
-
-  // Intercept browser back button
-  useEffect(() => {
-    if (!isOpen) return;
-    window.history.pushState({ editorModalOpen: true }, '');
-    const handlePopState = () => {
-      window.history.pushState({ editorModalOpen: true }, '');
-      setShowConfirm(true);
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [isOpen]);
-
-  const handleConfirmClose = () => {
-    window.history.back();
-    setShowConfirm(false);
-    onClose();
-  };
-
-  return (
-    <>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            key="editor-modal"
-            className="fixed inset-0 z-[100] flex flex-col bg-background"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            <button
-              onClick={() => setShowConfirm(true)}
-              className="absolute top-3 left-16 z-[110] flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              {productName ?? 'Back'}
-            </button>
-
-            <EditorLayout hideTitle config={config} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Replace with your own confirmation dialog component */}
-      {showConfirm && (
-        <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
-          <div style={{ background: 'white', padding: 24, borderRadius: 8, maxWidth: 400 }}>
-            <h2>Leave the editor?</h2>
-            <p>Going back will discard any unsaved changes to your design. Are you sure?</p>
-            <button onClick={() => setShowConfirm(false)}>Keep editing</button>
-            <button onClick={handleConfirmClose}>Leave editor</button>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-```
-
-> **Tip:** Replace the raw confirmation dialog above with your app's own `<AlertDialog>`, `<Modal>`, or `<Dialog>` component for a consistent look and feel.
-
----
-
-## Development
-
-This package lives inside the [sabiprint](https://github.com/seunoyeniyi/sabiprint) monorepo as a standalone sub-package with its own Git repository.
-
-```bash
-# Clone with submodule
-git clone --recurse-submodules https://github.com/seunoyeniyi/sabiprint.git
-
-# Update submodule to latest
-git submodule update --remote sabi_canvas
-
-# Build the library
-cd sabi_canvas
-npm install
-npm run build
-```
 
 ## Contributing
 
