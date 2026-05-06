@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FolderOpen, Image, LayoutGrid, Loader2, Plus, RefreshCw, ChevronRight, Zap, Play, Layers } from 'lucide-react';
 import { Button } from '@sabi-canvas/ui/button';
 import { ScrollArea } from '@sabi-canvas/ui/scroll-area';
 import { cn } from '@sabi-canvas/lib/utils';
 import { useRecentUploads } from '@sabi-canvas/hooks/useRecentUploads';
 import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
+import { loadAllProjects } from '@sabi-canvas/hooks/useProjectManager';
 import type { Project } from '@sabi-canvas/types/project';
 
 interface HomePanelProps {
@@ -45,17 +46,29 @@ export const HomePanel: React.FC<HomePanelProps> = ({
     const { uploads, isLoadingUploads } = useRecentUploads();
     const { listRecentUploads, disableRecentUploadsLocalStorage } = useSabiCanvasConfig();
 
-    const recentProjects = useMemo(() => {
-        const list = externalProjects ?? [];
-        return [...list].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
-    }, [externalProjects]);
+    // When no externalProjects are provided, load from localStorage
+    const isExternal = externalProjects !== undefined;
+    const [localProjects, setLocalProjects] = useState<Project[]>([]);
 
     useEffect(() => {
-        if (externalProjects !== undefined) {
+        if (!isExternal) {
+            setLocalProjects(loadAllProjects());
+        }
+    }, [isExternal]);
+
+    const recentProjects = useMemo(() => {
+        const list = isExternal ? externalProjects : localProjects;
+        return [...list].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
+    }, [isExternal, externalProjects, localProjects]);
+
+    const projectCount = isExternal ? externalProjects.length : localProjects.length;
+
+    useEffect(() => {
+        if (isExternal) {
             onRefreshProjects?.();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [isExternal]);
 
     const backendConnected = Boolean(externalProjects !== undefined && listRecentUploads);
     const uploadsSourceLabel = listRecentUploads
@@ -116,7 +129,7 @@ export const HomePanel: React.FC<HomePanelProps> = ({
                                 <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
                                 <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">Designs</span>
                             </div>
-                            <span className="text-sm font-bold">{externalProjects?.length ?? 0}</span>
+                            <span className="text-sm font-bold">{projectCount}</span>
                         </button>
 
                         <button

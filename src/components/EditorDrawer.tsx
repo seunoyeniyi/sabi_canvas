@@ -113,9 +113,13 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
             onOpenUploadsPanel={() => setActiveSidebarPanel('uploads')}
             onOpenProject={(project: Project) => {
               onOpenProject?.(project);
+              setActiveSidebarPanel(null);
+              onClose();
             }}
             onSelectProject={onSelectProject ? (project: Project) => {
               onSelectProject(project);
+              setActiveSidebarPanel(null);
+              onClose();
             } : undefined}
             externalProjects={externalProjects}
             isLoadingProjects={isLoadingProjects}
@@ -127,6 +131,8 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
           <ProjectsPanel
             onOpenProject={(project: Project) => {
               onOpenProject?.(project);
+              setActiveSidebarPanel(null);
+              onClose();
             }}
             onNewProject={handleCreateNewDesign}
             externalProjects={externalProjects}
@@ -135,6 +141,8 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
             onRefresh={onRefreshProjects}
             onSelectProject={onSelectProject ? (project: Project) => {
               onSelectProject(project);
+              setActiveSidebarPanel(null);
+              onClose();
             } : undefined}
           />
         );

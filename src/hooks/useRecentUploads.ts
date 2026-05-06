@@ -115,8 +115,11 @@ export const useRecentUploads = () => {
       }
 
       if (!saved) {
-        // The item itself is too large to store — skip silently
-        return current;
+        // The item is too large for localStorage — keep it in-memory for this session only.
+        // Don't invalidate (which would trigger a localStorage refetch and overwrite it).
+        queryClient.setQueryData(queryKey, next);
+        window.dispatchEvent(new Event('recent_uploads_changed'));
+        return next;
       }
 
       queryClient.setQueryData(queryKey, persistable);
