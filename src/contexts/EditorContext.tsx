@@ -60,6 +60,10 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     setState(prev => ({ ...prev, isDrawerOpen: !prev.isDrawerOpen }));
   }, []);
 
+  const closeDrawer = useCallback(() => {
+    setState(prev => (prev.isDrawerOpen ? { ...prev, isDrawerOpen: false } : prev));
+  }, []);
+
   const togglePropertyPanel = useCallback(() => {
     setState(prev => ({ ...prev, isPropertyPanelOpen: !prev.isPropertyPanelOpen }));
   }, []);
@@ -248,6 +252,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     ...state,
     setTheme,
     toggleDrawer,
+    closeDrawer,
     togglePropertyPanel,
     toggleEffectsPanel,
     setActiveTool,
@@ -287,7 +292,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     cropApply,
     cropReset,
     cropCancel,
-  }), [state, setTheme, toggleDrawer, togglePropertyPanel, toggleEffectsPanel, setActiveTool, setActiveNavItem, setZoom, setInteractionMode, setActiveSidebarPanel, toggleSidebarPanel, setActiveToolPanel, toggleToolPanel, setCanvasSize, startTextEdit, stopTextEdit, startShapeTextEdit, stopShapeTextEdit, startTableCellEdit, stopTableCellEdit, setSelectedTableCells, setIsCropMode, setLastGraphicsSearch, setLastIconsSearch, setLastPhotosSearch, setLastBackgroundPhotosSearch, setLastElementsCategory, setInlineTextSelectionState, registerApplyInlineStyleFn, applyInlineTextStyle, setDrawTool, setDrawColor, setDrawSize, setDrawTension, setReplacingImageId, setEditorMode, toggleMockupEnabled, setMockupEnabled, registerCropActions, cropApply, cropReset, cropCancel]);
+  }), [state, setTheme, toggleDrawer, closeDrawer, togglePropertyPanel, toggleEffectsPanel, setActiveTool, setActiveNavItem, setZoom, setInteractionMode, setActiveSidebarPanel, toggleSidebarPanel, setActiveToolPanel, toggleToolPanel, setCanvasSize, startTextEdit, stopTextEdit, startShapeTextEdit, stopShapeTextEdit, startTableCellEdit, stopTableCellEdit, setSelectedTableCells, setIsCropMode, setLastGraphicsSearch, setLastIconsSearch, setLastPhotosSearch, setLastBackgroundPhotosSearch, setLastElementsCategory, setInlineTextSelectionState, registerApplyInlineStyleFn, applyInlineTextStyle, setDrawTool, setDrawColor, setDrawSize, setDrawTension, setReplacingImageId, setEditorMode, toggleMockupEnabled, setMockupEnabled, registerCropActions, cropApply, cropReset, cropCancel]);
 
   return (
     <EditorContext.Provider value={value}>

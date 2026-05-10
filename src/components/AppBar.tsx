@@ -29,7 +29,7 @@ import { useTheme } from '@sabi-canvas/providers/theme-provider';
 
 export const AppBar: React.FC<AppBarProps> = ({
   logo,
-  title = 'Untitled Design',
+  title = 'Untitled',
   onTitleChange,
   onMenuToggle,
   onUndo,
@@ -79,7 +79,7 @@ export const AppBar: React.FC<AppBarProps> = ({
   };
 
   const commitTitle = () => {
-    const trimmed = editValue.trim() || 'Untitled Design';
+    const trimmed = editValue.trim() || 'Untitled';
     setIsEditingTitle(false);
     onTitleChange?.(trimmed);
   };

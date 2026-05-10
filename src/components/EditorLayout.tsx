@@ -53,6 +53,8 @@ export interface EditorLayoutProps {
    * of falling back to localStorage. Takes priority over templateId / isBlank.
    */
   initialProject?: Project;
+  /** Optional header title override without rehydrating the canvas. */
+  projectTitleOverride?: string;
   /**
    * Custom save callback. When provided, called instead of localStorage on
    * every debounced auto-save. Enables cloud / backend storage.
@@ -114,12 +116,13 @@ export interface EditorLayoutProps {
   drawerTitle?: string;
 }
 
-const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction }) => {
+const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, projectTitleOverride, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction }) => {
   useKeyboardShortcuts();
 
   const {
     isDrawerOpen,
     toggleDrawer,
+    closeDrawer,
     isPropertyPanelOpen,
     togglePropertyPanel,
     isEffectsPanelOpen,
@@ -277,7 +280,19 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
       loadProjectFonts(project.customFonts);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateId]);
+  }, [templateId, initialProject, isBlank, externalProjectId, loadProjectData, loadProjectFonts, setMockupEnabled]);
+
+  // Keep title in sync when host updates metadata without rehydrating canvas state.
+  useEffect(() => {
+    if (projectTitleOverride !== undefined) {
+      setProjectTitle(projectTitleOverride);
+      return;
+    }
+
+    if (initialProject?.title) {
+      setProjectTitle(initialProject.title);
+    }
+  }, [projectTitleOverride, initialProject?.title]);
 
   const getStage = useCallback((): Konva.Stage | null => {
     return stageRef.current?.current ?? null;
@@ -313,8 +328,8 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
   const handleNewProject = useCallback(() => {
     // If a host application controls project creation (e.g. backend routes), let them handle it.
     if (onHostNewProject) {
+      closeDrawer();
       onHostNewProject();
-      if (isDrawerOpen) toggleDrawer();
       return;
     }
 
@@ -338,8 +353,8 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     setMockupEnabled(false);
     
     // Ensure the drawer closes when switching projects internally
-    if (isDrawerOpen) toggleDrawer();
-  }, [onHostNewProject, loadProjectData, canvasSize, setMockupEnabled, isDrawerOpen, toggleDrawer]);
+    closeDrawer();
+  }, [onHostNewProject, closeDrawer, loadProjectData, canvasSize, setMockupEnabled]);
 
   const handleStageRefReady = useCallback((ref: React.RefObject<Konva.Stage>) => {
     stageRef.current = ref;

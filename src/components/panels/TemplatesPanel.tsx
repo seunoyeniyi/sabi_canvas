@@ -206,7 +206,9 @@ const TemplateCard: React.FC<{ template: DesignTemplate; onClick: () => void }> 
 }) => {
     return (
         <button
-            onClick={onClick}
+            onClick={() => {
+                onClick();
+            }}
             className="group relative w-full overflow-hidden rounded-md border border-border/60 hover:border-primary/60 transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
             <div

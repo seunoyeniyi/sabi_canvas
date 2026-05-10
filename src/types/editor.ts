@@ -239,6 +239,7 @@ export interface EditorState {
 export interface EditorContextValue extends EditorState {
   setTheme: (theme: EditorTheme) => void;
   toggleDrawer: () => void;
+  closeDrawer: () => void;
   togglePropertyPanel: () => void;
   toggleEffectsPanel: () => void;
   setActiveTool: (toolId: string | null) => void;
