@@ -449,7 +449,7 @@ const ContextualPropertyContent: React.FC = () => {
             </div>
 
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Cell Padding — {tableObject.cellPadding}px</Label>
+              <Label className="text-xs text-muted-foreground mb-1 block">Cell Padding , {tableObject.cellPadding}px</Label>
               <Slider
                 value={[tableObject.cellPadding]}
                 onValueChange={([val]) => updateTable({ cellPadding: val })}
@@ -506,7 +506,7 @@ const ContextualPropertyContent: React.FC = () => {
             </div>
 
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Font Size — {tableObject.defaultFontSize}px</Label>
+              <Label className="text-xs text-muted-foreground mb-1 block">Font Size , {tableObject.defaultFontSize}px</Label>
               <Slider
                 value={[tableObject.defaultFontSize]}
                 onValueChange={([val]) => updateTable({ defaultFontSize: val })}

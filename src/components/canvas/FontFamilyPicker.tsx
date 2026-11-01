@@ -255,7 +255,7 @@ export const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
     }
 
     preloadTimeoutRef.current = window.setTimeout(() => {
-      // Only preload google fonts — custom fonts are already registered
+      // Only preload google fonts , custom fonts are already registered
       const googleOnly = previewFontFamilies.filter((f) => !isCustomFont(f));
       preloadFonts(googleOnly, {
         concurrency: 2,

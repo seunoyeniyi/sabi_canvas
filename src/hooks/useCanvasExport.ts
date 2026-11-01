@@ -105,7 +105,7 @@ async function addExportBackground(
  * Unlike `stage.toDataURL()`, this excludes the grey viewport outside the canvas.
  *
  * Mirrors the clipping logic in `exportUsingClipping` but at thumbnail resolution
- * and without font-loading overhead — suitable for auto-save previews.
+ * and without font-loading overhead , suitable for auto-save previews.
  */
 export async function captureSafeAreaThumbnail(
   stage: Konva.Stage,
@@ -152,7 +152,7 @@ export async function captureSafeAreaThumbnail(
   exportLayer.draw();
 
   try {
-    // Suppress Konva's internal error logger — tainted cross-origin canvas nodes
+    // Suppress Konva's internal error logger , tainted cross-origin canvas nodes
     // cause Konva to log a SecurityError but it handles it gracefully internally.
     const originalKonvaError = Konva.Util.error.bind(Konva.Util);
     Konva.Util.error = () => undefined;
@@ -430,7 +430,7 @@ export const useCanvasExport = (
     for (const child of children) {
       if (!(child instanceof Konva.Group)) continue;
       if (isSafeAreaGroup(child)) continue;
-      // For print-area export, skip the mockup layer — only customer objects are exported
+      // For print-area export, skip the mockup layer , only customer objects are exported
       if (printAreaBounds && child.name() === 'canvas-mockup-layer') continue;
 
       for (const node of child.getChildren()) {

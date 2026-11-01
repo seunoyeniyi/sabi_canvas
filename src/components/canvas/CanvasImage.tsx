@@ -374,7 +374,7 @@ export const CanvasImage: React.FC<CanvasImageProps> = ({
 
   const handleDblTap = useCallback((e: Konva.KonvaEventObject<Event>) => {
     e.cancelBubble = true;
-    // Disable crop mode on mobile/touch — double-tap misbehaves on touch devices
+    // Disable crop mode on mobile/touch , double-tap misbehaves on touch devices
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (isTouchDevice) return;
     if (onDoubleClick) onDoubleClick(object.id);

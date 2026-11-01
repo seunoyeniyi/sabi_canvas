@@ -82,7 +82,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
     return null;
   }
 
-  // Draw mode bar — shown when in draw mode with no selection
+  // Draw mode bar , shown when in draw mode with no selection
   if (!selectedObject && interactionMode === 'draw') {
     return (
       <div
@@ -239,7 +239,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
 
   const tooltipSide = "bottom";
 
-  // Crop mode takeover bar — shown when actively cropping an image
+  // Crop mode takeover bar , shown when actively cropping an image
   if (isCropMode && isImage && !isSvgImage) {
     const imgObj = selectedObject as ImageObject;
     const hasCrop = imgObj.cropX != null && imgObj.cropWidth != null && (imgObj.cropWidth ?? 0) > 0;
@@ -573,7 +573,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
         </>
       )}
 
-      {/* SVG color palette — shown when the selected image is an SVG with extractable colors */}
+      {/* SVG color palette , shown when the selected image is an SVG with extractable colors */}
       {isImage && !isMultiSelect && selectedImageObject?.svgPalette && selectedImageObject.svgPalette.length > 0 && (
         <>
           {selectedImageObject.svgPalette.map((originalColor, i) => {
@@ -621,7 +621,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
         </>
       )}
 
-      {/* Cell Text Editing Tools — blur prevented via root div's onMouseDown */}
+      {/* Cell Text Editing Tools , blur prevented via root div's onMouseDown */}
       {isTable && !isMultiSelect && (isCellSelected || isEditingTableCell) && (
         <>
           <ColorPickerButton

@@ -27,7 +27,7 @@ interface ProjectsPanelProps {
   onNewProject?: () => void;
   /**
    * External projects list. When provided, the panel renders these instead of
-   * reading from localStorage — enabling database-backed or API-driven lists.
+   * reading from localStorage , enabling database-backed or API-driven lists.
    * Pass an empty array while the host is loading data.
    */
   externalProjects?: Project[];

@@ -17,7 +17,7 @@ interface KonvaCropOverlayProps {
   stageRef: React.RefObject<Konva.Stage>;
   cropRatio: CropRatio;
   onCropRatioChange: (ratio: CropRatio) => void;
-  /** Called when user taps/clicks outside the image area — treated as an apply. */
+  /** Called when user taps/clicks outside the image area , treated as an apply. */
   onApply: () => void;
 }
 
@@ -82,7 +82,7 @@ export const KonvaCropOverlay: React.FC<KonvaCropOverlayProps> = ({
   const cropLocalW = cropRatio.width * imgSW;
   const cropLocalH = cropRatio.height * imgSH;
 
-  // Click-out handler — skip if touch was a stage-pan gesture, otherwise apply.
+  // Click-out handler , skip if touch was a stage-pan gesture, otherwise apply.
   const handleCancel = useCallback(() => {
     if (touchMovedRef.current) {
       touchMovedRef.current = false;
@@ -182,7 +182,7 @@ export const KonvaCropOverlay: React.FC<KonvaCropOverlayProps> = ({
     const handleUp = () => {
       dragStateRef.current = null;
       touchStartPosRef.current = null;
-      // Intentionally NOT resetting touchMovedRef here — it must still be true
+      // Intentionally NOT resetting touchMovedRef here , it must still be true
       // when the `tap` event fires (synchronously after touchend).
     };
 
@@ -238,7 +238,7 @@ export const KonvaCropOverlay: React.FC<KonvaCropOverlayProps> = ({
   return (
     <Layer>
       {/*
-       * 1. Full-stage backdrop — dims everything outside the image.
+       * 1. Full-stage backdrop , dims everything outside the image.
        *    Clicking anywhere outside the image cancels crop mode.
        */}
       <Rect
@@ -274,7 +274,7 @@ export const KonvaCropOverlay: React.FC<KonvaCropOverlayProps> = ({
        *      so handles, dim strips, border and grid all align with the rotation.
        */}
       <Group x={pivotSX} y={pivotSY} rotation={rotation}>
-        {/* 3. Dim strips — image area outside the crop selection */}
+        {/* 3. Dim strips , image area outside the crop selection */}
         {dimRects.map((r) => (
           <Rect
             key={r.key}
@@ -391,7 +391,7 @@ export const KonvaCropOverlay: React.FC<KonvaCropOverlayProps> = ({
           </>
         )}
 
-        {/* 5. Crop border — transparent fill makes it hit-testable for move drag */}
+        {/* 5. Crop border , transparent fill makes it hit-testable for move drag */}
         <Rect
           x={cropLocalX}
           y={cropLocalY}

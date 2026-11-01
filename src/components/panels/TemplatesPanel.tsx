@@ -127,7 +127,7 @@ export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ onClose }) => {
 
     return (
         <div className="h-full flex flex-col overflow-hidden">
-            {/* Category pills — sticky, never scrolls away */}
+            {/* Category pills , sticky, never scrolls away */}
             <div className="flex-shrink-0 pb-2 space-y-2">
                 <div className="w-full overflow-x-auto pb-1 hide-scrollbar scroll-smooth">
                     <div className="flex items-center gap-1.5 pr-2 min-w-max">
@@ -148,7 +148,7 @@ export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ onClose }) => {
                     </div>
                 </div>
 
-                {/* Same-size toggle — hidden in customer mode since templates always scale to print area */}
+                {/* Same-size toggle , hidden in customer mode since templates always scale to print area */}
                 {isCustomerMode ? (
                     <p className="text-[11px] text-muted-foreground leading-none">
                         Templates will be scaled into your print area

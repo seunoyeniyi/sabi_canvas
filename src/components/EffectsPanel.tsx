@@ -137,7 +137,7 @@ const BidirectionalSlider: React.FC<{
           style={{ left: `${thumbPct}%`, transform: 'translateX(-50%)' }}
         />
 
-        {/* Invisible native range input — handles all interaction */}
+        {/* Invisible native range input , handles all interaction */}
         <input
           type="range"
           min={min}

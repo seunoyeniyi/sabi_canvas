@@ -213,7 +213,7 @@ export const DownloadDialog: React.FC<DownloadDialogProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
-          {/* Export type toggle — only shown when a print area exists */}
+          {/* Export type toggle , only shown when a print area exists */}
           {printAreaBounds && (
             <>
               <div className="space-y-2.5">
@@ -268,7 +268,7 @@ export const DownloadDialog: React.FC<DownloadDialogProps> = ({
                       ))}
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Exports the customer design within the print area — transparent background.
+                      Exports the customer design within the print area , transparent background.
                     </p>
                   </>
                 )}
@@ -309,7 +309,7 @@ export const DownloadDialog: React.FC<DownloadDialogProps> = ({
                 </div>
               </div>
 
-              {/* File Type — hidden in print-area mode (always PNG) */}
+              {/* File Type , hidden in print-area mode (always PNG) */}
               {!isPrintAreaMode && (
               <div className="space-y-2.5">
                 <Label className="text-sm font-medium">File type</Label>

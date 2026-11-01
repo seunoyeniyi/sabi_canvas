@@ -43,7 +43,7 @@ export interface AppBarAction {
 /**
  * Configuration for the primary save/publish action button rendered in the
  * AppBar just before the Download button. The label and behaviour are fully
- * controlled by the host application — a typical pattern is "Publish" when the
+ * controlled by the host application , a typical pattern is "Publish" when the
  * item is a draft and "Save" when it is already published.
  */
 export interface AppBarSaveAction {
@@ -228,11 +228,11 @@ export interface EditorState {
   drawColor: string;
   drawSize: number;
   drawTension: number;
-  // Image replace mode — ID of the image object currently being replaced, null otherwise
+  // Image replace mode , ID of the image object currently being replaced, null otherwise
   replacingImageId: string | null;
   // Print-on-demand editor mode
   editorMode: EditorMode;
-  // POD mockup feature — off by default, must be manually enabled
+  // POD mockup feature , off by default, must be manually enabled
   isMockupEnabled: boolean;
 }
 

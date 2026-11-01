@@ -68,7 +68,7 @@ export const useImageUpload = ({
             const dataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgText)));
             onImageLoaded(dataUrl, normalized.width, normalized.height);
           } catch {
-            // Fallback to Cloudinary URL if fetch fails — color editing won't work
+            // Fallback to Cloudinary URL if fetch fails , color editing won't work
             // but the image will still display.
             onImageLoaded(uploaded.src, normalized.width, normalized.height);
           }

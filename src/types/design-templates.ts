@@ -7,7 +7,7 @@ export interface DesignTemplate {
   // Metadata
   id: string;
   name: string;
-  /** Cloudinary URL — leave empty until manually set after upload */
+  /** Cloudinary URL , leave empty until manually set after upload */
   thumbnail: string;
   canvasWidth: number;
   canvasHeight: number;

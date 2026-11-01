@@ -1,5 +1,5 @@
 /**
- * Sabi Canvas — Public API
+ * Sabi Canvas , Public API
  *
  * A powerful, open-source canvas design editor framework
  * built with React and Konva.

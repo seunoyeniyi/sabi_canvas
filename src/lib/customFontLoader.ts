@@ -15,7 +15,7 @@ const dataUrlToBuffer = (dataUrl: string): ArrayBuffer => {
 };
 
 export const registerCustomFont = async (font: CustomFont): Promise<void> => {
-  // Sanitize at registration time — guards against fonts already stored in
+  // Sanitize at registration time , guards against fonts already stored in
   // localStorage with names containing commas or other CSS-unsafe characters.
   const family = sanitizeFontFamilyName(font.family);
 
@@ -28,7 +28,7 @@ export const registerCustomFont = async (font: CustomFont): Promise<void> => {
     try {
       await document.fonts.load(`16px "${family}"`, 'Aa');
     } catch {
-      // Non-fatal — font is in document.fonts, Canvas 2D will still use it.
+      // Non-fatal , font is in document.fonts, Canvas 2D will still use it.
     }
 
     markFontAsLoaded(family);

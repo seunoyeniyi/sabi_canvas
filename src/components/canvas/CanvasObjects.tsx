@@ -344,7 +344,7 @@ export const CanvasObjects: React.FC<CanvasObjectsProps> = ({
       return <Group key={object.id} listening={false}>{node}</Group>;
     };
 
-    // Print area: dedicated renderer — handles its own listening/interaction per mode
+    // Print area: dedicated renderer , handles its own listening/interaction per mode
     if (object.type === 'print-area') {
       const handleObjectDragStart = createDragStartHandler(object);
       return (

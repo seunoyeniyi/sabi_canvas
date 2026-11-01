@@ -96,7 +96,7 @@ export const useAutoSave = ({
   }, [customFonts]);
 
   useEffect(() => {
-    // Skip the very first mount render — we don't want to overwrite a project
+    // Skip the very first mount render , we don't want to overwrite a project
     // the moment the editor mounts before the parent has a chance to load a project from storage.
     if (isFirstMountRef.current) {
       isFirstMountRef.current = false;
@@ -111,7 +111,7 @@ export const useAutoSave = ({
     }
 
     // Guard: if an external onSave handler is registered but projectId is null,
-    // we have no valid backend ID to write to — skip until projectId is available.
+    // we have no valid backend ID to write to , skip until projectId is available.
     if (onSaveRef.current && projectIdRef.current === null) {
       return;
     }
@@ -182,7 +182,7 @@ export const useAutoSave = ({
       }
 
       if (onSaveRef.current) {
-        // External (cloud) save path — caller owns storage
+        // External (cloud) save path , caller owns storage
         onSaveRef.current(project).then(() => {
           onSaved?.();
         }).catch(() => {
@@ -195,7 +195,7 @@ export const useAutoSave = ({
         onSaved?.();
       }
     }, DEBOUNCE_MS);
-  // contentKey changes only when objects/background/page-structure change — not on zoom/pan
+  // contentKey changes only when objects/background/page-structure change , not on zoom/pan
   // customFontsKey ensures custom font add/delete is persisted even without object edits
   // projectTitle and isMockupEnabled are tracked via refs for the callback but also in deps to trigger saves
   // eslint-disable-next-line react-hooks/exhaustive-deps

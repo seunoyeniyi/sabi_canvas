@@ -34,7 +34,7 @@ const writeFonts = (fonts: CustomFont[]): void => {
   try {
     localStorage.setItem(CUSTOM_FONTS_STORAGE_KEY, JSON.stringify(fonts));
   } catch {
-    // Storage quota exceeded — silently ignore. Fonts remain in session only.
+    // Storage quota exceeded , silently ignore. Fonts remain in session only.
   }
 };
 

@@ -21,7 +21,7 @@ export const CUSTOM_FONT_ACCEPT = '.ttf,.otf,.woff,.woff2,font/ttf,font/otf,font
 /**
  * Sanitize a raw string into a valid CSS font-family name.
  * Commas, semicolons, braces, and other characters that have special meaning
- * in CSS font lists will break font registration — strip them out.
+ * in CSS font lists will break font registration , strip them out.
  */
 export const sanitizeFontFamilyName = (name: string): string =>
   name

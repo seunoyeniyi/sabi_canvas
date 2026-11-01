@@ -270,7 +270,7 @@ export const getFontDefinition = (fontFamily: string): GoogleFontDefinition | un
 };
 
 // ---------------------------------------------------------------------------
-// Custom font registry — populated at runtime when users upload fonts
+// Custom font registry , populated at runtime when users upload fonts
 // ---------------------------------------------------------------------------
 
 const customFontRegistry = new Map<string, GoogleFontDefinition>();

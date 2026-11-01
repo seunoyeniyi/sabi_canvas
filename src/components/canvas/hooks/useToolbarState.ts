@@ -162,8 +162,8 @@ export const useToolbarState = ({
   const isEditingTableCell = isTable && !!editingTableCell;
 
   // Cells that are "active" for property operations:
-  // — while text-editing: the single editing cell
-  // — otherwise: all selected cells (from single/shift click)
+  // , while text-editing: the single editing cell
+  // , otherwise: all selected cells (from single/shift click)
   const activeCells = useMemo(() => {
     if (!isTable) return [];
     if (editingTableCell) return [editingTableCell];

@@ -117,7 +117,7 @@ export const CanvasTable: React.FC<CanvasTableProps> = ({
       const clampedDx = Math.max(minDx, Math.min(maxDx, dx));
       const newBoundaryX =
         startWidths.slice(0, colIndex + 1).reduce((s, w) => s + w, 0) + clampedDx;
-      // Move divider visually — no React update, no re-render
+      // Move divider visually , no React update, no re-render
       e.target.x(newBoundaryX - DIVIDER_HIT_SIZE / 2);
       e.target.y(0);
     },
@@ -339,7 +339,7 @@ export const CanvasTable: React.FC<CanvasTableProps> = ({
                   perfectDrawEnabled={false}
                 />
               )}
-              {/* Cell text — hidden for the actively edited cell */}
+              {/* Cell text , hidden for the actively edited cell */}
               {!isActiveCell && (
                 <Text
                   x={x + object.cellPadding}

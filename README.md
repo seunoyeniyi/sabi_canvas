@@ -1,25 +1,25 @@
 # Sabi Canvas
 
-A powerful, open-source canvas design editor framework built with React and Konva. Sabi Canvas gives developers a full-featured graphic design editor — shapes, images, text, fonts, templates, layers, undo/redo, export to PDF/PNG — ready to embed in any React application.
+A powerful, open-source canvas design editor framework built with React and Konva. Sabi Canvas gives developers a full-featured graphic design editor , shapes, images, text, fonts, templates, layers, undo/redo, export to PDF/PNG , ready to embed in any React application.
 
 ## Features
 
-- **Konva-powered canvas** — high-performance 2D rendering
-- **Rich text editing** — multiple fonts, sizes, colors, alignment
-- **Image management** — upload, crop, background removal, drag-drop
-- **Shape library** — rectangles, circles, polygons, custom SVG shapes
-- **Design templates** — pre-built templates with full customization
-- **Layer management** — reorder, group, lock, hide layers
-- **Undo/Redo** — full history management
-- **Export** — PDF and PNG export with configurable DPI
-- **Auto-save** — project persistence via localStorage
-- **Dark/Light mode** — full theme support
-- **AI writing** — AI-powered text assistant (OpenAI, Gemini, Claude, Deepseek, Grok)
-- **Photo search** — Unsplash integration
-- **Graphics search** — Pixabay transparent illustrations
-- **Background removal** — Cloudinary-powered
-- **Google Fonts** — dynamic font catalog via Google Fonts API
-- **Mobile responsive** — works on desktop and mobile
+- **Konva-powered canvas** , high-performance 2D rendering
+- **Rich text editing** , multiple fonts, sizes, colors, alignment
+- **Image management** , upload, crop, background removal, drag-drop
+- **Shape library** , rectangles, circles, polygons, custom SVG shapes
+- **Design templates** , pre-built templates with full customization
+- **Layer management** , reorder, group, lock, hide layers
+- **Undo/Redo** , full history management
+- **Export** , PDF and PNG export with configurable DPI
+- **Auto-save** , project persistence via localStorage
+- **Dark/Light mode** , full theme support
+- **AI writing** , AI-powered text assistant (OpenAI, Gemini, Claude, Deepseek, Grok)
+- **Photo search** , Unsplash integration
+- **Graphics search** , Pixabay transparent illustrations
+- **Background removal** , Cloudinary-powered
+- **Google Fonts** , dynamic font catalog via Google Fonts API
+- **Mobile responsive** , works on desktop and mobile
 
 ---
 
@@ -55,7 +55,7 @@ function DesignEditorPage() {
 
 ## API Keys & Runtime Configuration
 
-Features like photo search, AI writing, and background removal require external API keys. Because sabi-canvas is a **pre-built npm package**, it cannot read your `.env` file directly — Vite evaluates `import.meta.env` at _your_ project's build time, not the package's.
+Features like photo search, AI writing, and background removal require external API keys. Because sabi-canvas is a **pre-built npm package**, it cannot read your `.env` file directly , Vite evaluates `import.meta.env` at _your_ project's build time, not the package's.
 
 ### How it works
 
@@ -119,19 +119,19 @@ function App() {
 
 ```ts
 interface SabiCanvasConfig {
-  /** Unsplash API access key — photo search/browse panel */
+  /** Unsplash API access key , photo search/browse panel */
   unsplashAccessKey?: string;
 
-  /** Pixabay API key — transparent graphics/illustrations panel */
+  /** Pixabay API key , transparent graphics/illustrations panel */
   pixabayApiKey?: string;
 
-  /** Google Fonts API key — enables dynamic full font catalog */
+  /** Google Fonts API key , enables dynamic full font catalog */
   googleFontsApiKey?: string;
 
-  /** Cloudinary cloud name — background removal feature */
+  /** Cloudinary cloud name , background removal feature */
   cloudinaryCloudName?: string;
 
-  /** Cloudinary unsigned upload preset — background removal feature */
+  /** Cloudinary unsigned upload preset , background removal feature */
   cloudinaryUploadPreset?: string;
 
   /** AI writing assistant config */
@@ -139,7 +139,7 @@ interface SabiCanvasConfig {
     /** Active provider: 'openai' | 'gemini' | 'claude' | 'deepseek' | 'grok'. Default: 'openai' */
     provider?: string;
 
-    /** Global model override — used when a provider-specific model is not set */
+    /** Global model override , used when a provider-specific model is not set */
     model?: string;
 
     openai?:    { apiKey?: string; model?: string };
@@ -204,7 +204,7 @@ VITE_GOOGLE_FONTS_API_KEY=...
 VITE_CLOUDINARY_CLOUD_NAME=...
 VITE_CLOUDINARY_UPLOAD_PRESET=...
 
-# AI writing — choose one provider
+# AI writing , choose one provider
 VITE_AI_PROVIDER=openai          # openai | gemini | claude | deepseek | grok
 
 # OpenAI
@@ -236,35 +236,35 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `config` | `SabiCanvasConfig` | — | Runtime API keys (see above) |
+| `config` | `SabiCanvasConfig` | , | Runtime API keys (see above) |
 | `isBlank` | `boolean` | `false` | Start with a blank canvas |
-| `templateId` | `string` | — | Load a built-in template by ID |
-| `projectId` | `string` | — | Backend design ID. When set, auto-save calls `onSave` instead of writing to localStorage |
-| `initialProject` | `Project` | — | Pre-loaded design data to hydrate the editor (e.g. fetched from your API on open) |
-| `onSave` | `(project: Project) => Promise<void>` | — | Called on every auto-save. Receives the full project object. Use to PATCH your backend |
-| `externalProjects` | `Project[]` | — | External projects list for the sidebar Projects panel. When provided, replaces localStorage. Pass `[]` while loading |
+| `templateId` | `string` | , | Load a built-in template by ID |
+| `projectId` | `string` | , | Backend design ID. When set, auto-save calls `onSave` instead of writing to localStorage |
+| `initialProject` | `Project` | , | Pre-loaded design data to hydrate the editor (e.g. fetched from your API on open) |
+| `onSave` | `(project: Project) => Promise<void>` | , | Called on every auto-save. Receives the full project object. Use to PATCH your backend |
+| `externalProjects` | `Project[]` | , | External projects list for the sidebar Projects panel. When provided, replaces localStorage. Pass `[]` while loading |
 | `isLoadingProjects` | `boolean` | `false` | Show a loading spinner in the Projects panel while fetching |
-| `onDeleteProject` | `(id: string) => Promise<void> \| void` | — | Called when the user confirms deletion from the Projects panel. Remove the item from `externalProjects` in your handler |
-| `onRefreshProjects` | `() => void` | — | Called on Projects panel mount and when the user clicks the refresh button |
-| `onSelectProject` | `(project: Project) => void` | — | When provided, clicking a project calls this instead of loading it into the current canvas. Use to navigate to another design |
+| `onDeleteProject` | `(id: string) => Promise<void> \| void` | , | Called when the user confirms deletion from the Projects panel. Remove the item from `externalProjects` in your handler |
+| `onRefreshProjects` | `() => void` | , | Called on Projects panel mount and when the user clicks the refresh button |
+| `onSelectProject` | `(project: Project) => void` | , | When provided, clicking a project calls this instead of loading it into the current canvas. Use to navigate to another design |
 | `hideTitle` | `boolean` | `false` | Hide the project title in the app bar |
-| `config.uploadImageFile` | `(file, options?) => Promise<{ src; width?; height?; }>` | — | Optional host upload adapter. Use your own backend/cloud provider and return a hosted image URL |
-| `config.uploadFontFile` | `(file) => Promise<{ src; publicId?; }>` | — | Optional host font upload adapter. Return a hosted URL and optional backend file id |
-| `config.deleteFontFile` | `({ src?, publicId? }) => Promise<void>` | — | Optional host font delete adapter. Called when a custom font is deleted |
-| `config.listRecentUploads` | `({ limit? }) => Promise<Array<{ src; width?; height?; ... }>>` | — | Optional adapter to load Upload panel history from your backend |
-| `config.deleteRecentUpload` | `(upload) => Promise<void>` | — | Optional adapter used by the drawer Uploads panel to delete a backend upload by metadata (e.g. publicId/resourceType) |
+| `config.uploadImageFile` | `(file, options?) => Promise<{ src; width?; height?; }>` | , | Optional host upload adapter. Use your own backend/cloud provider and return a hosted image URL |
+| `config.uploadFontFile` | `(file) => Promise<{ src; publicId?; }>` | , | Optional host font upload adapter. Return a hosted URL and optional backend file id |
+| `config.deleteFontFile` | `({ src?, publicId? }) => Promise<void>` | , | Optional host font delete adapter. Called when a custom font is deleted |
+| `config.listRecentUploads` | `({ limit? }) => Promise<Array<{ src; width?; height?; ... }>>` | , | Optional adapter to load Upload panel history from your backend |
+| `config.deleteRecentUpload` | `(upload) => Promise<void>` | , | Optional adapter used by the drawer Uploads panel to delete a backend upload by metadata (e.g. publicId/resourceType) |
 | `config.disableRecentUploadsLocalStorage` | `boolean` | `false` | Disable localStorage for recent uploads and keep the list memory-only |
 | `config.disableCustomFontsLocalStorage` | `boolean` | `false` | Disable localStorage for custom fonts state in sabi_canvas |
 | `config.disableRecentFontsLocalStorage` | `boolean` | `false` | Disable localStorage for recent font picks in FontFamilyPicker |
-| `saveAction` | `AppBarSaveAction` | — | Optional custom action button rendered in the app bar before the Download button. Useful for "Save", "Publish", or any app-specific primary action. See below. |
+| `saveAction` | `AppBarSaveAction` | , | Optional custom action button rendered in the app bar before the Download button. Useful for "Save", "Publish", or any app-specific primary action. See below. |
 | `enableJsonDevTools` | `boolean` | `false` | Show JSON inspector panel (dev only) |
-| `className` | `string` | — | Extra CSS class on the root element |
+| `className` | `string` | , | Extra CSS class on the root element |
 
 ---
 
 ## App Bar Custom Action (`saveAction`)
 
-The `saveAction` prop lets you inject a custom button into the editor app bar — immediately before the Download button — without modifying the package. Use it for app-level actions like "Save", "Publish", or "Submit for Review".
+The `saveAction` prop lets you inject a custom button into the editor app bar , immediately before the Download button , without modifying the package. Use it for app-level actions like "Save", "Publish", or "Submit for Review".
 
 ### `AppBarSaveAction` type
 
@@ -288,7 +288,7 @@ interface AppBarSaveAction {
 }
 ```
 
-### Example — dynamic Save / Publish button
+### Example , dynamic Save / Publish button
 
 ```tsx
 import { Save } from 'lucide-react';
@@ -325,7 +325,7 @@ The button is also rendered in the mobile toolbar with the icon visible and the 
 
 ---
 
-## Projects Panel — External Data
+## Projects Panel , External Data
 
 By default the Projects panel reads from **localStorage**. To replace it with a backend-driven list, pass `externalProjects`:
 
@@ -347,7 +347,7 @@ By default the Projects panel reads from **localStorage**. To replace it with a 
 />
 ```
 
-When `externalProjects` is provided the panel **never touches localStorage**. When it is omitted the original localStorage behaviour is preserved — so package consumers who don't use a backend are unaffected.
+When `externalProjects` is provided the panel **never touches localStorage**. When it is omitted the original localStorage behaviour is preserved , so package consumers who don't use a backend are unaffected.
 
 ---
 
@@ -418,9 +418,9 @@ Notes:
 
 ### How it works
 
-- **`projectId`** — tells the editor which backend record to update. When set, auto-save routes through `onSave` rather than localStorage.
-- **`initialProject`** — hydrates the editor with existing design data fetched from your API before opening.
-- **`onSave`** — called after each debounced change (1.5 s). Receives a `Project` object containing `pages`, `thumbnail`, `canvasSize`, `activePageId`, `customFonts`, and `isMockupEnabled`.
+- **`projectId`** , tells the editor which backend record to update. When set, auto-save routes through `onSave` rather than localStorage.
+- **`initialProject`** , hydrates the editor with existing design data fetched from your API before opening.
+- **`onSave`** , called after each debounced change (1.5 s). Receives a `Project` object containing `pages`, `thumbnail`, `canvasSize`, `activePageId`, `customFonts`, and `isMockupEnabled`.
 
 > **Important**: `onSave` is only called once `projectId` is a non-null string. If `projectId` is not yet set (e.g. while the backend record is being created), auto-save is suppressed to prevent writes with no valid target.
 
@@ -441,7 +441,7 @@ function DesignEditor({ designId }: { designId: string }) {
       .then((data) => setInitialProject(data)); // map to Project shape if needed
   }, [designId]);
 
-  // 2. Handle auto-save — called every ~1.5 s after a change
+  // 2. Handle auto-save , called every ~1.5 s after a change
   const handleSave = async (project: Project) => {
     await fetch(`/api/canvas/designs/${designId}`, {
       method: 'PATCH',
@@ -479,7 +479,7 @@ When you want to open a built-in template and immediately persist it to your bac
 // 1. Create the backend record (empty pages at this point)
 const design = await fetch('/api/canvas/designs', { method: 'POST', ... }).then(r => r.json());
 
-// 2. Open editor with both props — template loads visually, auto-save
+// 2. Open editor with both props , template loads visually, auto-save
 //    writes to the correct backend record from the first save onward.
 <EditorLayout
   config={editorConfig}

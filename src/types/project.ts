@@ -10,7 +10,7 @@ export const DEFAULT_PROJECT_TITLE = 'Untitled';
 export const generateProjectId = (): string =>
   `proj_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
-/** A CanvasPage without undo/redo history — safe to persist */
+/** A CanvasPage without undo/redo history , safe to persist */
 export interface ProjectPage {
   id: string;
   name: string;

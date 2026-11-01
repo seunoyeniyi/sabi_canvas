@@ -22,7 +22,7 @@ const writeStore = (store: ProjectsStore): void => {
   try {
     localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(store));
   } catch {
-    // quota exceeded or private browsing — silently skip
+    // quota exceeded or private browsing , silently skip
   }
 };
 

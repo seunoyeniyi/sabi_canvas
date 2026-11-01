@@ -4,9 +4,134 @@ import { Check, ChevronRight, Circle } from "lucide-react";
 
 import { cn } from "@sabi-canvas/lib/utils";
 
-const DropdownMenu = DropdownMenuPrimitive.Root;
+interface DropdownMenuContextValue {
+  open: boolean;
+  setOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+  toggle: () => void;
+}
 
-const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
+const DropdownMenuContext = React.createContext<DropdownMenuContextValue | null>(null);
+
+const DropdownMenu: React.FC<
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Root>
+> = ({
+  open: openProp,
+  defaultOpen = false,
+  onOpenChange,
+  children,
+  ...props
+}) => {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : uncontrolledOpen;
+
+  const setOpen = React.useCallback(
+    (next: boolean | ((prev: boolean) => boolean)) => {
+      const resolved = typeof next === "function" ? next(open) : next;
+      if (!isControlled) {
+        setUncontrolledOpen(resolved);
+      }
+      onOpenChange?.(resolved);
+    },
+    [isControlled, open, onOpenChange],
+  );
+
+  const toggle = React.useCallback(() => {
+    setOpen((prev) => !prev);
+  }, [setOpen]);
+
+  return (
+    <DropdownMenuContext.Provider value={{ open, setOpen, toggle }}>
+      <DropdownMenuPrimitive.Root
+        open={open}
+        onOpenChange={setOpen}
+        {...props}
+      >
+        {children}
+      </DropdownMenuPrimitive.Root>
+    </DropdownMenuContext.Provider>
+  );
+};
+DropdownMenu.displayName = DropdownMenuPrimitive.Root.displayName;
+
+const DropdownMenuTrigger = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger>
+>(({ onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onClick, disabled, ...props }, forwardedRef) => {
+  const menuContext = React.useContext(DropdownMenuContext);
+  const touchStateRef = React.useRef<{
+    startX: number;
+    startY: number;
+    startTime: number;
+    isDrag: boolean;
+  } | null>(null);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    onPointerDown?.(event);
+    if (disabled || event.defaultPrevented) return;
+
+    if (event.pointerType === "touch" || event.pointerType === "pen") {
+      // Prevent Radix's internal onPointerDown from popping the menu immediately on touch start / scroll.
+      event.preventDefault();
+      touchStateRef.current = {
+        startX: event.clientX,
+        startY: event.clientY,
+        startTime: Date.now(),
+        isDrag: false,
+      };
+    }
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    onPointerMove?.(event);
+    if (disabled || !touchStateRef.current) return;
+
+    const deltaX = Math.abs(event.clientX - touchStateRef.current.startX);
+    const deltaY = Math.abs(event.clientY - touchStateRef.current.startY);
+    if (deltaX > 8 || deltaY > 8) {
+      touchStateRef.current.isDrag = true;
+    }
+  };
+
+  const handlePointerCancel = (event: React.PointerEvent<HTMLButtonElement>) => {
+    onPointerCancel?.(event);
+    touchStateRef.current = null;
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
+    onPointerUp?.(event);
+    if (disabled || event.defaultPrevented) return;
+
+    if (event.pointerType === "touch" || event.pointerType === "pen") {
+      const state = touchStateRef.current;
+      touchStateRef.current = null;
+      if (state && !state.isDrag) {
+        // Clean tap detected without dragging -> toggle the menu
+        if (menuContext) {
+          menuContext.toggle();
+        }
+      }
+    }
+  };
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    onClick?.(event);
+  };
+
+  return (
+    <DropdownMenuPrimitive.Trigger
+      ref={forwardedRef}
+      disabled={disabled}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerCancel={handlePointerCancel}
+      onPointerUp={handlePointerUp}
+      onClick={handleClick}
+      {...props}
+    />
+  );
+});
+DropdownMenuTrigger.displayName = DropdownMenuPrimitive.Trigger.displayName;
 
 const DropdownMenuGroup = DropdownMenuPrimitive.Group;
 

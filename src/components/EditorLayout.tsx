@@ -452,7 +452,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     addObject(printArea);
   }, [addObject, canvasSize]);
 
-  // AppBar center: mode toggle + add print area — only shown when mockup feature is enabled
+  // AppBar center: mode toggle + add print area , only shown when mockup feature is enabled
   const appBarCenterContent = isMockupEnabled ? (
     <div className="flex items-center gap-2">
       <div className="flex items-center rounded-full border border-border bg-muted p-0.5 text-sm">

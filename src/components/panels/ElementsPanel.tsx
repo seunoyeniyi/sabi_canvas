@@ -96,7 +96,7 @@ export const ElementsPanel: React.FC<ElementsPanelProps> = ({ onClose }) => {
       return;
     }
 
-    // Standard shapes — pass no position so addShape auto-centers
+    // Standard shapes , pass no position so addShape auto-centers
     addShape(shape.type as CanvasObjectType);
     onClose();
   }, [addObject, addShape, onClose, getCustomerModePlacement]);

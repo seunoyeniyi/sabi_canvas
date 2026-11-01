@@ -36,15 +36,15 @@ export interface SabiCanvasRecentUpload extends SabiCanvasUploadedImage {
 }
 
 export interface SabiCanvasConfig {
-  /** Unsplash API access key — for photo search/browse in the editor */
+  /** Unsplash API access key , for photo search/browse in the editor */
   unsplashAccessKey?: string;
-  /** Pixabay API key — for transparent graphics/illustrations in the editor */
+  /** Pixabay API key , for transparent graphics/illustrations in the editor */
   pixabayApiKey?: string;
-  /** Google Fonts API key — enables dynamic font catalog from Google Fonts API */
+  /** Google Fonts API key , enables dynamic font catalog from Google Fonts API */
   googleFontsApiKey?: string;
-  /** Cloudinary cloud name — for background-removal feature */
+  /** Cloudinary cloud name , for background-removal feature */
   cloudinaryCloudName?: string;
-  /** Cloudinary unsigned upload preset — for background-removal feature */
+  /** Cloudinary unsigned upload preset , for background-removal feature */
   cloudinaryUploadPreset?: string;
   /** AI writing assistant configuration */
   ai?: SabiCanvasAIConfig;
@@ -95,7 +95,7 @@ export interface SabiCanvasConfig {
 }
 
 // ---------------------------------------------------------------------------
-// Module-level store — allows plain (non-React) modules to read config
+// Module-level store , allows plain (non-React) modules to read config
 // ---------------------------------------------------------------------------
 let _moduleConfig: SabiCanvasConfig = {};
 

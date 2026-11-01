@@ -15,8 +15,8 @@ interface TableBorderButtonProps {
 }
 
 const BORDER_STYLES: { value: TableBorderStyle; label: string; preview: string }[] = [
-  { value: 'none',   label: 'None',   preview: '—' },
-  { value: 'solid',  label: 'Solid',  preview: '—' },
+  { value: 'none',   label: 'None',   preview: ',' },
+  { value: 'solid',  label: 'Solid',  preview: ',' },
   { value: 'dashed', label: 'Dashed', preview: '- -' },
   { value: 'dotted', label: 'Dotted', preview: '···' },
 ];
@@ -170,7 +170,7 @@ export const TableBorderButton: React.FC<TableBorderButtonProps> = ({ border, on
         {/* Border width */}
         <div>
           <Label className="text-xs text-muted-foreground mb-1 block">
-            Width — {border.width}px
+            Width , {border.width}px
           </Label>
           <Slider
             min={0.5}

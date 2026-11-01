@@ -233,7 +233,7 @@ const quotePresets: TextTemplatePreset[] = [
         lineHeight: 1.45,
       },
       {
-        text: '— Walt Disney',
+        text: ', Walt Disney',
         fontFamily: 'Cormorant Garamond',
         fontSize: 36,
         fontStyle: 'bold',
@@ -301,7 +301,7 @@ const quotePresets: TextTemplatePreset[] = [
         lineHeight: 1.5,
       },
       {
-        text: '— Winston Churchill',
+        text: ', Winston Churchill',
         fontFamily: 'Lora',
         fontSize: 30,
         fontStyle: 'bold',
@@ -334,7 +334,7 @@ const quotePresets: TextTemplatePreset[] = [
         lineHeight: 1.45,
       },
       {
-        text: '— Cherish Every Moment',
+        text: ', Cherish Every Moment',
         fontFamily: 'Josefin Sans',
         fontSize: 28,
         fontStyle: 'normal',
@@ -368,7 +368,7 @@ const quotePresets: TextTemplatePreset[] = [
         lineHeight: 1.55,
       },
       {
-        text: '— Steve Jobs',
+        text: ', Steve Jobs',
         fontFamily: 'Oswald',
         fontSize: 30,
         fontStyle: 'normal',
@@ -402,7 +402,7 @@ const quotePresets: TextTemplatePreset[] = [
         lineHeight: 1.6,
       },
       {
-        text: '— Earl Nightingale',
+        text: ', Earl Nightingale',
         fontFamily: 'Cinzel',
         fontSize: 28,
         fontStyle: 'normal',

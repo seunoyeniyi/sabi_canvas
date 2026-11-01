@@ -132,7 +132,7 @@ export const useKeyboardShortcuts = (): void => {
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedIds.length > 0) {
         event.preventDefault();
         if (isMockupEnabled && editorMode === 'customer') {
-          // Guard: only delete objects the customer owns — never touch mockup-role objects
+          // Guard: only delete objects the customer owns , never touch mockup-role objects
           const customerSelected = selectedIds.filter((id) => {
             const obj = objects.find((o) => o.id === id);
             return obj?.objectRole === 'customer';

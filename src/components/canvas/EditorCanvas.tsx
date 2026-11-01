@@ -121,7 +121,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
   const isDrawingRef = useRef(false);
   const liveDrawPointsRef = useRef<number[]>([]);
 
-  // Crop mode ratio state — lifted here so the Konva layer and HTML buttons share it
+  // Crop mode ratio state , lifted here so the Konva layer and HTML buttons share it
   const [cropRatio, setCropRatio] = useState<CropRatio | null>(null);
 
   // Drag-drop images functionality
@@ -682,7 +682,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
 
     // Register inline style applier
     const applyFn = (cmd: string, value?: string) => {
-      // Capture the range BEFORE focus — el.focus() may fire selectionchange
+      // Capture the range BEFORE focus , el.focus() may fire selectionchange
       // synchronously and overwrite savedSelectionRef.current before we can use it.
       const rangeToRestore = savedSelectionRef.current;
       el.focus();
@@ -841,7 +841,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
 
     // Register inline style applier
     const applyFn = (cmd: string, value?: string) => {
-      // Capture the range BEFORE focus — el.focus() may fire selectionchange
+      // Capture the range BEFORE focus , el.focus() may fire selectionchange
       // synchronously and overwrite shapeSavedSelectionRef.current before we can use it.
       const rangeToRestore = shapeSavedSelectionRef.current;
       el.focus();
@@ -1076,7 +1076,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
   }, [editingTextId, editingValue, commitInlineTextEdit, editingShapeTextId, commitInlineShapeTextEdit, mode, interactive, handleTouchStart, isTouchGestureLocked, isMobile, isDesktop, isNodeWithinSelection, cancelActiveObjectDrags, safeAreaRect, dimensions, deselectAll, activeToolPanel, setActiveToolPanel]);
 
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
-    if (editingTextId) return; // move events are fine to skip — the pointerDown already committed the edit
+    if (editingTextId) return; // move events are fine to skip , the pointerDown already committed the edit
 
     // While locked, only pinch/pan viewport and skip object/selection interactions.
     if (e.type === 'touchmove' && interactive && handleTouchMove) {
@@ -1158,12 +1158,12 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
   }, [editingTextId, selectionRect.visible, interactive, handleTouchMove, isTouchGestureLocked, isMobile, mode, setPosition, safeAreaRect, dimensions]);
 
   const handlePointerUp = useCallback((e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
-    if (editingTextId) return; // up events are fine to skip — the pointerDown already committed the edit
+    if (editingTextId) return; // up events are fine to skip , the pointerDown already committed the edit
 
     // Keep gesture lock active until all fingers are lifted.
     if ((e.type === 'touchend' || e.type === 'touchcancel') && interactive && handleTouchEnd) {
       const touchEvent = e.evt as TouchEvent;
-      // touchcancel clears the touches list — treat as zero remaining fingers
+      // touchcancel clears the touches list , treat as zero remaining fingers
       const remainingTouches = e.type === 'touchcancel' ? 0 : touchEvent.touches.length;
       const wasSingleTouchStagePanActive = singleTouchStagePanRef.current.active;
       const didSingleTouchStagePanMove = singleTouchStagePanRef.current.moved;
@@ -1498,7 +1498,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
             )}
           </Layer>
 
-          {/* Crop overlay — rendered as a Konva Layer so it lives inside the canvas */}
+          {/* Crop overlay , rendered as a Konva Layer so it lives inside the canvas */}
           {isCropMode && selectedObject?.type === 'image' && cropRatio && (
             <KonvaCropOverlay
               object={selectedObject as ImageObject}
@@ -1582,7 +1582,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
               // Radix popovers render in a portal; the popper content wrapper is identifiable
               if (target.closest?.('[data-radix-popper-content-wrapper]')) return;
             } else {
-              // null relatedTarget: likely a Radix portal opening — defer to let focus settle
+              // null relatedTarget: likely a Radix portal opening , defer to let focus settle
               contentBlurTimeoutRef.current = window.setTimeout(() => {
                 contentBlurTimeoutRef.current = null;
                 commitInlineTextEdit();
@@ -1857,7 +1857,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
         const tableNode = stageRef.current?.findOne<Konva.Group>('.' + table.id);
         const absScale = tableNode?.getAbsoluteScale() ?? { x: dimensions.scale, y: dimensions.scale };
         if (tableNode) {
-          // getAbsoluteTransform already includes Stage x/y (pan), Group scale/offset, table rotation — use directly as DOM coords
+          // getAbsoluteTransform already includes Stage x/y (pan), Group scale/offset, table rotation , use directly as DOM coords
           const stagePos = tableNode.getAbsoluteTransform().point({ x: colOffset, y: rowOffset });
           domLeft = stagePos.x;
           domTop = stagePos.y;
@@ -1912,7 +1912,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
                 // Radix portals (popover, select, dialog, etc.) are inside [data-radix-portal]
                 if (target.closest?.('[data-radix-portal]')) return;
               } else {
-                // null relatedTarget: might be opening a Radix portal — defer to let focus settle
+                // null relatedTarget: might be opening a Radix portal , defer to let focus settle
                 cellBlurTimeoutRef.current = window.setTimeout(() => {
                   cellBlurTimeoutRef.current = null;
                   commitInlineCellEdit(editingCellValue);
@@ -1958,7 +1958,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
         );
       })()}
 
-      {/* Crop action buttons — HTML positioned inside the container, below the crop rect */}
+      {/* Crop action buttons , HTML positioned inside the container, below the crop rect */}
       {isCropMode && selectedObject?.type === 'image' && cropRatio && (() => {
         const obj = selectedObject as ImageObject;
         const nw = obj.naturalWidth || obj.width;

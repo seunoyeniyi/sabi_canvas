@@ -301,7 +301,7 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
             Color
           </Label>
           <div className="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
-            {/* Palette picker trigger — fixed first */}
+            {/* Palette picker trigger , fixed first */}
             <Popover>
               <PopoverTrigger asChild>
                 <button
@@ -338,7 +338,7 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
               </PopoverContent>
             </Popover>
 
-            {/* Transparent / checker — fixed second */}
+            {/* Transparent / checker , fixed second */}
             <button
               type="button"
               onClick={() => handleApply({ type: 'transparent' })}

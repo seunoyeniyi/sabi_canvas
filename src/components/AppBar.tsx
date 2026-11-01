@@ -46,7 +46,7 @@ export const AppBar: React.FC<AppBarProps> = ({
   const isMobile = useIsMobile();
   const { theme, setTheme } = useTheme();
 
-  // DOM-based theme detection — reactive to host app theme changes (e.g. next-themes)
+  // DOM-based theme detection , reactive to host app theme changes (e.g. next-themes)
   const [domTheme, setDomTheme] = useState<'dark' | 'light'>(() =>
     document.documentElement.classList.contains('dark') ? 'dark' : 'light'
   );
