@@ -65,6 +65,23 @@ run("npm", ["run", "build"]);
 run("npm", ["publish"]);
 run("git", ["push", "--follow-tags"]);
 
+// npm says "may take a few minutes to become available": installing right away fails with ETARGET.
+function waitForRegistry(v, timeoutMs = 10 * 60 * 1000) {
+  console.log(`\nWaiting for sabi-canvas@${v} to appear on the registry...`);
+  if (dryRun) return;
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const res = spawnSync("npm", ["view", `sabi-canvas@${v}`, "version", "--prefer-online"], { cwd: root, encoding: "utf8" });
+    if (res.status === 0 && res.stdout.trim() === v) return;
+    spawnSync("sleep", ["10"]);
+  }
+  console.error(
+    `\nsabi-canvas@${v} is published but not visible yet. When it is, run in each app:\n  npm install sabi-canvas@${v} --prefer-online`,
+  );
+  process.exit(1);
+}
+waitForRegistry(version);
+
 for (const app of ["client", "storefront"]) {
   const dir = path.resolve(root, "..", app);
   const pkgPath = path.join(dir, "package.json");
@@ -74,8 +91,7 @@ for (const app of ["client", "storefront"]) {
     console.log(`\nSkipping ${app}: it does not depend on sabi-canvas yet.`);
     continue;
   }
-  // The registry can lag a few seconds behind `npm publish`.
-  run("npm", ["install", `sabi-canvas@${version}`], dir);
+  run("npm", ["install", `sabi-canvas@${version}`, "--prefer-online"], dir);
 }
 
 console.log(`\nReleased sabi-canvas ${version}. Next: review, commit and push client/storefront.`);
