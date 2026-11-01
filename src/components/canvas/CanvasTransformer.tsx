@@ -12,6 +12,17 @@ import {
 const MIN_TEXT_WIDTH = 40;
 const TRANSFORMER_STROKE = 'hsl(217, 91%, 60%)';
 
+// Inlined so the package doesn't depend on a file in each host app's public/ folder.
+const ROTATE_ANCHOR_ICON =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">' +
+      '<circle cx="12" cy="12" r="11.5" fill="#fff"/>' +
+      '<g transform="translate(5 5) scale(0.583)" fill="none" stroke="#374151" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>' +
+      '</g></svg>',
+  );
+
 /**
  * Measures the pixel width of the longest word in a TextObject at its current
  * font size. Used as the minimum allowed box width so no word ever overflows.
@@ -246,7 +257,7 @@ export const CanvasTransformer: React.FC<CanvasTransformerProps> = ({
     };
 
     image.addEventListener('load', handleLoad);
-    image.src = '/rotate-anchor.svg';
+    image.src = ROTATE_ANCHOR_ICON;
 
     if (image.complete) {
       handleLoad();
