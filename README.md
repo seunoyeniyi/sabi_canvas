@@ -32,8 +32,11 @@ npm install sabi-canvas
 ### Peer Dependencies
 
 ```bash
-npm install react react-dom react-konva konva framer-motion lucide-react react-router-dom @tanstack/react-query
+npm install react react-dom konva@10.9.1 react-konva@19.2.7 framer-motion lucide-react react-router-dom @tanstack/react-query
 ```
+
+Use the same `konva` / `react-konva` versions as the other apps that embed the editor, so every app renders and
+exports designs identically. `react-konva` 19.2.x needs React 19.2; `react-konva` 19.3+ needs React 19.3 or later.
 
 ---
 
