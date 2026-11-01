@@ -552,6 +552,37 @@ import {
 } from 'sabi-canvas';
 ---
 
+## Local Development & Releasing
+
+`sabi_canvas` is its own git repository and lives **next to** the apps that use it:
+
+```
+workspaceos/
+  src/ (backend)   client/   storefront/   sabi_canvas/
+```
+
+### Working on it alongside client / storefront
+
+Nothing to configure and nothing to publish. `client` and `storefront` each have a
+`scripts/sabi-canvas-dev.mjs` that checks for `../sabi_canvas/src/index.ts`:
+
+- **Found** (your machine): `sabi-canvas` resolves to this folder's source, so edits hot-reload in the app.
+  React, Konva, React Query and the other peers are pinned to the app's own copies.
+- **Not found** (CI, Cloudflare, a lone clone): the published npm package is used.
+- Force the published package locally with `SABI_CANVAS=published npm run dev` (in the app).
+
+Run `npm install` here once so the canvas's own dependencies (Radix etc.) resolve.
+Keep the two `sabi-canvas-dev.mjs` copies identical.
+
+### Shipping
+
+Push in this order, each repo as usual:
+
+1. Backend.
+2. `sabi_canvas`: `npm run release -- patch` (or `minor` / `major`). It bumps, builds, publishes,
+   pushes the tag, and updates `sabi-canvas` in `../client` and `../storefront`. Add `--dry-run` to preview.
+3. `client` and `storefront`: commit the dependency bump and push.
+
 ## Contributing
 
 Pull requests are welcome! Please open an issue first to discuss what you would like to change.
