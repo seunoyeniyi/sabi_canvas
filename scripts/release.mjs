@@ -37,6 +37,15 @@ if (dirty) {
   if (!dryRun) process.exit(1);
 }
 
+// Fail before bumping anything if npm isn't logged in (publish would 404 halfway through).
+if (!dryRun) {
+  const whoami = spawnSync("npm", ["whoami"], { cwd: root, encoding: "utf8" });
+  if (whoami.status !== 0) {
+    console.error("Not logged in to npm. Run `npm login` (as the account that owns sabi-canvas), then release again.");
+    process.exit(1);
+  }
+}
+
 // A version published from somewhere else would make `npm version` + `npm publish` collide.
 const localVersion = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version;
 const registry = spawnSync("npm", ["view", "sabi-canvas", "version"], { cwd: root, encoding: "utf8" }).stdout.trim();
