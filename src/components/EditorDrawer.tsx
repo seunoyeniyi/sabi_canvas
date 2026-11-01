@@ -177,7 +177,7 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={handleCloseDrawer}
-                className="fixed inset-0 z-[160] backdrop-blur-sm"
+                className="fixed inset-0 z-160 backdrop-blur-xs"
               />
             )}
 
@@ -188,7 +188,7 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
               exit={{ x: side === 'left' ? '-100%' : '100%' }}
               transition={{ duration: 0.22, ease: 'easeInOut' }}
               className={cn(
-                'fixed top-0 z-[165] h-full w-[min(18rem,60vw)] md:w-[16rem]',
+                'fixed top-0 z-165 h-full w-[min(18rem,60vw)] md:w-64',
                 'flex flex-col bg-card shadow-editor-lg',
                 side === 'left' ? 'left-0 border-r' : 'right-0 border-l',
                 'border-panel-border',
@@ -199,7 +199,7 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
               <div className="flex items-center justify-between h-14 px-4 border-b border-panel-border">
                 <div className="flex items-center gap-3">
                   {logo ?? (
-                    <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+                    <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
                       <span className="text-xs font-bold text-primary-foreground">SC</span>
                     </div>
                   )}
@@ -258,7 +258,7 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 24 }}
                 transition={{ duration: 0.22, ease: 'easeInOut' }}
-                className="fixed top-0 left-[16rem] right-0 z-[164] h-full bg-card border-l border-panel-border shadow-editor-lg"
+                className="fixed top-0 left-64 right-0 z-164 h-full bg-card border-l border-panel-border shadow-editor-lg"
               >
                 <div className="h-full flex flex-col">
                   <div className="flex items-center justify-between h-14 px-4 border-b border-panel-border">
@@ -299,8 +299,8 @@ export const EditorDrawer: React.FC<EditorDrawerProps> = ({
           }
         }}
       >
-        <SheetContent side="bottom" className="h-[70vh] !gap-y-0 rounded-t-2xl px-0 flex flex-col">
-          <SheetHeader className="flex-shrink-0 px-4 pb-2 border-b border-border">
+        <SheetContent side="bottom" className="h-[70vh] gap-y-0! rounded-t-2xl px-0 flex flex-col">
+          <SheetHeader className="shrink-0 px-4 pb-2 border-b border-border">
             <SheetTitle className="text-left">{activePanelLabel}</SheetTitle>
           </SheetHeader>
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col">{renderPanelContent()}</div>
@@ -336,7 +336,7 @@ const DrawerItem: React.FC<DrawerItemProps> = ({
       )}
     >
       <span className={cn(
-        'flex-shrink-0',
+        'shrink-0',
         isActive ? 'text-primary' : 'text-muted-foreground'
       )}>
         {item.icon}

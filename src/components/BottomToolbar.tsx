@@ -52,7 +52,7 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({ className }) => {
         initial={{ y: 80 }}
         animate={{ y: 0 }}
         className={cn(
-          'fixed bottom-0 left-0 right-0 z-[150]',
+          'fixed bottom-0 left-0 right-0 z-150',
           'h-16 pb-safe',
           'bg-card border-t border-panel-border',
           'shadow-editor-lg',
@@ -105,7 +105,7 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({ className }) => {
           side="bottom"
           className="h-[60vh] rounded-t-2xl px-0 flex flex-col"
         >
-          <SheetHeader className="flex-shrink-0 px-4 pb-2 border-b border-border">
+          <SheetHeader className="shrink-0 px-4 pb-2 border-b border-border">
             <SheetTitle className="text-left">{getPanelTitle()}</SheetTitle>
           </SheetHeader>
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col px-4 py-0">

@@ -80,7 +80,7 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-background/80 backdrop-blur-xs lg:hidden"
           />
 
           {/* Panel */}
@@ -90,7 +90,7 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className={cn(
-              'fixed bottom-0 left-0 right-0 z-[150]',
+              'fixed bottom-0 left-0 right-0 z-150',
               'max-h-[70vh] bg-card rounded-t-2xl',
               'border-t border-panel-border shadow-editor-lg',
               'lg:hidden',
@@ -467,7 +467,7 @@ const ContextualPropertyContent: React.FC = () => {
                 )}
               >
                 <span className={cn(
-                  'block h-4 w-4 rounded-full bg-white shadow absolute top-0.5 transition-transform',
+                  'block h-4 w-4 rounded-full bg-white shadow-sm absolute top-0.5 transition-transform',
                   tableObject.headerRow ? 'translate-x-4' : 'translate-x-0.5'
                 )} />
               </button>

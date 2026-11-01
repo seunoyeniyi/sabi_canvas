@@ -87,13 +87,13 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
     return (
       <div
         id="top-properties-bar"
-        className="flex items-center gap-1 border-b border-panel-border bg-card px-2 h-12 shadow-sm shrink-0"
+        className="flex items-center gap-1 border-b border-panel-border bg-card px-2 h-12 shadow-xs shrink-0"
       >
         {/* Cancel draw mode */}
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 px-2 flex-shrink-0 gap-1.5 text-xs flex items-center text-muted-foreground hover:text-foreground"
+          className="h-8 px-2 shrink-0 gap-1.5 text-xs flex items-center text-muted-foreground hover:text-foreground"
           onClick={() => setInteractionMode('select')}
           title="Exit draw mode"
         >
@@ -111,7 +111,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
             key={id}
             variant={drawTool === id ? 'secondary' : 'ghost'}
             size="sm"
-            className={`h-8 px-2 flex-shrink-0 gap-1.5 text-xs flex items-center ${drawTool === id ? 'bg-accent border border-primary/30' : ''}`}
+            className={`h-8 px-2 shrink-0 gap-1.5 text-xs flex items-center ${drawTool === id ? 'bg-accent border border-primary/30' : ''}`}
             onClick={() => setDrawTool(id)}
             title={label}
           >
@@ -125,7 +125,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
         <Separator orientation="vertical" className="mx-1 h-6" />
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 px-2 flex-shrink-0 text-xs gap-1">
+            <Button variant="ghost" size="sm" className="h-8 px-2 shrink-0 text-xs gap-1">
               <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M2 13 C4 10, 6 6, 8 8 C10 10, 12 5, 14 3" strokeLinecap="round" />
               </svg>
@@ -246,17 +246,17 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
     return (
       <div
         id="top-properties-bar"
-        className="flex items-center gap-2 border-b border-panel-border bg-card px-3 h-12 shadow-sm shrink-0"
+        className="flex items-center gap-2 border-b border-panel-border bg-card px-3 h-12 shadow-xs shrink-0"
       >
-        <Crop className="h-3 w-3 text-primary flex-shrink-0" />
-        <span className="text-xs font-medium text-foreground flex-shrink-0">Cropping</span>
+        <Crop className="h-3 w-3 text-primary shrink-0" />
+        <span className="text-xs font-medium text-foreground shrink-0">Cropping</span>
         <div className="flex-1" />
         {hasCrop && (
           <ToolbarTooltip label="Reset to original" side="bottom">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 gap-1.5 flex-shrink-0 text-xs font-medium"
+              className="h-8 px-2 gap-1.5 shrink-0 text-xs font-medium"
               onClick={cropReset}
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -266,7 +266,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
         )}
         <Button
           size="sm"
-          className="h-8 px-3 gap-1.5 flex-shrink-0 text-xs font-medium"
+          className="h-8 px-3 gap-1.5 shrink-0 text-xs font-medium"
           onClick={cropApply}
         >
           <Check className="h-3.5 w-3.5" />
@@ -275,7 +275,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
         <Button
           variant="outline"
           size="sm"
-          className="h-8 px-3 gap-1.5 flex-shrink-0 text-xs font-medium"
+          className="h-8 px-3 gap-1.5 shrink-0 text-xs font-medium"
           onClick={cropCancel}
         >
           <X className="h-3.5 w-3.5" />
@@ -289,7 +289,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
     <>
       <div
         id="top-properties-bar"
-        className="flex items-center overflow-x-auto gap-1 border-b border-panel-border bg-card px-2 h-12 shadow-sm hide-scrollbar shrink-0"
+        className="flex items-center overflow-x-auto gap-1 border-b border-panel-border bg-card px-2 h-12 shadow-xs hide-scrollbar shrink-0"
         onMouseDown={(e) => {
           // Allow inputs to receive focus properly (crucial for popovers rendered via portals)
           if ((e.target as HTMLElement).tagName.toLowerCase() === 'input') {
@@ -328,7 +328,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
         <>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 px-2 flex-shrink-0 text-xs gap-1">
+              <Button variant="ghost" size="sm" className="h-8 px-2 shrink-0 text-xs gap-1">
                 <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M2 13 C4 10, 6 6, 8 8 C10 10, 12 5, 14 3" strokeLinecap="round" />
                 </svg>
@@ -376,7 +376,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
               size="icon"
               aria-label="Bold"
               onClick={() => toggleFontStyle('bold')}
-              className={cn("h-8 w-8 flex-shrink-0",
+              className={cn("h-8 w-8 shrink-0",
                 (isInlineTextEditing ? inlineTextSelectionState?.bold : (selectedObject as any)[isShapeWithText ? 'innerTextFontStyle' : 'fontStyle']?.includes('bold'))
                 && "bg-secondary text-secondary-foreground"
               )}
@@ -390,7 +390,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
               size="icon"
               aria-label="Italic"
               onClick={() => toggleFontStyle('italic')}
-              className={cn("h-8 w-8 flex-shrink-0",
+              className={cn("h-8 w-8 shrink-0",
                 (isInlineTextEditing ? inlineTextSelectionState?.italic : (selectedObject as any)[isShapeWithText ? 'innerTextFontStyle' : 'fontStyle']?.includes('italic'))
                 && "bg-secondary text-secondary-foreground"
               )}
@@ -406,7 +406,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
                   size="icon"
                   aria-label="Underline"
                   onClick={() => toggleTextDecoration('underline')}
-                  className={cn("h-8 w-8 flex-shrink-0",
+                  className={cn("h-8 w-8 shrink-0",
                     (isInlineTextEditing ? inlineTextSelectionState?.underline : (selectedObject as any)[isShapeWithText ? 'innerTextDecoration' : 'textDecoration']?.includes('underline'))
                     && "bg-secondary text-secondary-foreground"
                   )}
@@ -420,7 +420,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
                   size="icon"
                   aria-label="Strikethrough"
                   onClick={() => toggleTextDecoration('line-through')}
-                  className={cn("h-8 w-8 flex-shrink-0",
+                  className={cn("h-8 w-8 shrink-0",
                     (isInlineTextEditing ? inlineTextSelectionState?.strikethrough : (selectedObject as any)[isShapeWithText ? 'innerTextDecoration' : 'textDecoration']?.includes('line-through'))
                     && "bg-secondary text-secondary-foreground"
                   )}
@@ -440,7 +440,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
                       size="icon"
                       aria-label="List Style"
                       onClick={toggleListStyle}
-                      className={cn("h-8 w-8 flex-shrink-0", currentList !== 'none' && "bg-secondary text-secondary-foreground")}
+                      className={cn("h-8 w-8 shrink-0", currentList !== 'none' && "bg-secondary text-secondary-foreground")}
                     >
                       {currentList === 'ordered' ? <ListOrdered className="h-4 w-4" /> : <List className="h-4 w-4" />}
                     </Button>
@@ -489,7 +489,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
                 size="icon"
                 aria-label={align}
                 onClick={() => handleTextAlignChange(align)}
-                className={cn("h-8 w-8 flex-shrink-0",
+                className={cn("h-8 w-8 shrink-0",
                   ((selectedObject as any)[isShapeWithText ? 'innerTextAlign' : 'align'] ?? 'center') === align
                     && "bg-secondary text-secondary-foreground"
                 )}
@@ -511,7 +511,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
                     size="icon"
                     aria-label={`Vertical align ${valign}`}
                     onClick={() => handleTextVerticalAlignChange(valign)}
-                    className={cn("h-8 w-8 flex-shrink-0",
+                    className={cn("h-8 w-8 shrink-0",
                       ((selectedObject as any).innerTextVerticalAlign ?? 'middle') === valign
                         && "bg-secondary text-secondary-foreground"
                     )}
@@ -538,7 +538,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
               size="icon"
               aria-label="Crop"
               onClick={handleCropModeToggle}
-              className={cn("h-8 w-8 flex-shrink-0", isCropMode && "bg-secondary text-secondary-foreground")}
+              className={cn("h-8 w-8 shrink-0", isCropMode && "bg-secondary text-secondary-foreground")}
             >
               <Crop className="h-4 w-4" />
             </Button>
@@ -548,7 +548,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
             variant="ghost"
             size="sm"
             className={cn(
-              'h-8 px-2 gap-1.5 flex-shrink-0 text-xs font-medium',
+              'h-8 px-2 gap-1.5 shrink-0 text-xs font-medium',
               selectedImageObject?.removedBgSrc && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
             )}
             onClick={() => setIsRemoveBgDialogOpen(true)}
@@ -560,7 +560,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 gap-1.5 flex-shrink-0 text-xs font-medium"
+            className="h-8 px-2 gap-1.5 shrink-0 text-xs font-medium"
             onClick={() => {
               setReplacingImageId(selectedObject!.id);
               setActiveToolPanel('upload');
@@ -633,7 +633,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 px-2 flex-shrink-0 text-xs font-medium gap-1">
+              <Button variant="ghost" size="sm" className="h-8 px-2 shrink-0 text-xs font-medium gap-1">
                 Table <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -671,7 +671,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
               size="icon"
               aria-label="Bold"
               onClick={() => handleCellFontStyleToggle('bold')}
-              className={cn("h-8 w-8 flex-shrink-0", (activeCellData?.fontStyle ?? 'normal').includes('bold') && "bg-secondary text-secondary-foreground")}
+              className={cn("h-8 w-8 shrink-0", (activeCellData?.fontStyle ?? 'normal').includes('bold') && "bg-secondary text-secondary-foreground")}
             >
               <Bold className="h-4 w-4" />
             </Button>
@@ -682,7 +682,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
               size="icon"
               aria-label="Italic"
               onClick={() => handleCellFontStyleToggle('italic')}
-              className={cn("h-8 w-8 flex-shrink-0", (activeCellData?.fontStyle ?? 'normal').includes('italic') && "bg-secondary text-secondary-foreground")}
+              className={cn("h-8 w-8 shrink-0", (activeCellData?.fontStyle ?? 'normal').includes('italic') && "bg-secondary text-secondary-foreground")}
             >
               <Italic className="h-4 w-4" />
             </Button>
@@ -702,7 +702,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
                 size="icon"
                 aria-label={align}
                 onClick={() => handleCellTextAlignChange(align)}
-                className={cn("h-8 w-8 flex-shrink-0",
+                className={cn("h-8 w-8 shrink-0",
                   (activeCellData?.textAlign ?? (selectedObject as TableObject).defaultTextAlign) === align
                     && "bg-secondary text-secondary-foreground"
                 )}
@@ -721,7 +721,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
                 size="icon"
                 aria-label={`Vertical align ${valign}`}
                 onClick={() => handleCellVerticalAlignChange(valign)}
-                className={cn("h-8 w-8 flex-shrink-0",
+                className={cn("h-8 w-8 shrink-0",
                   (activeCellData?.verticalAlign ?? (selectedObject as TableObject).defaultVerticalAlign ?? 'top') === valign
                     && "bg-secondary text-secondary-foreground"
                 )}
@@ -746,7 +746,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
         variant="ghost"
         aria-label="Effects"
         onClick={toggleEffectsPanel}
-        className={cn("h-8 px-2 gap-1.5 flex-shrink-0 text-xs font-medium", isEffectsPanelOpen && "bg-muted text-foreground")}
+        className={cn("h-8 px-2 gap-1.5 shrink-0 text-xs font-medium", isEffectsPanelOpen && "bg-muted text-foreground")}
       >
         <Sparkles className="h-4 w-4" />
         Effects
@@ -759,14 +759,14 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
 
       {/* Global Actions */}
       {shouldShowGroupAction && (
-        <Button variant="ghost" className="h-8 px-2 flex-shrink-0 text-xs font-medium" onClick={handleGroupAction}>
+        <Button variant="ghost" className="h-8 px-2 shrink-0 text-xs font-medium" onClick={handleGroupAction}>
           {isGroupActionUngroup ? <Ungroup className="h-4 w-4" /> : <Group className="h-4 w-4" />}
           {isGroupActionUngroup ? 'Ungroup' : 'Group'}
         </Button>
       )}
 
       <ToolbarTooltip label="Duplicate" side={tooltipSide}>
-        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={handleDuplicate}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleDuplicate}>
           <Copy className="h-4 w-4" />
         </Button>
       </ToolbarTooltip>
@@ -781,7 +781,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
             variant="ghost"
             size="icon"
             className={cn(
-              'h-8 w-8 flex-shrink-0',
+              'h-8 w-8 shrink-0',
               selectedObject?.objectRole === 'mockup' && 'text-amber-500 hover:text-amber-600'
             )}
             onClick={() => updateObject(selectedObject!.id, {
@@ -797,7 +797,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
         <Button 
           variant="ghost" 
           size="icon" 
-          className={cn("h-8 w-8 flex-shrink-0", allLocked && "text-muted-foreground")}
+          className={cn("h-8 w-8 shrink-0", allLocked && "text-muted-foreground")}
           onClick={handleLockToggle}
         >
           {allLocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
@@ -805,7 +805,7 @@ export const TopPropertiesBar: React.FC<TopPropertiesBarProps> = ({ selectedObje
       </ToolbarTooltip>
 
       <ToolbarTooltip label="Delete" side={tooltipSide}>
-        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleDelete}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleDelete}>
           <Trash2 className="h-4 w-4" />
         </Button>
       </ToolbarTooltip>

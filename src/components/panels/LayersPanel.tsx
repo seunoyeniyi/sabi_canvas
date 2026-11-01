@@ -439,7 +439,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = () => {
                   e.stopPropagation();
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full bg-background border border-primary rounded px-1.5 py-1 text-xs outline-none"
+                className="w-full bg-background border border-primary rounded px-1.5 py-1 text-xs outline-hidden"
               />
             ) : (
               <span

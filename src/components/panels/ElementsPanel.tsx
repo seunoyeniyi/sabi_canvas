@@ -120,7 +120,7 @@ export const ElementsPanel: React.FC<ElementsPanelProps> = ({ onClose }) => {
                 className={`
                   cursor-pointer transition-all px-4 py-1.5 whitespace-nowrap rounded-lg text-sm font-medium
                   ${selectedCategory === category
-                    ? 'shadow-sm border-primary'
+                    ? 'shadow-xs border-primary'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border-border/50'}
                 `}
                 onClick={() => setSelectedCategory(category)}

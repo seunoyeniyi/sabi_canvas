@@ -161,7 +161,7 @@ const UnsplashBackgroundSection: React.FC<UnsplashBackgroundSectionProps> = ({
                 <button
                   key={photo.id}
                   className={cn(
-                    'group relative w-full mb-2 break-inside-avoid rounded-xl overflow-hidden bg-muted/30 border border-border/40 hover:border-primary/40 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-primary',
+                    'group relative w-full mb-2 break-inside-avoid rounded-xl overflow-hidden bg-muted/30 border border-border/40 hover:border-primary/40 hover:shadow-md transition-all focus:outline-hidden focus:ring-2 focus:ring-primary',
                     isActive && 'ring-2 ring-primary border-primary'
                   )}
                   onClick={() => onApply({ type: 'image', src: photo.urls.regular })}
@@ -177,7 +177,7 @@ const UnsplashBackgroundSection: React.FC<UnsplashBackgroundSectionProps> = ({
                   />
 
                   {/* Attribution overlay */}
-                  <div className="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-2 pointer-events-none">
+                  <div className="absolute inset-x-0 bottom-0 top-1/2 bg-linear-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-2 pointer-events-none">
                     <p className="text-[9px] text-white/90 leading-tight text-center w-full pointer-events-auto pb-1 drop-shadow-md truncate px-1">
                       By{' '}
                       <a
@@ -308,7 +308,7 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
                   type="button"
                   aria-label="Pick custom color"
                   className={cn(
-                    'flex items-center justify-center w-8 h-8 flex-shrink-0 rounded-md border-2 transition-all hover:scale-110',
+                    'flex items-center justify-center w-8 h-8 shrink-0 rounded-md border-2 transition-all hover:scale-110',
                     currentBg?.type === 'solid' &&
                       !COMPACT_SOLID_PRESETS.includes(currentBg.color.toLowerCase())
                       ? 'border-primary ring-2 ring-primary/30'
@@ -316,7 +316,7 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
                   )}
                   style={{ backgroundColor: localColor }}
                 >
-                  <Palette className="h-3.5 w-3.5 text-gray-500 drop-shadow" />
+                  <Palette className="h-3.5 w-3.5 text-gray-500 drop-shadow-sm" />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-3" side="right" align="start">
@@ -325,7 +325,7 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
                 <div className="flex items-center gap-1 border border-input rounded-md px-2 py-1 h-8 mt-2">
                   <span className="text-xs text-muted-foreground">#</span>
                   <input
-                    className="flex-1 bg-transparent border-none text-xs focus:outline-none uppercase"
+                    className="flex-1 bg-transparent border-none text-xs focus:outline-hidden uppercase"
                     value={localColor.replace('#', '')}
                     onChange={(e) => {
                       const val = '#' + e.target.value.replace('#', '');
@@ -344,7 +344,7 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
               onClick={() => handleApply({ type: 'transparent' })}
               aria-label="No background (transparent)"
               className={cn(
-                'w-8 h-8 flex-shrink-0 rounded-md border-2 transition-all hover:scale-110',
+                'w-8 h-8 shrink-0 rounded-md border-2 transition-all hover:scale-110',
                 isTransparent ? 'border-primary ring-2 ring-primary/30' : 'border-border'
               )}
               style={{
@@ -368,7 +368,7 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
                   aria-label={color}
                   onClick={() => handleApply({ type: 'solid', color })}
                   className={cn(
-                    'w-8 h-8 flex-shrink-0 rounded-md border-2 transition-all hover:scale-110',
+                    'w-8 h-8 shrink-0 rounded-md border-2 transition-all hover:scale-110',
                     isActive ? 'border-primary ring-2 ring-primary/30' : 'border-border'
                   )}
                   style={{ backgroundColor: color }}
@@ -401,7 +401,7 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
                     )
                   }
                   className={cn(
-                    'w-8 h-8 flex-shrink-0 rounded-md border-2 transition-all hover:scale-110',
+                    'w-8 h-8 shrink-0 rounded-md border-2 transition-all hover:scale-110',
                     isActive ? 'border-primary ring-2 ring-primary/30' : 'border-border'
                   )}
                   style={{ background: preset.css }}

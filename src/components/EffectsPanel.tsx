@@ -111,7 +111,7 @@ const BidirectionalSlider: React.FC<{
     <div className="space-y-2 pt-1">
       {/* Value readout */}
       <div className="flex justify-end">
-        <span className="text-xs font-mono bg-muted rounded px-1.5 py-0.5 min-w-[2.5rem] text-center tabular-nums">
+        <span className="text-xs font-mono bg-muted rounded px-1.5 py-0.5 min-w-10 text-center tabular-nums">
           {value}
         </span>
       </div>
@@ -133,7 +133,7 @@ const BidirectionalSlider: React.FC<{
 
         {/* Thumb (visual only, pointer-events from the input) */}
         <div
-          className="absolute h-4 w-4 rounded-full border-2 border-primary bg-background shadow pointer-events-none z-10"
+          className="absolute h-4 w-4 rounded-full border-2 border-primary bg-background shadow-sm pointer-events-none z-10"
           style={{ left: `${thumbPct}%`, transform: 'translateX(-50%)' }}
         />
 
@@ -331,7 +331,7 @@ const PanelContent: React.FC<{
                   onClick={() =>
                     upd({ colorFilter: active ? 'none' : preset.value } as Partial<CanvasObject>)
                   }
-                  className="flex flex-col items-center gap-1.5 group focus:outline-none"
+                  className="flex flex-col items-center gap-1.5 group focus:outline-hidden"
                 >
                   <div
                     className={cn(
@@ -748,7 +748,7 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({ isOpen, onClose }) =
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="fixed bottom-0 left-0 right-0 z-[150] max-h-[50vh] bg-card rounded-t-2xl border-t border-panel-border shadow-editor-lg lg:hidden flex flex-col"
+          className="fixed bottom-0 left-0 right-0 z-150 max-h-[50vh] bg-card rounded-t-2xl border-t border-panel-border shadow-editor-lg lg:hidden flex flex-col"
         >
           <div className="flex justify-center py-2 shrink-0">
             <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />

@@ -109,7 +109,7 @@ export const GraphicsGrid: React.FC<GraphicsGridProps> = ({ onClose }) => {
               {graphics.map((hit) => (
                 <button
                   key={hit.id}
-                  className="group relative w-full aspect-square rounded-xl overflow-hidden bg-muted/30 border border-border/40 hover:border-primary/40 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="group relative w-full aspect-square rounded-xl overflow-hidden bg-muted/30 border border-border/40 hover:border-primary/40 hover:shadow-md transition-all focus:outline-hidden focus:ring-2 focus:ring-primary"
                   onClick={(e) => handleGraphicClick(e, hit)}
                 >
                   <img
@@ -123,7 +123,7 @@ export const GraphicsGrid: React.FC<GraphicsGridProps> = ({ onClose }) => {
                   />
 
                   {/* Hover Overlay */}
-                  <div className="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-2 pointer-events-none">
+                  <div className="absolute inset-x-0 bottom-0 top-1/2 bg-linear-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-2 pointer-events-none">
                     <p className="text-[10px] text-white/90 leading-tight text-center w-full truncate px-1">
                       {hit.tags.split(',').slice(0, 2).join(', ')}
                     </p>

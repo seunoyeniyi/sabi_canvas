@@ -115,7 +115,7 @@ export const ResizePanel: React.FC<ResizePanelProps> = ({
                   type="number"
                   value={customWidth}
                   onChange={(e) => setCustomWidth(e.target.value)}
-                  className="h-9 text-sm font-mono !ring-1"
+                  className="h-9 text-sm font-mono ring-1!"
                   min={100}
                   max={10000}
                 />
@@ -127,7 +127,7 @@ export const ResizePanel: React.FC<ResizePanelProps> = ({
                   type="number"
                   value={customHeight}
                   onChange={(e) => setCustomHeight(e.target.value)}
-                  className="h-9 text-sm font-mono !ring-1"
+                  className="h-9 text-sm font-mono ring-1!"
                   min={100}
                   max={10000}
                 />
@@ -168,7 +168,7 @@ export const ResizePanel: React.FC<ResizePanelProps> = ({
                       )}
                     >
                       <span className={cn(
-                        'flex-shrink-0',
+                        'shrink-0',
                         isSelected ? 'text-primary-foreground' : 'text-muted-foreground'
                       )}>
                         {preset.icon}
@@ -183,7 +183,7 @@ export const ResizePanel: React.FC<ResizePanelProps> = ({
                         </div>
                       </div>
                       {isSelected && (
-                        <Check className="h-4 w-4 flex-shrink-0" />
+                        <Check className="h-4 w-4 shrink-0" />
                       )}
                     </motion.button>
                   );

@@ -128,7 +128,7 @@ export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ onClose }) => {
     return (
         <div className="h-full flex flex-col overflow-hidden">
             {/* Category pills , sticky, never scrolls away */}
-            <div className="flex-shrink-0 pb-2 space-y-2">
+            <div className="shrink-0 pb-2 space-y-2">
                 <div className="w-full overflow-x-auto pb-1 hide-scrollbar scroll-smooth">
                     <div className="flex items-center gap-1.5 pr-2 min-w-max">
                         {TEMPLATE_CATEGORIES.map((cat) => (
@@ -157,14 +157,14 @@ export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ onClose }) => {
                     <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
                         <span
                             className={cn(
-                                'relative inline-flex h-4 w-7 flex-shrink-0 rounded-full border transition-colors',
+                                'relative inline-flex h-4 w-7 shrink-0 rounded-full border transition-colors',
                                 sameSize ? 'bg-primary border-primary' : 'bg-muted border-border/60'
                             )}
                             onClick={() => setSameSize(v => !v)}
                         >
                             <span
                                 className={cn(
-                                    'absolute top-[1px] h-3 w-3 rounded-full bg-white shadow transition-transform',
+                                    'absolute top-px h-3 w-3 rounded-full bg-white shadow-sm transition-transform',
                                     sameSize ? 'translate-x-3.5' : 'translate-x-0.5'
                                 )}
                             />
@@ -209,7 +209,7 @@ const TemplateCard: React.FC<{ template: DesignTemplate; onClick: () => void }> 
             onClick={() => {
                 onClick();
             }}
-            className="group relative w-full overflow-hidden rounded-md border border-border/60 hover:border-primary/60 transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="group relative w-full overflow-hidden rounded-md border border-border/60 hover:border-primary/60 transition-all hover:shadow-md focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
             <div
                 style={{
@@ -224,7 +224,7 @@ const TemplateCard: React.FC<{ template: DesignTemplate; onClick: () => void }> 
                         className="absolute inset-0 w-full h-full object-cover"
                     />
                 ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted/80 to-muted/30">
+                    <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-muted/80 to-muted/30">
                         <span className="text-[11px] font-medium text-center text-foreground/70 leading-tight px-2">
                             {template.name}
                         </span>

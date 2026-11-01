@@ -1524,7 +1524,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
       )}
 
       {/* Canvas info overlay */}
-      <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg bg-card/90 backdrop-blur-sm border border-panel-border shadow-sm pointer-events-none">
+      <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg bg-card/90 backdrop-blur-xs border border-panel-border shadow-xs pointer-events-none">
         <span className="text-xs font-mono text-muted-foreground">
           {config.designWidth} × {config.designHeight}px
         </span>

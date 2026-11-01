@@ -63,7 +63,7 @@ export const PageNavigation: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center gap-2 z-10 p-1.5 bg-background/85 backdrop-blur border border-border shadow-sm rounded-xl overflow-x-auto max-w-[90vw] sm:max-w-[70vw] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex items-center gap-2 z-10 p-1.5 bg-background/85 backdrop-blur-sm border border-border shadow-xs rounded-xl overflow-x-auto max-w-[90vw] sm:max-w-[70vw] scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       {sortedPages.map((page, index) => (
         <div key={page.id} className="relative flex items-center group">
           <Badge
@@ -71,7 +71,7 @@ export const PageNavigation: React.FC = () => {
             className={cn(
               "cursor-pointer px-3.5 py-1.5 rounded-md border transition-all text-sm h-9 select-none flex items-center gap-1.5",
               page.id === activePageId 
-                ? "bg-primary text-primary-foreground border-primary/70 shadow-sm" 
+                ? "bg-primary text-primary-foreground border-primary/70 shadow-xs" 
                 : "bg-card/80 hover:bg-muted text-muted-foreground border-border"
             )}
             onClick={() => setActivePage(page.id)}
@@ -84,7 +84,7 @@ export const PageNavigation: React.FC = () => {
                 onChange={(e) => setEditName(e.target.value)}
                 onBlur={() => handleRename(page.id)}
                 onKeyDown={(e) => handleKeyDown(e, page.id)}
-                className="bg-transparent border-none outline-none w-20 text-center focus:ring-0 text-primary-foreground placeholder:text-primary-foreground/50"
+                className="bg-transparent border-none outline-hidden w-20 text-center focus:ring-0 text-primary-foreground placeholder:text-primary-foreground/50"
               />
             ) : (
               <span className="truncate max-w-[100px] font-medium">{page.name}</span>
@@ -143,7 +143,7 @@ export const PageNavigation: React.FC = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="rounded-md w-9 h-9 flex-shrink-0 bg-transparent hover:bg-muted border border-border"
+          className="rounded-md w-9 h-9 shrink-0 bg-transparent hover:bg-muted border border-border"
           onClick={addPage}
           title="Add New Page"
         >

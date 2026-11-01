@@ -40,6 +40,11 @@ export default defineConfig({
           path.resolve(__dirname, "src/style.d.ts"),
           path.resolve(__dirname, "dist/style.d.ts")
         );
+        // Tailwind v4 design tokens for hosts (`@import "sabi-canvas/theme.css"`).
+        copyFileSync(
+          path.resolve(__dirname, "src/theme.css"),
+          path.resolve(__dirname, "dist/theme.css")
+        );
       },
     },
   ],

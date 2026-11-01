@@ -155,7 +155,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
             'rounded-lg',
             'transition-colors duration-200',
             isActive
-              ? 'bg-primary/10 text-primary shadow-sm'
+              ? 'bg-primary/10 text-primary shadow-xs'
               : 'text-muted-foreground hover:bg-toolbar-hover hover:text-foreground',
             disabled && 'opacity-40 cursor-not-allowed'
           )}
@@ -181,7 +181,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
           {isActive && !collapsed && (
             <motion.div
               layoutId="toolIndicatorExpanded"
-              className="absolute left-6 -bottom-0 w-4 h-0.5 rounded-full bg-primary"
+              className="absolute left-6 bottom-0 w-4 h-0.5 rounded-full bg-primary"
             />
           )}
         </motion.button>

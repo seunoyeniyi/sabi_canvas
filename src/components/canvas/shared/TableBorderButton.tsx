@@ -103,7 +103,7 @@ export const TableBorderButton: React.FC<TableBorderButtonProps> = ({ border, on
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" title="Table borders">
+        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" title="Table borders">
           <Grid3X3 className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
@@ -117,7 +117,7 @@ export const TableBorderButton: React.FC<TableBorderButtonProps> = ({ border, on
                 key={preset.label}
                 variant="outline"
                 size="icon"
-                className="h-9 w-full flex-shrink-0"
+                className="h-9 w-full shrink-0"
                 title={preset.label}
                 onClick={() => applyPreset(preset.keys)}
               >
@@ -139,7 +139,7 @@ export const TableBorderButton: React.FC<TableBorderButtonProps> = ({ border, on
                 variant="outline"
                 size="sm"
                 className={cn(
-                  'h-8 px-1 text-[10px] flex-shrink-0',
+                  'h-8 px-1 text-[10px] shrink-0',
                   border.style === s.value && 'bg-secondary text-secondary-foreground border-primary/40'
                 )}
                 onClick={() => onChange({ style: s.value })}
