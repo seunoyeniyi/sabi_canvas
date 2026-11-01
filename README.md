@@ -552,6 +552,35 @@ import {
 } from 'sabi-canvas';
 ---
 
+## Tailwind CSS v4 setup
+
+Sabi Canvas ships its components as Tailwind utility classes and **requires Tailwind CSS v4** in the host app
+(it uses v4 class names such as `shadow-xs`, `outline-hidden` and `bg-linear-to-r`). The package does not bundle any
+Tailwind CSS: your app generates it. In your main stylesheet:
+
+```css
+@import "tailwindcss";
+
+/* 1. Tell Tailwind to scan the canvas for class names (one of the two is enough in production). */
+@source "../node_modules/sabi-canvas/dist";
+
+/* 2. Utilities used by the dialogs, sheets, tooltips... (animate-in, fade-in-0, zoom-in-95, ...). */
+@plugin "tailwindcss-animate";
+
+/* 3. Same dark-mode switch the components were written for: a `.dark` class on an ancestor. */
+@custom-variant dark (&:is(.dark *));
+
+/* 4. Optional: the editor's own tokens (toolbar, panel, canvas-bg, tool-*, editor shadows, animations). */
+@import "sabi-canvas/theme.css";
+```
+
+- **Colours come from your CSS variables.** The shadcn-style tokens (`--background`, `--primary`, `--border`, ...) and
+  the editor ones (`--toolbar`, `--panel`, `--canvas-bg`, ...) are defined by the host, so branding and light/dark mode
+  stay yours. `theme.css` only maps them to utilities (`bg-toolbar`, `text-tool-blue`, ...).
+- **Customise freely.** Redefine any token in your own `@theme` block, or skip `theme.css` and map just the ones you want.
+- **Tooltips need a provider.** Wrap the editor in your app's `TooltipProvider` (`@radix-ui/react-tooltip`).
+- **Upgrading from Tailwind v3?** Move your `tailwind.config` to CSS (`npx @tailwindcss/upgrade`) and use `tailwind-merge` v3.
+
 ## Local Development & Releasing
 
 `sabi_canvas` is its own git repository and lives **next to** the apps that use it:

@@ -124,7 +124,7 @@ export const PhotosPanel: React.FC<PhotosPanelProps> = ({ onClose }) => {
               {photos.map((photo) => (
                 <button
                   key={photo.id}
-                  className="group relative w-full mb-2 break-inside-avoid rounded-xl overflow-hidden bg-muted/30 border border-border/40 hover:border-primary/40 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="group relative w-full mb-2 break-inside-avoid rounded-xl overflow-hidden bg-muted/30 border border-border/40 hover:border-primary/40 hover:shadow-md transition-all focus:outline-hidden focus:ring-2 focus:ring-primary"
                   onClick={(e) => handlePhotoClick(e, photo)}
                 >
                   <img
@@ -138,7 +138,7 @@ export const PhotosPanel: React.FC<PhotosPanelProps> = ({ onClose }) => {
                   />
 
                   {/* Attribution Overlay */}
-                  <div className="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-2 pointer-events-none">
+                  <div className="absolute inset-x-0 bottom-0 top-1/2 bg-linear-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-2 pointer-events-none">
                     <p className="text-[9px] text-white/90 leading-tight text-center w-full pointer-events-auto pb-1 drop-shadow-md truncate px-1">
                       By{' '}
                       <a

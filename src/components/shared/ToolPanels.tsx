@@ -137,7 +137,7 @@ export const TextPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   return (
     <Tabs defaultValue="text" className="w-full flex flex-col h-full">
-      <TabsList className="w-full h-8 mb-3 flex-shrink-0">
+      <TabsList className="w-full h-8 mb-3 shrink-0">
         <TabsTrigger value="text" className="flex-1 text-xs">Text</TabsTrigger>
         <TabsTrigger value="fonts" className="flex-1 text-xs">My Fonts</TabsTrigger>
       </TabsList>

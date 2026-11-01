@@ -215,7 +215,7 @@ export const IconsGrid: React.FC<IconsGridProps> = ({ onClose }) => {
                   <button
                     key={`${graphic}-${index}`}
                     onClick={() => handleGraphicClick(graphic)}
-                    className="flex items-center justify-center aspect-square p-2.5 rounded-xl border border-border/40 bg-card hover:bg-accent hover:border-primary/40 hover:shadow-sm transition-all group relative overflow-hidden"
+                    className="flex items-center justify-center aspect-square p-2.5 rounded-xl border border-border/40 bg-card hover:bg-accent hover:border-primary/40 hover:shadow-xs transition-all group relative overflow-hidden"
                     title={graphic.includes(':') ? graphic.split(':')[1] : graphic}
                   >
                     <img

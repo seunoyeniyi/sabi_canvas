@@ -461,7 +461,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
           className={cn(
             'rounded-full px-3 py-1 transition-colors',
             editorMode === 'mockup-design'
-              ? 'bg-background text-foreground shadow-sm'
+              ? 'bg-background text-foreground shadow-xs'
               : 'text-muted-foreground hover:text-foreground'
           )}
         >
@@ -472,7 +472,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
           className={cn(
             'rounded-full px-3 py-1 transition-colors',
             editorMode === 'customer'
-              ? 'bg-background text-foreground shadow-sm'
+              ? 'bg-background text-foreground shadow-xs'
               : 'text-muted-foreground hover:text-foreground'
           )}
         >

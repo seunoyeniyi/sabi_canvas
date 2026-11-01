@@ -115,7 +115,7 @@ export const AppBar: React.FC<AppBarProps> = ({
       )}
     >
       {/* Left Section: Menu + Logo */}
-      <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+      <div className="flex items-center gap-2 min-w-0 shrink-0">
         <Button
           variant="ghost"
           size="icon"
@@ -137,7 +137,7 @@ export const AppBar: React.FC<AppBarProps> = ({
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={commitTitle}
               onKeyDown={handleTitleKeyDown}
-              className="font-medium text-sm px-2 py-1 rounded-md border border-input outline-none focus:ring-1 focus:ring-ring min-w-0 w-[120px] md:w-[200px] text-foreground bg-transparent"
+              className="font-medium text-sm px-2 py-1 rounded-md border border-input outline-hidden focus:ring-1 focus:ring-ring min-w-0 w-[120px] md:w-[200px] text-foreground bg-transparent"
               maxLength={80}
             />
           ) : (
@@ -148,7 +148,7 @@ export const AppBar: React.FC<AppBarProps> = ({
               <span className="font-medium text-sm truncate max-w-[120px] md:max-w-[200px]">
                 {title}
               </span>
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             </button>
           )
         )}
@@ -156,7 +156,7 @@ export const AppBar: React.FC<AppBarProps> = ({
 
       {/* Center Section: Optional content (e.g. mode toggle) */}
       {centerContent && (
-        <div className="flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center justify-center shrink-0">
           {centerContent}
         </div>
       )}

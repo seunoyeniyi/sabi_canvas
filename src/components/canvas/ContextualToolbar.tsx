@@ -257,7 +257,7 @@ export const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
     <div
       ref={toolbarRef}
       className={cn(
-        'fixed z-[150] flex items-center gap-1 rounded-md shadow-xl',
+        'fixed z-150 flex items-center gap-1 rounded-md shadow-xl',
         'bg-card/95 backdrop-blur-md border border-panel-border px-0.5 py-0.5',
         'transition-all duration-150',
         className
@@ -271,7 +271,7 @@ export const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
     >
       {isText && !isMultiSelect && (
         <ToolbarTooltip label="Edit Text" side={popoverSide}>
-          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={handleTextEdit}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleTextEdit}>
             <PenSquare className="h-4 w-4" />
           </Button>
         </ToolbarTooltip>
@@ -291,7 +291,7 @@ export const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className={cn("h-8 w-8 flex-shrink-0", allLocked && "text-muted-foreground")}
+          className={cn("h-8 w-8 shrink-0", allLocked && "text-muted-foreground")}
           onClick={handleLockToggle}
         >
           {allLocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
@@ -305,7 +305,7 @@ export const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
             size="icon"
             aria-label="Crop"
             onClick={handleCropModeToggle}
-            className={cn("h-8 w-8 flex-shrink-0", isCropMode && "bg-secondary text-secondary-foreground")}
+            className={cn("h-8 w-8 shrink-0", isCropMode && "bg-secondary text-secondary-foreground")}
           >
             <Crop className="h-4 w-4" />
           </Button>
@@ -321,14 +321,14 @@ export const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
       />
 
       {shouldShowGroupAction && (
-        <Button variant="ghost" className="h-8 px-2 flex-shrink-0 text-xs font-medium" onClick={handleGroupAction}>
+        <Button variant="ghost" className="h-8 px-2 shrink-0 text-xs font-medium" onClick={handleGroupAction}>
           {isGroupActionUngroup ? <Ungroup className="h-4 w-4" /> : <Group className="h-4 w-4" />}
           {isGroupActionUngroup ? 'Ungroup' : 'Group'}
         </Button>
       )}
 
       <ToolbarTooltip label="Duplicate" side={popoverSide}>
-        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={handleDuplicate}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleDuplicate}>
           <Copy className="h-4 w-4" />
         </Button>
       </ToolbarTooltip>
@@ -336,7 +336,7 @@ export const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
       <div className="w-px h-4 bg-border mx-1 my-1" />
 
       <ToolbarTooltip label="Delete" side={popoverSide}>
-        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleDelete}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleDelete}>
           <Trash2 className="h-4 w-4" />
         </Button>
       </ToolbarTooltip>

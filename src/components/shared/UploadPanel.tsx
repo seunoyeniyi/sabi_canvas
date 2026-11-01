@@ -213,7 +213,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onClose }) => {
               {uploads.map((img) => (
                 <button
                   key={img.id}
-                  className="group relative aspect-square rounded-md overflow-hidden bg-muted hover:ring-2 hover:ring-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="group relative aspect-square rounded-md overflow-hidden bg-muted hover:ring-2 hover:ring-primary focus:outline-hidden focus:ring-2 focus:ring-primary"
                   onClick={(e) => handleRecentClick(e, img.src, img.width, img.height)}
                 >
                   <img

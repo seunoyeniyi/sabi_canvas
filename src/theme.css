@@ -1,0 +1,83 @@
+/*
+ * sabi-canvas design tokens for Tailwind CSS v4 hosts.
+ *
+ * Import once in the host's main stylesheet, after `@import "tailwindcss"`:
+ *
+ *   @import "sabi-canvas/theme.css";
+ *
+ * Every colour/shadow here points at a CSS variable the HOST defines (for
+ * example --toolbar, --panel, --canvas-bg), so light/dark mode and branding
+ * stay in the host's hands. Override any token by redefining it in your own
+ * `@theme` block, or skip this file and map only the tokens you need.
+ *
+ * `inline` makes utilities read the host's variables directly instead of
+ * Tailwind emitting its own copy (several names, e.g. --shadow-sm, also exist
+ * as host variables).
+ */
+@theme inline {
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: Inter, system-ui, sans-serif;
+
+  --color-surface: hsl(var(--surface));
+  --color-surface-foreground: hsl(var(--surface-foreground));
+
+  --color-toolbar: hsl(var(--toolbar));
+  --color-toolbar-foreground: hsl(var(--toolbar-foreground));
+  --color-toolbar-hover: hsl(var(--toolbar-hover));
+  --color-toolbar-active: hsl(var(--toolbar-active));
+
+  --color-panel: hsl(var(--panel));
+  --color-panel-border: hsl(var(--panel-border));
+
+  --color-canvas-bg: hsl(var(--canvas-bg));
+  --color-canvas-grid: hsl(var(--canvas-grid));
+
+  --color-tool-blue: hsl(var(--tool-blue));
+  --color-tool-green: hsl(var(--tool-green));
+  --color-tool-orange: hsl(var(--tool-orange));
+  --color-tool-pink: hsl(var(--tool-pink));
+  --color-tool-purple: hsl(var(--tool-purple));
+
+  --shadow-editor-sm: var(--shadow-sm);
+  --shadow-editor-md: var(--shadow-md);
+  --shadow-editor-lg: var(--shadow-lg);
+}
+
+@theme {
+  --animate-slide-in-right: slide-in-right 0.3s ease-out;
+  --animate-slide-out-right: slide-out-right 0.3s ease-out;
+  --animate-slide-in-left: slide-in-left 0.3s ease-out;
+  --animate-slide-out-left: slide-out-left 0.3s ease-out;
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-fade-up: fade-up 0.6s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+
+  @keyframes slide-in-right {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes slide-out-right {
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
+  }
+  @keyframes slide-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes slide-out-left {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scale-in {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+}

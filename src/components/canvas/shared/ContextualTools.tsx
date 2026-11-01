@@ -97,7 +97,7 @@ export const ToolbarTooltip: React.FC<ToolbarTooltipProps> = ({ label, side = 't
         <TooltipTrigger asChild>
           {triggerWithTouchHandlers}
         </TooltipTrigger>
-        <TooltipContent side={side} className="text-xs px-2 py-1 bg-popover text-popover-foreground border shadow-sm">
+        <TooltipContent side={side} className="text-xs px-2 py-1 bg-popover text-popover-foreground border shadow-xs">
           {label}
         </TooltipContent>
       </Tooltip>
@@ -109,7 +109,7 @@ export const ToolbarTooltip: React.FC<ToolbarTooltipProps> = ({ label, side = 't
       <TooltipTrigger asChild>
         {children}
       </TooltipTrigger>
-      <TooltipContent side={side} className="text-xs px-2 py-1 bg-popover text-popover-foreground border shadow-sm" sideOffset={8}>
+      <TooltipContent side={side} className="text-xs px-2 py-1 bg-popover text-popover-foreground border shadow-xs" sideOffset={8}>
         {label}
       </TooltipContent>
     </Tooltip>
@@ -151,7 +151,7 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
             // variant="ghost"
             size="icon"
             aria-label={label}
-            className="h-8 w-8 relative group flex-shrink-0 rounded-sm border border-panel-border transition-transform hover:scale-110"
+            className="h-8 w-8 relative group shrink-0 rounded-sm border border-panel-border transition-transform hover:scale-110"
             style={{ backgroundColor: color || '#ffffff' }}
           >
             <div
@@ -178,7 +178,7 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
               <div className="flex items-center gap-1 border border-input rounded-md px-2 py-1 h-8">
                 <span className="text-xs text-muted-foreground">#</span>
                 <input
-                  className="flex-1 bg-transparent border-none text-xs focus:outline-none uppercase"
+                  className="flex-1 bg-transparent border-none text-xs focus:outline-hidden uppercase"
                   value={localColor.replace('#', '')}
                   onChange={(e) => {
                     const val = '#' + e.target.value.replace('#', '');
@@ -204,7 +204,7 @@ export const StrokeWidthButton: React.FC<{
   <Popover>
     <ToolbarTooltip label="Stroke Weight" side={side}>
       <PopoverTrigger asChild>
-        <Button aria-label="Stroke Weight" variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 ">
+        <Button aria-label="Stroke Weight" variant="ghost" size="icon" className="h-8 w-8 shrink-0 ">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width={24}
@@ -231,7 +231,7 @@ export const OpacityButton: React.FC<{
   <Popover>
     <ToolbarTooltip label="Opacity" side={side}>
       <PopoverTrigger asChild>
-        <Button aria-label="Opacity" variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+        <Button aria-label="Opacity" variant="ghost" size="icon" className="h-8 w-8 shrink-0">
           <Droplet className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
@@ -259,7 +259,7 @@ export const PositionAlignButton: React.FC<{
   return (
     <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button aria-label="Position" variant="ghost" className={cn("h-8 px-2 flex-shrink-0 text-xs font-medium", isOpen && "bg-muted text-foreground")}>
+        <Button aria-label="Position" variant="ghost" className={cn("h-8 px-2 shrink-0 text-xs font-medium", isOpen && "bg-muted text-foreground")}>
           <Layers className="h-4 w-4" />
           Position
         </Button>
@@ -267,20 +267,20 @@ export const PositionAlignButton: React.FC<{
       <PopoverContent className="w-56 p-2" side={side} align="center">
         <Label className="text-xs mb-2 block font-semibold">Layering</Label>
         <div className="grid grid-cols-2 gap-1 mb-3">
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onLayersChange('forward')}><ArrowUp className="h-3 w-3" />Forward</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onLayersChange('backward')}><ArrowDown className="h-3 w-3" />Backward</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onLayersChange('front')}><ChevronsUp className="h-3 w-3" />To Front</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onLayersChange('back')}><ChevronsDown className="h-3 w-3" />To back</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onLayersChange('forward')}><ArrowUp className="h-3 w-3" />Forward</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onLayersChange('backward')}><ArrowDown className="h-3 w-3" />Backward</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onLayersChange('front')}><ChevronsUp className="h-3 w-3" />To Front</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onLayersChange('back')}><ChevronsDown className="h-3 w-3" />To back</Button>
         </div>
         <Separator className="my-2" />
         <Label className="text-xs mb-2 block font-semibold">Position</Label>
         <div className="grid grid-cols-2 gap-1 mb-3">
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('left')}><AlignLeft className="h-3 w-3" />Align left</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('top')}><ArrowUp className="h-3 w-3" />Align top</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('center')}><AlignCenter className="h-3 w-3" />Align center</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('middle')}><Move className="h-3 w-3" />Align middle</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('right')}><AlignRight className="h-3 w-3" />Align right</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('bottom')}><ArrowDown className="h-3 w-3" />Align bottom</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('left')}><AlignLeft className="h-3 w-3" />Align left</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('top')}><ArrowUp className="h-3 w-3" />Align top</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('center')}><AlignCenter className="h-3 w-3" />Align center</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('middle')}><Move className="h-3 w-3" />Align middle</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('right')}><AlignRight className="h-3 w-3" />Align right</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('bottom')}><ArrowDown className="h-3 w-3" />Align bottom</Button>
         </div>
       </PopoverContent>
     </Popover>
@@ -314,7 +314,7 @@ export const AIWriteButton: React.FC<{
         <Button
           aria-label="AI Write"
           variant="ghost"
-          className={cn('h-8 px-2 flex-shrink-0 text-xs font-medium gap-1.5', isOpen && 'bg-muted text-foreground')}
+          className={cn('h-8 px-2 shrink-0 text-xs font-medium gap-1.5', isOpen && 'bg-muted text-foreground')}
           disabled={isLoading}
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
@@ -357,7 +357,7 @@ export const MultipleAlignButton: React.FC<{
   return (
     <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button aria-label="Position" variant="ghost" className={cn("h-8 px-2 gap-1.5 flex-shrink-0 text-xs font-medium", isOpen && "bg-muted text-foreground")}>
+        <Button aria-label="Position" variant="ghost" className={cn("h-8 px-2 gap-1.5 shrink-0 text-xs font-medium", isOpen && "bg-muted text-foreground")}>
           <Layers className="h-4 w-4" />
           Position
         </Button>
@@ -365,20 +365,20 @@ export const MultipleAlignButton: React.FC<{
       <PopoverContent className="w-56 p-2" side={side} align="center">
         <Label className="text-xs mb-2 block font-semibold">Layering</Label>
         <div className="grid grid-cols-2 gap-1 mb-3">
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onLayersChange('forward')}><ArrowUp className="h-3 w-3" />Forward</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onLayersChange('backward')}><ArrowDown className="h-3 w-3" />Backward</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onLayersChange('front')}><ChevronsUp className="h-3 w-3" />To Front</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onLayersChange('back')}><ChevronsDown className="h-3 w-3" />To back</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onLayersChange('forward')}><ArrowUp className="h-3 w-3" />Forward</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onLayersChange('backward')}><ArrowDown className="h-3 w-3" />Backward</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onLayersChange('front')}><ChevronsUp className="h-3 w-3" />To Front</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onLayersChange('back')}><ChevronsDown className="h-3 w-3" />To back</Button>
         </div>
         <Separator className="my-2" />
         <Label className="text-xs mb-2 block font-semibold">Position</Label>
         <div className="grid grid-cols-2 gap-1">
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('left')}><AlignLeft className="h-3 w-3" />Align left</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('top')}><ArrowUp className="h-3 w-3" />Align top</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('center')}><AlignCenter className="h-3 w-3" />Align center</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('middle')}><Move className="h-3 w-3" />Align middle</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('right')}><AlignRight className="h-3 w-3" />Align right</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 !px-1 rounded-none" onClick={() => onAlign('bottom')}><ArrowDown className="h-3 w-3" />Align bottom</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('left')}><AlignLeft className="h-3 w-3" />Align left</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('top')}><ArrowUp className="h-3 w-3" />Align top</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('center')}><AlignCenter className="h-3 w-3" />Align center</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('middle')}><Move className="h-3 w-3" />Align middle</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('right')}><AlignRight className="h-3 w-3" />Align right</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs justify-start gap-1.5 px-1! rounded-none" onClick={() => onAlign('bottom')}><ArrowDown className="h-3 w-3" />Align bottom</Button>
         </div>
       </PopoverContent>
     </Popover>
@@ -396,7 +396,7 @@ export const ShadowButton: React.FC<{
   <Popover>
     <ToolbarTooltip label="Shadow" side={side}>
       <PopoverTrigger asChild>
-        <Button aria-label="Shadow" variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+        <Button aria-label="Shadow" variant="ghost" size="icon" className="h-8 w-8 shrink-0">
           <SunDim className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
@@ -437,7 +437,7 @@ export const MaskShapeButton: React.FC<{
           aria-label="Mask to Shape"
           variant="ghost"
           size="icon"
-          className={cn("h-8 w-8 flex-shrink-0 ", currentMask !== 'none' && "text-primary")}
+          className={cn("h-8 w-8 shrink-0 ", currentMask !== 'none' && "text-primary")}
         >
           <Shapes className="h-4 w-4" />
         </Button>
@@ -451,7 +451,7 @@ export const MaskShapeButton: React.FC<{
             key={opt.id}
             variant={currentMask === opt.id ? 'default' : 'ghost'}
             size="icon"
-            className="h-8 w-8 flex-col gap-0 !p-0"
+            className="h-8 w-8 flex-col gap-0 p-0!"
             onClick={() => onChange(opt.id)}
             title={opt.label}
           >
@@ -498,7 +498,7 @@ export const TextSpacingButton: React.FC<{
           aria-label="Line Height & Spacing"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 flex-shrink-0 "
+          className="h-8 w-8 shrink-0 "
         >
           <LineHeightIcon className="h-4 w-4" />
         </Button>

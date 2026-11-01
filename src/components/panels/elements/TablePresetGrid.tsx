@@ -81,7 +81,7 @@ export const TablePresetGrid: React.FC<TablePresetGridProps> = ({ onClose }) => 
             className="flex flex-col items-center gap-1.5 p-0 rounded-none border border-border/50 bg-card hover:bg-accent hover:border-primary/30 transition-all group"
             title={`${preset.rows} rows × ${preset.cols} columns`}
           >
-            <div className="w-full aspect-[4/3] flex items-center justify-center overflow-hidden rounded-none">
+            <div className="w-full aspect-4/3 flex items-center justify-center overflow-hidden rounded-none">
               <TablePreviewSvg rows={preset.rows} cols={preset.cols} />
             </div>
             <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">

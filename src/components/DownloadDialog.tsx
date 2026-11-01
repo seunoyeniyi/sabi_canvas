@@ -198,7 +198,7 @@ export const DownloadDialog: React.FC<DownloadDialogProps> = ({
         {/* Header */}
         <SheetHeader className="px-4 py-2 border-b border-panel-border text-left">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 shrink-0 rounded bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <div className="h-8 w-8 shrink-0 rounded bg-linear-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
               <Download className="h-4 w-4 text-white" />
             </div>
             <div>
@@ -302,7 +302,7 @@ export const DownloadDialog: React.FC<DownloadDialogProps> = ({
                   )}
                 </div>
                 {/* Dimensions badge */}
-                <div className="absolute flex items-start justify-center bottom-2 right-2 px-2 py-0.5 rounded-md bg-background/90 backdrop-blur-sm border border-panel-border">
+                <div className="absolute flex items-start justify-center bottom-2 right-2 px-2 py-0.5 rounded-md bg-background/90 backdrop-blur-xs border border-panel-border">
                   <span className="text-[10px] font-mono text-muted-foreground">
                     {exportWidth} × {exportHeight}px
                   </span>
@@ -322,7 +322,7 @@ export const DownloadDialog: React.FC<DownloadDialogProps> = ({
                         'relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200',
                         'hover:border-violet-400/50 hover:bg-violet-500/5',
                         format === option.value
-                          ? 'border-violet-500 bg-violet-500/10 shadow-sm'
+                          ? 'border-violet-500 bg-violet-500/10 shadow-xs'
                           : 'border-panel-border bg-background'
                       )}
                     >
@@ -410,7 +410,7 @@ export const DownloadDialog: React.FC<DownloadDialogProps> = ({
                       min={10}
                       max={100}
                       step={1}
-                      className="[&>span:first-child]:h-1.5 [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&>span:first-child_span]:bg-violet-500"
+                      className="[&>span:first-child]:h-1.5 **:[[role=slider]]:h-4 **:[[role=slider]]:w-4 [&>span:first-child_span]:bg-violet-500"
                     />
                     <div className="flex justify-between text-[10px] text-muted-foreground">
                       <span>Smaller file</span>
@@ -450,7 +450,7 @@ export const DownloadDialog: React.FC<DownloadDialogProps> = ({
                   'shadow-lg hover:shadow-xl',
                   downloadSuccess
                     ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                    : 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white'
+                    : 'bg-linear-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white'
                 )}
               >
                 {isExporting ? (

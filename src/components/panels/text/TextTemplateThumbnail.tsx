@@ -49,7 +49,7 @@ export const TextTemplateThumbnail: React.FC<TextTemplateThumbnailProps> = ({
   return (
     <button
       onClick={onClick}
-      className="w-full rounded-sm border border-border/50 overflow-hidden hover:border-primary/60 hover:shadow-md transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="w-full rounded-sm border border-border/50 overflow-hidden hover:border-primary/60 hover:shadow-md transition-all group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
       title={preset.name}
     >
       {/* Preview area */}

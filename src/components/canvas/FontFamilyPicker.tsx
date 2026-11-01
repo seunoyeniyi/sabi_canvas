@@ -342,7 +342,7 @@ export const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
           <span className="truncate" style={{ fontFamily: getFontFallbackStack(selectedFontLabel) }}>
             {selectedFontLabel}
           </span>
-          <ChevronDown className="ml-1 h-3.5 w-3.5 flex-shrink-0" />
+          <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-2" side={side} align="start">

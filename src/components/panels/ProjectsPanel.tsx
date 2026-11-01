@@ -147,7 +147,7 @@ export const ProjectsPanel: React.FC<ProjectsPanelProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground flex-shrink-0"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0"
             onClick={onRefresh}
             title="Refresh"
           >
@@ -276,7 +276,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
 
         {/* Actions */}
         <div
-          className="flex items-center gap-1 flex-shrink-0"
+          className="flex items-center gap-1 shrink-0"
           onClick={(e) => e.stopPropagation()}
         >
           {isDeleting ? (

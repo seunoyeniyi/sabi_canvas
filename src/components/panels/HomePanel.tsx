@@ -104,7 +104,7 @@ export const HomePanel: React.FC<HomePanelProps> = ({
                                 </Button>
                             )}
                             <Button
-                                className="w-full gap-2 font-semibold shadow-sm active:scale-[0.98] transition-transform"
+                                className="w-full gap-2 font-semibold shadow-xs active:scale-[0.98] transition-transform"
                                 onClick={onNewProject}
                                 size="sm"
                             >
@@ -177,9 +177,9 @@ export const HomePanel: React.FC<HomePanelProps> = ({
                                         key={project.id}
                                         type="button"
                                         onClick={() => handleOpenProject(project)}
-                                        className="group relative rounded-lg border border-border/40 bg-card overflow-hidden hover:border-primary/40 focus:outline-none transition-all text-left flex flex-col"
+                                        className="group relative rounded-lg border border-border/40 bg-card overflow-hidden hover:border-primary/40 focus:outline-hidden transition-all text-left flex flex-col"
                                     >
-                                        <div className="aspect-[4/3] w-full bg-[#f3f3f3] dark:bg-[#1e1e1e] relative overflow-hidden flex-shrink-0">
+                                        <div className="aspect-4/3 w-full bg-[#f3f3f3] dark:bg-[#1e1e1e] relative overflow-hidden shrink-0">
                                             {project.thumbnail ? (
                                                 <img
                                                     src={project.thumbnail}
