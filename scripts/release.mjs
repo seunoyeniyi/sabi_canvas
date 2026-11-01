@@ -37,6 +37,19 @@ if (dirty) {
   if (!dryRun) process.exit(1);
 }
 
+// A version published from somewhere else would make `npm version` + `npm publish` collide.
+const localVersion = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version;
+const registry = spawnSync("npm", ["view", "sabi-canvas", "version"], { cwd: root, encoding: "utf8" }).stdout.trim();
+const toNums = (v) => v.split(".").map(Number);
+const behind = registry && toNums(localVersion).reduce((acc, n, i) => acc || Math.sign(n - toNums(registry)[i]), 0) < 0;
+if (behind) {
+  console.error(
+    `npm already has sabi-canvas ${registry} but package.json says ${localVersion}.\n` +
+      `Run \`npm version ${registry} --no-git-tag-version\`, commit it, then release again.`,
+  );
+  process.exit(1);
+}
+
 run("npm", ["version", bump]);
 const version = dryRun ? `<next ${bump}>` : JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version;
 run("npm", ["run", "build"]);
