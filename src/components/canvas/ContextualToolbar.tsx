@@ -201,11 +201,22 @@ export const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
     });
   }, [selectedObject, isMultiSelect, selectedIds, stageRef, containerRef, setPositionIfChanged]);
 
-  // Close position popover whenever the selection changes
+  // Close popovers whenever the selection changes
   const selectionKey = selectedObject?.id ?? selectedIds.join(',');
   useEffect(() => {
     setIsPositionOpen(false);
+    setIsAIWriteOpen(false);
   }, [selectionKey]);
+
+  const handlePositionOpenChange = useCallback((open: boolean) => {
+    setIsPositionOpen(open);
+    if (open) setIsAIWriteOpen(false);
+  }, []);
+
+  const handleAIWriteOpenChange = useCallback((open: boolean) => {
+    setIsAIWriteOpen(open);
+    if (open) setIsPositionOpen(false);
+  }, []);
 
   // Sync ref for callback access
   useEffect(() => {
@@ -281,7 +292,7 @@ export const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
         <AIWriteButton
           side={popoverSide}
           open={isAIWriteOpen}
-          onOpenChange={setIsAIWriteOpen}
+          onOpenChange={handleAIWriteOpenChange}
           isLoading={isAIWriteRunning}
           onAction={handleAIWriteAction}
         />
@@ -317,7 +328,7 @@ export const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
         onLayersChange={handleLayers}
         side={popoverSide}
         open={isPositionOpen}
-        onOpenChange={setIsPositionOpen}
+        onOpenChange={handlePositionOpenChange}
       />
 
       {shouldShowGroupAction && (
