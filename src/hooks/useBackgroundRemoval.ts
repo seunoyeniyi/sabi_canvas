@@ -51,14 +51,67 @@ const waitForDerivedImage = async (src: string) => {
 export const useBackgroundRemoval = () => {
   const [stage, setStage] = useState<BackgroundRemovalStage>('idle');
   const [error, setError] = useState<string | null>(null);
-  const { cloudinaryCloudName, cloudinaryUploadPreset } = useSabiCanvasConfig();
+  const { proxy, cloudinaryCloudName, cloudinaryUploadPreset } = useSabiCanvasConfig();
+
+  const proxyUrl =
+    proxy?.removeBackgroundUrl ||
+    (proxy?.baseUrl ? `${proxy.baseUrl.replace(/\/$/, '')}/remove-background` : undefined);
 
   const removeBackground = useCallback(async (image: ImageObject): Promise<BackgroundRemovalSuccess | BackgroundRemovalError> => {
+    // 1. If backend proxy is configured, route through backend securely
+    if (proxyUrl) {
+      setStage('uploading');
+      setError(null);
+
+      try {
+        const response = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ image: image.src }),
+        });
+
+        const payload = (await response.json()) as {
+          resultUrl?: string;
+          message?: string;
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(
+            payload?.message ||
+              payload?.error ||
+              `Background removal request failed (${response.status})`,
+          );
+        }
+
+        const resultUrl = payload.resultUrl;
+        if (!resultUrl) {
+          throw new Error('Server did not return a valid result URL for the processed image.');
+        }
+
+        setStage('processing');
+        await waitForDerivedImage(resultUrl);
+
+        setStage('done');
+        return { resultUrl };
+      } catch (caughtError) {
+        const message =
+          caughtError instanceof Error ? caughtError.message : 'Background removal failed.';
+        setStage('error');
+        setError(message);
+        return { message };
+      }
+    }
+
+    // 2. Fallback to direct client-side unsigned Cloudinary upload if credentials are provided
     const cloudName = cloudinaryCloudName;
     const uploadPreset = cloudinaryUploadPreset;
 
     if (!cloudName || !uploadPreset) {
-      const message = 'Cloudinary is not configured. Pass cloudinaryCloudName and cloudinaryUploadPreset to SabiCanvasProvider.';
+      const message =
+        'Background removal is not configured. Configure backend proxy or pass Cloudinary credentials.';
       setStage('error');
       setError(message);
       return { message };
@@ -99,7 +152,7 @@ export const useBackgroundRemoval = () => {
       setError(message);
       return { message };
     }
-  }, [cloudinaryCloudName, cloudinaryUploadPreset]);
+  }, [proxyUrl, cloudinaryCloudName, cloudinaryUploadPreset]);
 
   const reset = useCallback(() => {
     setStage('idle');

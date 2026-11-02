@@ -46,6 +46,8 @@ export interface SabiCanvasProxyConfig {
   aiUrl?: string;
   /** Custom Google Fonts catalog proxy URL, defaults to `${baseUrl}/google-fonts` */
   googleFontsUrl?: string;
+  /** Custom background removal proxy URL, defaults to `${baseUrl}/remove-background` */
+  removeBackgroundUrl?: string;
 }
 
 export interface SabiCanvasConfig {
