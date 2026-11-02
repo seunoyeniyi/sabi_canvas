@@ -199,13 +199,31 @@ const writeCachedGoogleFonts = (fonts: GoogleFontDefinition[]): void => {
   }
 };
 
-const hasGoogleFontsApiKey = (): boolean => {
-  return Boolean(getSabiCanvasConfig().googleFontsApiKey);
+const getGoogleFontsApiUrl = (): string | undefined => {
+  const { proxy, googleFontsApiKey } = getSabiCanvasConfig();
+  if (proxy?.googleFontsUrl) {
+    return proxy.googleFontsUrl;
+  }
+  if (proxy?.baseUrl) {
+    return `${proxy.baseUrl.replace(/\/$/, '')}/google-fonts`;
+  }
+  if (googleFontsApiKey) {
+    return `https://www.googleapis.com/webfonts/v1/webfonts?sort=popularity&key=${googleFontsApiKey}`;
+  }
+  return undefined;
+};
+
+const hasGoogleFontsCatalogSource = (): boolean => {
+  return Boolean(getGoogleFontsApiUrl());
 };
 
 const fetchGoogleFontsFromApi = async (): Promise<GoogleFontDefinition[]> => {
-  const apiKey = getSabiCanvasConfig().googleFontsApiKey;
-  const response = await fetch(`https://www.googleapis.com/webfonts/v1/webfonts?sort=popularity&key=${apiKey}`);
+  const url = getGoogleFontsApiUrl();
+  if (!url) {
+    throw new Error('Google Fonts API key or proxy is not configured');
+  }
+
+  const response = await fetch(url);
 
   if (!response.ok) {
     throw new Error(`Google Fonts API returned ${response.status}`);
@@ -228,7 +246,7 @@ const fetchGoogleFontsFromApi = async (): Promise<GoogleFontDefinition[]> => {
 export const getGoogleFontCatalog = async (): Promise<GoogleFontDefinition[]> => {
   if (runtimeFontCatalog) return runtimeFontCatalog;
 
-  if (!hasGoogleFontsApiKey()) {
+  if (!hasGoogleFontsCatalogSource()) {
     runtimeFontCatalog = GOOGLE_FONT_CATALOG;
     return runtimeFontCatalog;
   }

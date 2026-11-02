@@ -44,6 +44,8 @@ export interface SabiCanvasProxyConfig {
   pixabayUrl?: string;
   /** Custom AI text generation proxy URL, defaults to `${baseUrl}/ai/generate-text` */
   aiUrl?: string;
+  /** Custom Google Fonts catalog proxy URL, defaults to `${baseUrl}/google-fonts` */
+  googleFontsUrl?: string;
 }
 
 export interface SabiCanvasConfig {

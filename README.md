@@ -130,21 +130,33 @@ const editorConfig = {
   proxy: {
     baseUrl: 'https://api.yourdomain.com/api/canvas/proxy',
     // Or specify individual custom endpoints:
-    // unsplashUrl: 'https://api.yourdomain.com/api/canvas/proxy/unsplash/photos',
-    // pixabayUrl:  'https://api.yourdomain.com/api/canvas/proxy/pixabay',
-    // aiUrl:       'https://api.yourdomain.com/api/canvas/proxy/ai/generate-text',
+    // unsplashUrl:    'https://api.yourdomain.com/api/canvas/proxy/unsplash/photos',
+    // pixabayUrl:     'https://api.yourdomain.com/api/canvas/proxy/pixabay',
+    // aiUrl:          'https://api.yourdomain.com/api/canvas/proxy/ai/generate-text',
+    // googleFontsUrl: 'https://api.yourdomain.com/api/canvas/proxy/google-fonts',
   },
 };
 ```
 
-When `proxy` is provided, the editor routes requests to your backend endpoints instead of calling 3rd-party APIs directly. If direct keys (`unsplashAccessKey`, `pixabayApiKey`, `ai.*.apiKey`) are also provided, they serve as fallback.
+When `proxy` is provided, the editor routes requests to your backend endpoints instead of calling 3rd-party APIs directly. If direct keys (`unsplashAccessKey`, `pixabayApiKey`, `googleFontsApiKey`, `ai.*.apiKey`) are also provided, they serve as fallback. If neither is provided, `sabi-canvas` gracefully falls back to its built-in offline font catalog and local file handling.
+
+#### Backend Proxy Contract (Framework-Agnostic)
+
+You can build these 4 simple endpoints in any backend language or framework (Node.js/Express, Next.js API routes, FastAPI, Laravel, Go, Ruby, etc.):
+
+| Endpoint | Method | Query / Body | Expected Response |
+|---|---|---|---|
+| `/unsplash/photos` | `GET` | `?query=...&page=1&per_page=20` | JSON array of Unsplash image objects (`[{ urls: { small, regular } }]`) |
+| `/pixabay` | `GET` | `?q=...&page=1&per_page=20&image_type=illustration` | JSON `{ hits: [{ webformatURL, largeImageURL }], totalHits }` |
+| `/google-fonts` | `GET` | `?sort=popularity` | JSON `{ items: [{ family, category, variants }] }` |
+| `/ai/generate-text` | `POST` | `{ prompt, provider?, model? }` | JSON `{ text: "Generated copy...", provider?, model? }` |
 
 ### Full config reference
 
 ```ts
 interface SabiCanvasConfig {
   /**
-   * Backend proxy configuration to route Unsplash, Pixabay, and AI requests
+   * Backend proxy configuration to route Unsplash, Pixabay, Google Fonts, and AI requests
    * through your server, keeping secret API keys hidden from client browsers.
    */
   proxy?: {
@@ -152,6 +164,7 @@ interface SabiCanvasConfig {
     unsplashUrl?: string;
     pixabayUrl?: string;
     aiUrl?: string;
+    googleFontsUrl?: string;
   };
 
   /** Unsplash API access key , photo search/browse panel (fallback if no proxy configured) */
@@ -160,7 +173,7 @@ interface SabiCanvasConfig {
   /** Pixabay API key , transparent graphics/illustrations panel (fallback if no proxy configured) */
   pixabayApiKey?: string;
 
-  /** Google Fonts API key , enables dynamic full font catalog */
+  /** Google Fonts API key , enables dynamic full font catalog (fallback if no proxy configured) */
   googleFontsApiKey?: string;
 
   /** Cloudinary cloud name , background removal feature */
