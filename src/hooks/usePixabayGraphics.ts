@@ -28,14 +28,37 @@ const PER_PAGE = 20;
  * Handles infinite scrolling, search queries, and caching.
  */
 export function usePixabayGraphics(query: string) {
-  const { pixabayApiKey: apiKey } = useSabiCanvasConfig();
+  const { pixabayApiKey: apiKey, proxy } = useSabiCanvasConfig();
+  const proxyUrl =
+    proxy?.pixabayUrl ||
+    (proxy?.baseUrl ? `${proxy.baseUrl.replace(/\/$/, '')}/pixabay` : undefined);
 
   return useInfiniteQuery<PixabayResponse>({
-    queryKey: ['pixabay-graphics', query],
+    queryKey: ['pixabay-graphics', query, proxyUrl],
     queryFn: async ({ pageParam = 1 }) => {
-      if (!apiKey) {
-        toast.error("Pixabay API key is missing. Please add it to .env");
-        throw new Error("Missing API Key");
+      if (!proxyUrl && !apiKey) {
+        toast.error('Pixabay is not configured. Please configure proxy or add API key.');
+        throw new Error('Missing Pixabay configuration');
+      }
+
+      if (proxyUrl) {
+        try {
+          const response = await axios.get<PixabayResponse>(proxyUrl, {
+            params: {
+              q: query.trim() || undefined,
+              per_page: PER_PAGE,
+              page: pageParam,
+              image_type: 'illustration',
+              colors: 'transparent',
+              editors_choice: query.trim() ? undefined : 'true',
+            },
+          });
+          return response.data;
+        } catch (error) {
+          console.error('Error fetching Pixabay graphics via proxy:', error);
+          toast.error('Failed to load graphics');
+          throw error;
+        }
       }
 
       const params: Record<string, any> = {
@@ -67,7 +90,7 @@ export function usePixabayGraphics(query: string) {
       const totalLoaded = allPages.length * PER_PAGE;
       return totalLoaded < lastPage.totalHits ? nextPage : undefined;
     },
-    enabled: !!apiKey, // Only run if API key is present
+    enabled: Boolean(apiKey || proxyUrl),
     staleTime: 1000 * 60 * 5, // 5 minutes cache
   });
 }

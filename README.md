@@ -118,14 +118,46 @@ function App() {
 }
 ```
 
+### Backend Proxy / API Gateway (Recommended for Production)
+
+To protect your 3rd-party API keys (Unsplash, Pixabay, Gemini, etc.) and avoid exposing them in public browser bundles, you can route requests through your own backend API gateway using the `proxy` config:
+
+```tsx
+import { EditorLayout } from 'sabi-canvas';
+
+const editorConfig = {
+  // Route Unsplash, Pixabay, and AI through your backend proxy
+  proxy: {
+    baseUrl: 'https://api.yourdomain.com/api/canvas/proxy',
+    // Or specify individual custom endpoints:
+    // unsplashUrl: 'https://api.yourdomain.com/api/canvas/proxy/unsplash/photos',
+    // pixabayUrl:  'https://api.yourdomain.com/api/canvas/proxy/pixabay',
+    // aiUrl:       'https://api.yourdomain.com/api/canvas/proxy/ai/generate-text',
+  },
+};
+```
+
+When `proxy` is provided, the editor routes requests to your backend endpoints instead of calling 3rd-party APIs directly. If direct keys (`unsplashAccessKey`, `pixabayApiKey`, `ai.*.apiKey`) are also provided, they serve as fallback.
+
 ### Full config reference
 
 ```ts
 interface SabiCanvasConfig {
-  /** Unsplash API access key , photo search/browse panel */
+  /**
+   * Backend proxy configuration to route Unsplash, Pixabay, and AI requests
+   * through your server, keeping secret API keys hidden from client browsers.
+   */
+  proxy?: {
+    baseUrl?: string;
+    unsplashUrl?: string;
+    pixabayUrl?: string;
+    aiUrl?: string;
+  };
+
+  /** Unsplash API access key , photo search/browse panel (fallback if no proxy configured) */
   unsplashAccessKey?: string;
 
-  /** Pixabay API key , transparent graphics/illustrations panel */
+  /** Pixabay API key , transparent graphics/illustrations panel (fallback if no proxy configured) */
   pixabayApiKey?: string;
 
   /** Google Fonts API key , enables dynamic full font catalog */

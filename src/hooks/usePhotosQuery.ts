@@ -33,20 +33,35 @@ const PER_PAGE = 20;
  * Handles both the default state (latest photos or a default search) and active searches.
  */
 export function usePhotosQuery(query: string, defaultSearch?: string) {
-  const { unsplashAccessKey: apiKey } = useSabiCanvasConfig();
+  const { unsplashAccessKey: apiKey, proxy } = useSabiCanvasConfig();
+  const proxyUrl =
+    proxy?.unsplashUrl ||
+    (proxy?.baseUrl ? `${proxy.baseUrl.replace(/\/$/, '')}/unsplash/photos` : undefined);
 
   return useInfiniteQuery<UnsplashImage[]>({
-    queryKey: ['photos', query, defaultSearch],
+    queryKey: ['photos', query, defaultSearch, proxyUrl],
     queryFn: async ({ pageParam = 1 }) => {
-      if (!apiKey) {
-        toast.error("Unsplash API key is missing. Please add it to .env");
-        throw new Error("Missing API Key");
+      if (!proxyUrl && !apiKey) {
+        toast.error('Unsplash is not configured. Please configure proxy or add API key.');
+        throw new Error('Missing Unsplash configuration');
       }
 
       try {
-        let response;
         const activeSearch = query.trim() || defaultSearch;
 
+        if (proxyUrl) {
+          const response = await axios.get(proxyUrl, {
+            params: {
+              query: activeSearch || undefined,
+              per_page: PER_PAGE,
+              page: pageParam,
+            },
+          });
+          const data = response.data;
+          return Array.isArray(data) ? data : (data?.results ?? []);
+        }
+
+        let response;
         if (activeSearch) {
           response = await axios.get<UnsplashSearchResponse>(`${UNSPLASH_API_URL}/search/photos`, {
             params: {
@@ -77,7 +92,7 @@ export function usePhotosQuery(query: string, defaultSearch?: string) {
     getNextPageParam: (lastPage, allPages) => {
       return lastPage.length === PER_PAGE ? allPages.length + 1 : undefined;
     },
-    enabled: !!apiKey,
+    enabled: Boolean(apiKey || proxyUrl),
     staleTime: 1000 * 60 * 5, // 5 minutes cache
   });
 }

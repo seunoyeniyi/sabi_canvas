@@ -35,10 +35,27 @@ export interface SabiCanvasRecentUpload extends SabiCanvasUploadedImage {
   resourceType?: 'image' | 'video' | 'raw';
 }
 
+export interface SabiCanvasProxyConfig {
+  /** Base URL for backend proxy endpoints (e.g. 'https://api.sabiflow.com/api/canvas/proxy' or '/api/canvas/proxy') */
+  baseUrl?: string;
+  /** Custom Unsplash proxy URL, defaults to `${baseUrl}/unsplash/photos` */
+  unsplashUrl?: string;
+  /** Custom Pixabay proxy URL, defaults to `${baseUrl}/pixabay` */
+  pixabayUrl?: string;
+  /** Custom AI text generation proxy URL, defaults to `${baseUrl}/ai/generate-text` */
+  aiUrl?: string;
+}
+
 export interface SabiCanvasConfig {
-  /** Unsplash API access key , for photo search/browse in the editor */
+  /**
+   * Backend proxy configuration.
+   * When provided, API requests (Unsplash, Pixabay, AI writing assistant)
+   * are routed through your backend API gateway instead of exposing 3rd-party API keys in client browsers.
+   */
+  proxy?: SabiCanvasProxyConfig;
+  /** Unsplash API access key , for direct photo search/browse in the editor (fallback if no proxy configured) */
   unsplashAccessKey?: string;
-  /** Pixabay API key , for transparent graphics/illustrations in the editor */
+  /** Pixabay API key , for direct transparent graphics/illustrations in the editor (fallback if no proxy configured) */
   pixabayApiKey?: string;
   /** Google Fonts API key , enables dynamic font catalog from Google Fonts API */
   googleFontsApiKey?: string;
