@@ -77,9 +77,9 @@ export const UploadsPanel: React.FC<UploadsPanelProps> = ({ onAssetInserted }) =
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-3 py-3 border-b border-panel-border">
+      <div className="px-3 py-3 border-b border-panel-border flex md:flex-row items-center justify-end gap-2">
         <Button
-          className="w-full gap-2"
+          className="w-full md:w-auto gap-2"
           onClick={uploadImage}
           disabled={isUploadingImage}
         >
