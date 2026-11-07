@@ -23,6 +23,8 @@ interface CanvasObjectsContextValue {
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
   duplicatePage: (id: string) => void;
+  /** Inserts ready-made pages after a page (the active one by default) without touching other pages' history. */
+  insertPages: (pages: CanvasPage[], afterPageId?: string) => void;
   reorderPage: (id: string, direction: 'left' | 'right') => void;
   setActivePage: (id: string) => void;
   updatePageViewState: (zoom: number, position: { x: number; y: number }) => void;
@@ -418,6 +420,19 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
       });
     },
     [cloneCanvasObject]
+  );
+
+  const insertPages = useCallback(
+    (incoming: CanvasPage[], afterPageId?: string) => {
+      if (incoming.length === 0) return;
+      setPages((prev) => {
+        const anchorIdx = prev.findIndex((p) => p.id === (afterPageId ?? activePageId));
+        const at = anchorIdx === -1 ? prev.length : anchorIdx + 1;
+        const fresh = incoming.map((page) => ({ ...page, selectedIds: [], past: [], future: [] }));
+        return [...prev.slice(0, at), ...fresh, ...prev.slice(at)].map((p, i) => ({ ...p, order: i }));
+      });
+    },
+    [activePageId]
   );
 
   const reorderPage = useCallback((id: string, direction: 'left' | 'right') => {
@@ -1352,6 +1367,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
       deletePage,
       renamePage,
       duplicatePage,
+      insertPages,
       reorderPage,
       setActivePage,
       updatePageViewState,
@@ -1401,6 +1417,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
       deletePage,
       renamePage,
       duplicatePage,
+      insertPages,
       reorderPage,
       updatePageViewState,
       updatePageBackground,

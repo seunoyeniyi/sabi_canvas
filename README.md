@@ -8,7 +8,7 @@ A powerful, open-source canvas design editor framework built with React and Konv
 - **Rich text editing** , multiple fonts, sizes, colors, alignment
 - **Image management** , upload, crop, background removal, drag-drop
 - **Shape library** , rectangles, circles, polygons, custom SVG shapes
-- **Design templates** , pre-built templates with full customization
+- **Design templates** , the free Sabi Canvas templates library out of the box, with live filters; plug in your own templates API or panel
 - **Layer management** , reorder, group, lock, hide layers
 - **Undo/Redo** , full history management
 - **Export** , PDF and PNG export with configurable DPI
@@ -68,6 +68,7 @@ Pass your API keys to `<EditorLayout>` via the `config` prop. Vite resolves `imp
 import { EditorLayout } from 'sabi-canvas';
 
 const editorConfig = {
+  sabiCanvasApiKey:        import.meta.env.VITE_SABI_CANVAS_API_KEY, // optional: unlocks paid templates
   unsplashAccessKey:       import.meta.env.VITE_UNSPLASH_ACCESS_KEY,
   pixabayApiKey:           import.meta.env.VITE_PIXABAY_API_KEY,
   googleFontsApiKey:       import.meta.env.VITE_GOOGLE_FONTS_API_KEY,
@@ -170,6 +171,12 @@ interface SabiCanvasConfig {
     removeBackgroundUrl?: string;
   };
 
+  /**
+   * Sabi Canvas API key (cpk_…) , optional. Without it every template is listed and the free ones open;
+   * with it, the paid templates your plan includes open too. Ignored when `templates.source` is set.
+   */
+  sabiCanvasApiKey?: string;
+
   /** Unsplash API access key , photo search/browse panel (fallback if no proxy configured) */
   unsplashAccessKey?: string;
 
@@ -236,12 +243,27 @@ interface SabiCanvasConfig {
    * Useful when your platform policy disallows local persistence.
    */
   disableRecentUploadsLocalStorage?: boolean;
+
+  /**
+   * Templates panel. Defaults to the free Sabi Canvas templates API (no key,
+   * no env). See "Templates" below.
+   */
+  templates?: {
+    source?: TemplateSource;                                // where templates and filters come from
+    panel?: React.ComponentType<{ onClose: () => void }>;    // replaces the whole panel
+    pageSize?: number;                                      // templates per request, default 20
+    onLockedTemplate?: (template: TemplateSummary, error: unknown) => void; // a locked template was refused
+    onTemplateApplied?: (design: TemplateDesign) => void;   // after a template lands on the canvas
+  };
 }
 ```
 
 ### `.env` variables (recommended naming)
 
 ```bash
+# Templates (optional: the free templates work without it)
+VITE_SABI_CANVAS_API_KEY=cpk_...
+
 # Photos
 VITE_UNSPLASH_ACCESS_KEY=...
 
@@ -289,7 +311,7 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 |---|---|---|---|
 | `config` | `SabiCanvasConfig` | , | Runtime API keys (see above) |
 | `isBlank` | `boolean` | `false` | Start with a blank canvas |
-| `templateId` | `string` | , | Load a built-in template by ID |
+| `templateId` | `string` | , | Open a template by its id (or slug, on the Sabi Canvas API), fetched from the template source |
 | `projectId` | `string` | , | Backend design ID. When set, auto-save calls `onSave` instead of writing to localStorage |
 | `initialProject` | `Project` | , | Pre-loaded design data to hydrate the editor (e.g. fetched from your API on open) |
 | `onSave` | `(project: Project) => Promise<void>` | , | Called on every auto-save. Receives the full project object. Use to PATCH your backend |
@@ -307,9 +329,155 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 | `config.disableRecentUploadsLocalStorage` | `boolean` | `false` | Disable localStorage for recent uploads and keep the list memory-only |
 | `config.disableCustomFontsLocalStorage` | `boolean` | `false` | Disable localStorage for custom fonts state in sabi_canvas |
 | `config.disableRecentFontsLocalStorage` | `boolean` | `false` | Disable localStorage for recent font picks in FontFamilyPicker |
+| `config.sabiCanvasApiKey` | `string` | , | Optional Sabi Canvas API key. Paid templates your plan includes open too. See [Templates](#templates) |
+| `config.templates.source` | `TemplateSource` | Sabi Canvas API | Where the Templates panel and `templateId` get templates, filters and designs. See [Templates](#templates) |
+| `config.templates.panel` | `ComponentType<{ onClose }>` | , | Replaces the Templates panel with your own component |
+| `config.templates.pageSize` | `number` | `20` | Templates per request |
+| `config.templates.onLockedTemplate` | `(template, error) => void` | , | Called when a locked template (`hasAccess: false`) is refused, e.g. to offer an upgrade. Without it, a dialog says which plan it needs |
+| `config.templates.onTemplateApplied` | `(design) => void` | , | Called after a template is applied to the canvas |
 | `saveAction` | `AppBarSaveAction` | , | Optional custom action button rendered in the app bar before the Download button. Useful for "Save", "Publish", or any app-specific primary action. See below. |
 | `enableJsonDevTools` | `boolean` | `false` | Show JSON inspector panel (dev only) |
 | `className` | `string` | , | Extra CSS class on the root element |
+
+---
+
+## Templates
+
+The Templates panel lists the **Sabi Canvas templates** by default, free and paid. Listing, filters and free designs are
+public: there's no key, account or environment variable to set. Paid templates show with a lock (and the plan, e.g.
+`Pro`); picking one asks the API, which refuses it unless your key's plan includes it. The API is documented at
+[sabicanvas.sabiflow.shop/developers](https://sabicanvas.sabiflow.shop/developers).
+
+### Paid templates: add your Sabi Canvas API key
+
+Make a key in your account on [sabicanvas.sabiflow.shop](https://sabicanvas.sabiflow.shop) (Account → API) and pass it as
+`sabiCanvasApiKey`. Nothing else changes: the editor keeps using the Sabi Canvas API, and the designs your plan includes
+open. Upgrade your plan and the same key opens more templates straight away.
+
+```tsx
+<EditorLayout config={{ sabiCanvasApiKey: import.meta.env.VITE_SABI_CANVAS_API_KEY }} />
+```
+
+The key is sent from the browser in the `x-api-key` header, so anyone using your app can see it, and requests made with
+it count toward your monthly limit. It can only read templates; revoke it in your account if it's misused. A key that
+isn't valid stops the panel loading, and the panel shows the API's reason.
+
+Nothing in the panel is hardcoded. It shows what the template source returns:
+
+- **Search** goes to the source as `search`.
+- **Filters** come from the source's `filters()` reply. The first single-choice group (categories, on the Sabi Canvas API)
+  shows as chips; the others, and the sort orders, sit behind the Filters button. Each option can carry a live `count`.
+- **Paging** follows the source's `hasMore`; the next page loads as the list scrolls.
+
+Picking a template replaces what's on the active page with the design's first page, including its size and background
+(undo brings the old objects back), and adds any further pages after it. In customer mode with a print area, the design is scaled into the print area instead.
+
+### The default source
+
+```tsx
+import { EditorLayout, createSabiCanvasTemplateSource } from 'sabi-canvas';
+
+// Nothing to configure: this is what the editor uses already.
+<EditorLayout isBlank />
+
+// Only to show another Canvas Pro business's templates instead:
+const source = createSabiCanvasTemplateSource({
+  baseUrl: 'https://api.sabiflow.com/api/canvas-pro/api/v1/<business-slug>',
+  apiKey: 'cpk_...', // optional, a key from that business's website
+});
+
+<EditorLayout config={{ templates: { source } }} />
+```
+
+### Your own templates API
+
+Implement `TemplateSource` and pass it as `config.templates.source`. The filters your backend returns are the filters
+the panel shows; whatever is chosen comes back to `list()` and `filters()` as `state.filters`, keyed by group `key`.
+
+```tsx
+import type { TemplateSource } from 'sabi-canvas';
+
+const myTemplates: TemplateSource = {
+  // Names this source in the editor's cache. Make it unique per set of templates.
+  id: `my-api:${workspaceId}`,
+
+  async list({ page, limit, search, filters, sort }, { signal } = {}) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit), search });
+    Object.entries(filters).forEach(([key, values]) => values.length && params.set(key, values.join(',')));
+    if (sort) params.set('sort', sort);
+    const res = await fetch(`/api/templates?${params}`, { signal }).then((r) => r.json());
+    return {
+      items: res.data.map((t) => ({ id: t.id, name: t.name, thumbnail: t.thumb, width: t.w, height: t.h })),
+      hasMore: res.page < res.totalPages,
+      total: res.total,
+    };
+  },
+
+  // Optional. Leave it out to offer search only.
+  async filters({ search, filters }, { signal } = {}) {
+    return fetch(`/api/templates/filters?...`, { signal }).then((r) => r.json());
+    // → {
+    //     groups: [
+    //       { key: 'category', label: 'Categories', type: 'single', allLabel: 'All templates',
+    //         options: [{ value: 'instagram', label: 'Instagram', count: 5 }] },
+    //       { key: 'tags', label: 'Topics', type: 'multi', options: [{ value: 'promo', label: 'promo', count: 2 }] },
+    //     ],
+    //     sort: { default: 'popular', options: [{ value: 'popular', label: 'Most popular' }, { value: 'newest', label: 'Newest' }] },
+    //   }
+  },
+
+  // The design to apply, by the id from list() or the editor's templateId prop.
+  async getDesign(id, { signal } = {}) {
+    const t = await fetch(`/api/templates/${id}`, { signal }).then((r) => r.json());
+    return {
+      id: t.id, name: t.name, width: t.w, height: t.h,
+      content: {
+        // Each page: { size: { width, height }, objects: CanvasObject[], background?, name? }
+        pages: t.pages,
+        customFonts: t.customFonts, // optional, uploaded fonts the design uses
+      },
+    };
+  },
+};
+
+<EditorLayout config={{ templates: { source: myTemplates } }} />
+```
+
+Templates you return with `hasAccess: false` show a lock (and `badge`, e.g. `Pro`). Picking one still calls
+`getDesign`, so your backend decides. If it throws, `config.templates.onLockedTemplate(template, error)` is called, so you
+can offer an upgrade or sign-in; without it, a dialog says which plan the template needs. Give your errors a numeric
+`status` (as `SabiCanvasApiError` does) so a refusal (4xx) isn't mistaken for a network failure.
+
+### Your own panel
+
+Pass any component as `config.templates.panel`. It renders inside the editor, so the same hooks the built-in panel uses
+are available:
+
+```tsx
+import {
+  useTemplateList, useTemplateFilters, useTemplateDesignLoader, useApplyTemplate,
+  type TemplatesPanelProps,
+} from 'sabi-canvas';
+
+function MyTemplatesPanel({ onClose }: TemplatesPanelProps) {
+  const [state, setState] = useState({ search: '', filters: {} });
+  const { data } = useTemplateList(state);        // TanStack infinite query over config.templates.source
+  const { data: filters } = useTemplateFilters(state);
+  const loadDesign = useTemplateDesignLoader();    // cached fetch of a design
+  const applyTemplate = useApplyTemplate();        // puts a design on the canvas
+
+  const pick = async (id: string) => {
+    const result = applyTemplate(await loadDesign(id));
+    if (result.success) onClose();
+  };
+  // ...render your own UI
+}
+
+<EditorLayout config={{ templates: { panel: MyTemplatesPanel } }} />
+```
+
+The panel and the hooks use TanStack Query. If your app has a `QueryClientProvider`, the editor uses its client;
+otherwise `<EditorLayout>` provides its own.
 
 ---
 
@@ -524,14 +692,14 @@ function DesignEditor({ designId }: { designId: string }) {
 
 ### Opening a template with a backend record
 
-When you want to open a built-in template and immediately persist it to your backend, create the backend record first, then pass both `projectId` and `templateId`:
+When you want to open a template and immediately persist it to your backend, create the backend record first, then pass both `projectId` and `templateId` (an id from your template source; the Sabi Canvas API also takes the template's slug):
 
 ```tsx
 // 1. Create the backend record (empty pages at this point)
 const design = await fetch('/api/canvas/designs', { method: 'POST', ... }).then(r => r.json());
 
-// 2. Open editor with both props , template loads visually, auto-save
-//    writes to the correct backend record from the first save onward.
+// 2. Open editor with both props , the template's design is fetched and loaded,
+//    and auto-save writes to the correct backend record from the first save onward.
 <EditorLayout
   config={editorConfig}
   projectId={design._id}
@@ -601,6 +769,22 @@ import {
   CanvasObjectsProvider, useCanvasObjects,
   CustomFontsProvider, useCustomFonts,
 } from 'sabi-canvas';
+
+// Templates
+import {
+  createSabiCanvasTemplateSource, getDefaultTemplateSource, SABI_CANVAS_TEMPLATES_URL, SabiCanvasApiError,
+  useTemplateSource, useTemplateList, useTemplateFilters, useTemplateDesignLoader, useApplyTemplate,
+} from 'sabi-canvas';
+import type {
+  TemplateSource, TemplateSummary, TemplateDesign, TemplateFilters, TemplateFilterGroup,
+  TemplateFilterState, TemplatesPanelProps, SabiCanvasTemplatesConfig,
+} from 'sabi-canvas';
+```
+
+> **Removed in 0.4:** `DESIGN_TEMPLATES`, `TEMPLATE_CATEGORIES`, and the `DesignTemplate` / `TemplateCategory` /
+> `TemplateCategoryItem` types. Templates now come from a template source; use `useTemplateList` and
+> `useTemplateFilters` to list them in your own pages.
+
 ---
 
 ## Tailwind CSS v4 setup

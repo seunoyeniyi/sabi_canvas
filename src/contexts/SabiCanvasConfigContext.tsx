@@ -1,4 +1,5 @@
 import React, { createContext, useContext } from 'react';
+import type { SabiCanvasTemplatesConfig } from '@sabi-canvas/types/design-templates';
 
 export interface SabiCanvasAIProviderConfig {
   apiKey?: string;
@@ -57,6 +58,13 @@ export interface SabiCanvasConfig {
    * are routed through your backend API gateway instead of exposing 3rd-party API keys in client browsers.
    */
   proxy?: SabiCanvasProxyConfig;
+  /**
+   * Sabi Canvas API key (`cpk_…`), from your account on the Sabi Canvas
+   * website. Optional. Without it the Templates panel lists every template and
+   * opens the free ones; with it, the paid templates your plan includes open
+   * too. Ignored when `templates.source` is set.
+   */
+  sabiCanvasApiKey?: string;
   /** Unsplash API access key , for direct photo search/browse in the editor (fallback if no proxy configured) */
   unsplashAccessKey?: string;
   /** Pixabay API key , for direct transparent graphics/illustrations in the editor (fallback if no proxy configured) */
@@ -113,6 +121,12 @@ export interface SabiCanvasConfig {
    * Disable localStorage usage for recent font picks in FontFamilyPicker.
    */
   disableRecentFontsLocalStorage?: boolean;
+  /**
+   * Templates panel. By default it lists the free Sabi Canvas templates, with
+   * the filters the API offers. Pass `source` to serve your own templates and
+   * filters, or `panel` to replace the panel entirely.
+   */
+  templates?: SabiCanvasTemplatesConfig;
 }
 
 // ---------------------------------------------------------------------------

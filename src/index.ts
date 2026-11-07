@@ -87,6 +87,9 @@ export { useIconsQuery } from './hooks/useIconsQuery';
 export { useRecentUploads } from './hooks/useRecentUploads';
 export { useMediaQuery, useBreakpoint, useIsMobile, useIsTablet, useIsDesktop } from './hooks/useMediaQuery';
 export { useDebounce } from './hooks/use-debounce';
+export { useTemplateSource, useTemplateList, useTemplateFilters, useTemplateDesignLoader, templateQueryKeys } from './hooks/useTemplates';
+export { useApplyTemplate } from './hooks/useApplyTemplate';
+export type { ApplyTemplateResult } from './hooks/useApplyTemplate';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type {
@@ -138,11 +141,34 @@ export { DEFAULT_STAGE_CONFIG, ZOOM_CONFIG, PRINT_PRESETS } from './types/canvas
 export type { CanvasPage, CanvasBackground } from './types/pages';
 export type { Project, ProjectPage } from './types/project';
 export type { CustomFont } from './types/custom-fonts';
-export type { DesignTemplate, TemplateCategory } from './types/design-templates';
+export type {
+  // Templates
+  SabiCanvasTemplatesConfig,
+  TemplateSource,
+  TemplateSummary,
+  TemplateDesign,
+  TemplateContent,
+  TemplatePageContent,
+  TemplateFilters,
+  TemplateFilterGroup,
+  TemplateFilterOption,
+  TemplateFilterState,
+  TemplateSorting,
+  TemplateSortOption,
+  TemplateListQuery,
+  TemplateListResult,
+  TemplateRequestContext,
+  TemplatesPanelProps,
+} from './types/design-templates';
 
-// ─── Design Templates ─────────────────────────────────────────────────────────
-export { DESIGN_TEMPLATES, TEMPLATE_CATEGORIES } from './design-templates';
-export type { TemplateCategoryItem } from './design-templates';
+// ─── Templates ────────────────────────────────────────────────────────────────
+export {
+  createSabiCanvasTemplateSource,
+  getDefaultTemplateSource,
+  SABI_CANVAS_TEMPLATES_URL,
+  SabiCanvasApiError,
+} from './lib/templates/sabiCanvasTemplateSource';
+export type { SabiCanvasTemplateSourceOptions } from './lib/templates/sabiCanvasTemplateSource';
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 export { cn } from './lib/utils';

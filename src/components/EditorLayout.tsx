@@ -1,6 +1,7 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useContext } from 'react';
+import { QueryClient, QueryClientContext, QueryClientProvider } from '@tanstack/react-query';
 import Konva from 'konva';
-import { Download, FileCode2, FileDown, FileUp, Printer, Frame } from 'lucide-react';
+import { Download, FileCode2, FileDown, FileUp, Printer, Frame, Loader2 } from 'lucide-react';
 import { convertPolotnoDesign } from '@sabi-canvas/lib/polotnoConverter';
 import { toast } from 'sonner';
 import { EditorProvider, useEditor } from '@sabi-canvas/contexts/EditorContext';
@@ -17,6 +18,7 @@ import { PropertyPanel } from './PropertyPanel';
 import { EffectsPanel } from './EffectsPanel';
 import { CanvasContainer } from './CanvasContainer';
 import { DownloadDialog } from './DownloadDialog';
+import { TemplateLockedDialog, useTemplateLockedDialog } from './shared/TemplateLockedDialog';
 import { cn } from '@sabi-canvas/lib/utils';
 import { AppBarAction } from '@sabi-canvas/types/editor';
 import type { AppBarSaveAction } from '@sabi-canvas/types/editor';
@@ -25,7 +27,9 @@ import { useAutoSave } from '@sabi-canvas/hooks/useAutoSave';
 import { getLastProjectId, getProject, setLastProjectId } from '@sabi-canvas/hooks/useProjectManager';
 import { DEFAULT_PROJECT_TITLE, projectPageToCanvasPage } from '@sabi-canvas/types/project';
 import { createPrintAreaObject } from '@sabi-canvas/types/canvas-objects';
-import { DESIGN_TEMPLATES } from '@sabi-canvas/design-templates';
+import { useTemplateDesignLoader } from '@sabi-canvas/hooks/useTemplates';
+import { fontFamiliesIn, toCanvasPages } from '@sabi-canvas/lib/templates/placeTemplate';
+import { preloadFonts } from '@sabi-canvas/lib/fontLoader';
 import type { Project } from '@sabi-canvas/types/project';
 import type { CanvasPage } from '@sabi-canvas/types/pages';
 
@@ -33,6 +37,10 @@ export interface EditorLayoutProps {
   children?: React.ReactNode;
   className?: string;
   enableJsonDevTools?: boolean;
+  /**
+   * Opens a template's design, fetched by id from the template source
+   * (`config.templates.source`, or the free Sabi Canvas API by default).
+   */
   templateId?: string;
   isBlank?: boolean;
   hideTitle?: boolean;
@@ -161,6 +169,14 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(externalProjectId ?? null);
   const [projectTitle, setProjectTitle] = useState<string>(DEFAULT_PROJECT_TITLE);
+  const [isOpeningTemplate, setIsOpeningTemplate] = useState(false);
+  const lockedDialog = useTemplateLockedDialog();
+  const showLockedDialogRef = useRef(lockedDialog.show);
+  showLockedDialogRef.current = lockedDialog.show;
+  // Read through a ref so a source re-created on every render doesn't reload the design.
+  const loadTemplateDesign = useTemplateDesignLoader();
+  const loadTemplateDesignRef = useRef(loadTemplateDesign);
+  loadTemplateDesignRef.current = loadTemplateDesign;
   const stageRef = useRef<React.RefObject<Konva.Stage> | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
   const polotnoImportInputRef = useRef<HTMLInputElement | null>(null);
@@ -232,41 +248,40 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
       return;
     }
 
-    // 1. Handle template initialization if a valid templateId is passed.
+    // 2. Open a template from the template source.
     if (templateId) {
-      const template = DESIGN_TEMPLATES.find((t) => t.id === templateId);
-      if (template) {
-        const pageId = `page_${Date.now()}`;
-        const templateSize = { width: template.canvasWidth, height: template.canvasHeight };
-        const canvasPages: CanvasPage[] = [
-          {
-            id: pageId,
-            name: template.pageName || template.name,
-            order: 0,
-            size: templateSize,
-            objects: template.objects || [],
-            background: template.background || { type: 'solid', color: '#ffffff' },
-            viewState: template.viewState || { zoom: 1, position: { x: 0, y: 0 } },
-            selectedIds: [],
-            past: [],
-            future: [],
-          },
-        ];
-
-        loadProjectData(canvasPages, pageId, templateSize);
-        // Only reset to null when there is no external (backend) projectId.
-        // If externalProjectId is provided the auto-save must keep using that ID
-        // so the PATCH always targets the correct backend record.
-        if (!externalProjectId) {
-          setProjectId(null);
-        }
-        setProjectTitle(template.name);
-        setMockupEnabled(false);
-        return; // Skip loading from localStorage
-      }
+      const controller = new AbortController();
+      setIsOpeningTemplate(true);
+      loadTemplateDesignRef.current(templateId)
+        .then((design) => {
+          if (controller.signal.aborted) return;
+          const canvasPages = toCanvasPages(design.content.pages);
+          if (canvasPages.length === 0) throw new Error('This template is empty.');
+          loadProjectData(canvasPages, canvasPages[0].id, canvasPages[0].size);
+          // Keep an external (backend) projectId so auto-save PATCHes that record.
+          if (!externalProjectId) setProjectId(null);
+          setProjectTitle(design.name);
+          setMockupEnabled(false);
+          if (design.content.customFonts?.length) loadProjectFonts(design.content.customFonts);
+          const families = fontFamiliesIn(design.content.pages);
+          if (families.length) void preloadFonts(families, { maxFonts: families.length, concurrency: 4 });
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          const status = (error as { status?: unknown } | null)?.status;
+          if (status === 401 || status === 403) showLockedDialogRef.current();
+          else toast.error('This template couldn’t be opened.');
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setIsOpeningTemplate(false);
+        });
+      return () => {
+        controller.abort();
+        setIsOpeningTemplate(false);
+      };
     }
 
-    // 2. Fallback: Load last project from local storage
+    // 3. Fallback: Load last project from local storage
     const lastId = getLastProjectId();
     if (!lastId) return;
     const project = getProject(lastId);
@@ -578,6 +593,13 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
             {children}
           </CanvasContainer>
 
+          {isOpeningTemplate && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/60" role="status">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="sr-only">Opening template</span>
+            </div>
+          )}
+
           {/* Floating Desktop Toolbar */}
           <div className={cn(
             "absolute left-4 bottom-4 z-10 hidden md:flex transition-all duration-300 ease-in-out",
@@ -619,6 +641,8 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
         onChange={handleImportPolotnoFile}
       />
 
+      <TemplateLockedDialog open={lockedDialog.open} plan={lockedDialog.plan} onOpenChange={lockedDialog.onOpenChange} />
+
       {/* Download Dialog */}
       <DownloadDialog
         isOpen={isDownloadOpen}
@@ -629,21 +653,31 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
   );
 };
 
+/** Uses the host's React Query client, or a private one when the host has none. */
+const EditorQueryClient: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const hostClient = useContext(QueryClientContext);
+  const [ownClient] = useState(() => (hostClient ? null : new QueryClient()));
+  if (hostClient || !ownClient) return <>{children}</>;
+  return <QueryClientProvider client={ownClient}>{children}</QueryClientProvider>;
+};
+
 export const EditorLayout: React.FC<EditorLayoutProps> = ({ config, ...props }) => {
   const ancestorConfig = useSabiCanvasConfig();
   // Use the prop-level config if provided, otherwise fall through to ancestor provider
   const resolvedConfig = config ?? ancestorConfig;
 
   return (
-    <SabiCanvasProvider config={resolvedConfig}>
-      <EditorProvider>
-        <CanvasObjectsProvider>
-          <CustomFontsProvider>
-            <EditorLayoutContent {...props} />
-          </CustomFontsProvider>
-        </CanvasObjectsProvider>
-      </EditorProvider>
-    </SabiCanvasProvider>
+    <EditorQueryClient>
+      <SabiCanvasProvider config={resolvedConfig}>
+        <EditorProvider>
+          <CanvasObjectsProvider>
+            <CustomFontsProvider>
+              <EditorLayoutContent {...props} />
+            </CustomFontsProvider>
+          </CanvasObjectsProvider>
+        </EditorProvider>
+      </SabiCanvasProvider>
+    </EditorQueryClient>
   );
 };
 

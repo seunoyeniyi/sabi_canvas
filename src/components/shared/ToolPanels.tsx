@@ -11,6 +11,7 @@ import { LayersPanel } from '../panels/LayersPanel';
 import { MyFontsPanel } from '../panels/MyFontsPanel';
 import { TextTemplatesPanel } from '../panels/text/TextTemplatesPanel';
 import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 import { TextObject, createDefaultObject } from '@sabi-canvas/types/canvas-objects';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@sabi-canvas/ui/tabs';
 
@@ -22,10 +23,13 @@ interface ToolPanelProps {
 export const ToolPanelContent: React.FC<ToolPanelProps> = ({ activeTool, onClose }) => {
   const { canvasSize } = useEditor();
   const { updateActivePageSize } = useCanvasObjects();
+  const { templates } = useSabiCanvasConfig();
 
   switch (activeTool) {
-    case 'templates':
-      return <TemplatesPanel onClose={onClose} />;
+    case 'templates': {
+      const Panel = templates?.panel ?? TemplatesPanel;
+      return <Panel onClose={onClose} />;
+    }
     case 'resize':
       return (
         <ResizePanel
