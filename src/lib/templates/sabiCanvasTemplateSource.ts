@@ -174,6 +174,8 @@ export function createSabiCanvasTemplateSource(options: SabiCanvasTemplateSource
       return filters;
     },
 
+    pageSizeFilter: ({ width, height }) => ({ key: 'size', value: `${width}x${height}` }),
+
     async getDesign(id, context): Promise<TemplateDesign> {
       const result = await get<ApiTemplateContent>(`/templates/${encodeURIComponent(id)}/content`, undefined, context?.signal);
       return {

@@ -144,6 +144,12 @@ export interface TemplateSource {
    * to offer search only.
    */
   filters?(state: TemplateFilterState, context?: TemplateRequestContext): Promise<TemplateFilters>;
+  /**
+   * How to filter by the page's size: the filter group `key` and the option
+   * `value` for a size. When set, the panel starts filtered to the page's size
+   * until someone picks another size or none. Omit it to start unfiltered.
+   */
+  pageSizeFilter?(size: { width: number; height: number }): { key: string; value: string };
   /** A template's design, by the `id` from `list` or the editor's `templateId` prop. */
   getDesign(id: string, context?: TemplateRequestContext): Promise<TemplateDesign>;
 }

@@ -9,7 +9,7 @@ import { useEditor } from '@sabi-canvas/contexts/EditorContext';
 import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 import { useDebounce } from '@sabi-canvas/hooks/use-debounce';
 import { useApplyTemplate } from '@sabi-canvas/hooks/useApplyTemplate';
-import { useTemplateDesignLoader, useTemplateFilters, useTemplateList } from '@sabi-canvas/hooks/useTemplates';
+import { useTemplateDesignLoader, useTemplateFilters, useTemplateList, useTemplateSource } from '@sabi-canvas/hooks/useTemplates';
 import { cn } from '@sabi-canvas/lib/utils';
 import { TemplateLockedDialog, useTemplateLockedDialog } from '@sabi-canvas/components/shared/TemplateLockedDialog';
 import type {
@@ -25,20 +25,78 @@ type ChosenFilters = TemplateFilterState['filters'];
 
 const SKELETON_HEIGHTS = ['h-40', 'h-28', 'h-32', 'h-44', 'h-28', 'h-36'];
 
+/** Nothing searched or chosen: the source's full set of filters. */
+const NO_CHOICES: TemplateFilterState = { search: '', filters: {} };
+
+/**
+ * Every filter group and option the source has offered, in the order of its
+ * full set, with counts from the reply for the current choices. Sources often
+ * leave out groups and options the current choices rule out; here they stay,
+ * so a choice can always be changed. An option missing from a group the
+ * current reply does have finds nothing (count 0); when the whole group is
+ * missing, its counts aren't known.
+ */
+function mergeFilterGroups(known: TemplateFilterGroup[][], current: TemplateFilterGroup[] | undefined): TemplateFilterGroup[] {
+    const byKey = new Map<string, TemplateFilterGroup>();
+    for (const groups of known) {
+        for (const group of groups) {
+            const seen = byKey.get(group.key);
+            if (!seen) {
+                byKey.set(group.key, { ...group, options: [...group.options] });
+                continue;
+            }
+            const values = new Set(seen.options.map((option) => option.value));
+            seen.options.push(...group.options.filter((option) => !values.has(option.value)));
+        }
+    }
+
+    const currentByKey = new Map((current ?? []).map((group) => [group.key, group]));
+    return [...byKey.values()].map((group) => {
+        const live = currentByKey.get(group.key);
+        const liveOptions = new Map(live?.options.map((option) => [option.value, option]));
+        const counted = live?.options.some((option) => option.count !== undefined) ?? false;
+        return {
+            ...group,
+            ...live,
+            options: group.options.map((option) => {
+                const liveOption = liveOptions.get(option.value);
+                return { ...option, ...liveOption, count: live ? (liveOption?.count ?? (counted ? 0 : undefined)) : undefined };
+            }),
+        };
+    });
+}
+
 /**
  * Lists templates from the configured source (the free Sabi Canvas API by
- * default) with the filters and sort orders that source offers. The first
- * single-choice filter group shows as chips; the rest sit behind Filters.
+ * default) with the filters and sort orders that source offers. Every group
+ * is under Filters; the first single-choice group is also offered as chips.
  */
 export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ onClose }) => {
     const { templates: templatesConfig } = useSabiCanvasConfig();
-    const { editorMode, isMockupEnabled } = useEditor();
+    const { editorMode, isMockupEnabled, canvasSize } = useEditor();
     const isCustomerMode = isMockupEnabled && editorMode === 'customer';
+    const source = useTemplateSource();
 
     const [search, setSearch] = useState('');
-    const [filters, setFilters] = useState<ChosenFilters>({});
+    const [chosen, setChosen] = useState<ChosenFilters>({});
     const [sort, setSort] = useState<string | undefined>(undefined);
     const debouncedSearch = useDebounce(search, 400);
+
+    // Start filtered to the page's size, and follow it if the page is resized,
+    // until someone picks a size themselves (or none). Not in customer mode:
+    // there, templates are scaled into the print area whatever their size.
+    const pageWidth = Math.round(canvasSize.width);
+    const pageHeight = Math.round(canvasSize.height);
+    const pageSize = useMemo(
+        () => (isCustomerMode ? undefined : source.pageSizeFilter?.({ width: pageWidth, height: pageHeight })),
+        [isCustomerMode, source, pageWidth, pageHeight],
+    );
+    const [pageSizeTouched, setPageSizeTouched] = useState(false);
+    const pageSizeApplied = Boolean(pageSize) && !pageSizeTouched;
+    const filters = useMemo<ChosenFilters>(
+        () => (pageSize && !pageSizeTouched ? { ...chosen, [pageSize.key]: [pageSize.value] } : chosen),
+        [chosen, pageSize, pageSizeTouched],
+    );
 
     const state = useMemo<TemplateFilterState>(
         () => ({ search: debouncedSearch.trim(), filters, sort }),
@@ -47,46 +105,57 @@ export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ onClose }) => {
 
     const list = useTemplateList(state);
     const filterQuery = useTemplateFilters(state);
+    const allFiltersQuery = useTemplateFilters(NO_CHOICES);
     const loadDesign = useTemplateDesignLoader();
     const applyTemplate = useApplyTemplate();
     const [applyingId, setApplyingId] = useState<string | null>(null);
     const lockedDialog = useTemplateLockedDialog();
 
-    // A group stays on screen while one of its values is chosen, even if the
-    // source stops sending it, so the choice can always be undone.
-    const seenGroups = useRef(new Map<string, TemplateFilterGroup>());
+    // No filter section is ever hidden: groups and options from the full set,
+    // and from any reply seen while the panel is open, stay on screen.
+    // Wait for the full set so the sections (and the chip row) don't reorder.
+    const seenGroups = useRef<TemplateFilterGroup[]>([]);
+    const allFiltersSettled = !allFiltersQuery.isPending || allFiltersQuery.fetchStatus === 'idle';
     const groups = useMemo(() => {
-        const current = filterQuery.data?.groups ?? [];
-        current.forEach((group) => seenGroups.current.set(group.key, group));
-        const missing = Object.keys(filters)
-            .filter((key) => filters[key]?.length && !current.some((group) => group.key === key))
-            .map((key) => seenGroups.current.get(key))
-            .filter((group): group is TemplateFilterGroup => Boolean(group));
-        return [...current, ...missing];
-    }, [filterQuery.data, filters]);
-    const chipGroup = groups.find((group) => group.type === 'single' && group.options.length > 0);
-    const moreGroups = groups.filter((group) => group !== chipGroup && group.options.length > 0);
-    const sorting = filterQuery.data?.sort;
-    const hasMoreFilters = moreGroups.length > 0 || (sorting?.options.length ?? 0) > 1;
+        if (!allFiltersSettled) return [];
+        const merged = mergeFilterGroups(
+            [allFiltersQuery.data?.groups ?? [], filterQuery.data?.groups ?? [], seenGroups.current],
+            filterQuery.data?.groups,
+        );
+        seenGroups.current = merged;
+        return merged.filter((group) => group.options.length > 0);
+    }, [allFiltersSettled, allFiltersQuery.data, filterQuery.data]);
+    // The first single-choice group is also offered as chips; every group, that
+    // one included, is listed under Filters.
+    const chipGroup = groups.find((group) => group.type === 'single');
+    const sorting = filterQuery.data?.sort ?? allFiltersQuery.data?.sort;
+    const hasFilterMenu = groups.length > 0 || (sorting?.options.length ?? 0) > 1;
 
     const items = useMemo(() => list.data?.pages.flatMap((page) => page.items) ?? [], [list.data]);
-    const chosenCount = moreGroups.reduce((sum, group) => sum + (filters[group.key]?.length ?? 0), 0);
+    const chosenCount = groups.reduce((sum, group) => sum + (filters[group.key]?.length ?? 0), 0);
     const isFiltered = Boolean(state.search) || Object.values(filters).some((values) => values.length > 0);
 
+    const pageSizeKey = pageSize?.key;
     const setGroupValues = useCallback((key: string, values: string[]) => {
-        setFilters((prev) => {
+        if (key === pageSizeKey) setPageSizeTouched(true);
+        setChosen((prev) => {
             const next = { ...prev };
             if (values.length) next[key] = values;
             else delete next[key];
             return next;
         });
-    }, []);
+    }, [pageSizeKey]);
 
     const clearAll = () => {
         setSearch('');
-        setFilters({});
+        setChosen({});
         setSort(undefined);
+        setPageSizeTouched(true);
     };
+
+    // Nothing in the page's size, and nothing else narrowing the list.
+    const onlyPageSize = pageSizeApplied && !state.search
+        && Object.entries(filters).every(([key, values]) => key === pageSizeKey || values.length === 0);
 
     // Locked templates are still asked for: the source decides, so a plan
     // upgraded since the list loaded works straight away.
@@ -145,9 +214,9 @@ export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ onClose }) => {
                             className="h-8 pl-8 pr-2 text-xs md:text-xs rounded-md bg-muted/20 border-border/60 focus-visible:ring-offset-0"
                         />
                     </div>
-                    {hasMoreFilters && (
+                    {hasFilterMenu && (
                         <FiltersPopover
-                            groups={moreGroups}
+                            groups={groups}
                             sorting={sorting}
                             filters={filters}
                             sort={sort}
@@ -188,6 +257,12 @@ export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ onClose }) => {
                         title="Templates couldn’t load"
                         detail={errorMessage(list.error) ?? 'Check your connection and try again.'}
                         action={{ label: 'Try again', onClick: () => void list.refetch() }}
+                    />
+                ) : items.length === 0 && onlyPageSize ? (
+                    <EmptyState
+                        title="No templates in this size"
+                        detail={`None match your page size, ${pageWidth} × ${pageHeight}.`}
+                        action={{ label: 'Show all sizes', onClick: () => setGroupValues(pageSizeKey!, []) }}
                     />
                 ) : items.length === 0 ? (
                     <EmptyState
@@ -297,9 +372,15 @@ const FiltersPopover: React.FC<{
     onClear: () => void;
 }> = ({ groups, sorting, filters, sort, chosenCount, onGroupChange, onSortChange, onClear }) => {
     const activeSort = sort ?? sorting?.default;
+    // Picking anything applies it and closes the menu.
+    const [open, setOpen] = useState(false);
+    const pick = (apply: () => void) => {
+        apply();
+        setOpen(false);
+    };
 
     return (
-        <Popover>
+        <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <button
                     type="button"
@@ -313,7 +394,7 @@ const FiltersPopover: React.FC<{
                 >
                     <SlidersHorizontal className="h-3.5 w-3.5" />
                     {chosenCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] leading-4 text-center">
+                        <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] leading-4 text-center">
                             {chosenCount}
                         </span>
                     )}
@@ -327,13 +408,13 @@ const FiltersPopover: React.FC<{
                 <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4">
                     {groups.map((group) => {
                         const chosen = filters[group.key] ?? [];
-                        const choose = (value: string) => {
+                        const choose = (value: string) => pick(() => {
                             if (group.type === 'multi') {
                                 onGroupChange(group.key, chosen.includes(value) ? chosen.filter((v) => v !== value) : [...chosen, value]);
                             } else {
                                 onGroupChange(group.key, chosen[0] === value ? [] : [value]);
                             }
-                        };
+                        });
                         return (
                             <fieldset key={group.key} className="space-y-1.5">
                                 <legend className="text-[11px] font-medium text-foreground mb-1.5">{group.label}</legend>
@@ -342,7 +423,7 @@ const FiltersPopover: React.FC<{
                                         <button
                                             type="button"
                                             aria-pressed={chosen.length === 0}
-                                            onClick={() => onGroupChange(group.key, [])}
+                                            onClick={() => pick(() => onGroupChange(group.key, []))}
                                             className={chipClass(chosen.length === 0)}
                                         >
                                             {group.allLabel ?? 'Any'}
@@ -355,9 +436,8 @@ const FiltersPopover: React.FC<{
                                                 key={option.value}
                                                 type="button"
                                                 aria-pressed={active}
-                                                disabled={!active && option.count === 0}
                                                 onClick={() => choose(option.value)}
-                                                className={chipClass(active)}
+                                                className={cn(chipClass(active), !active && option.count === 0 && 'opacity-60')}
                                             >
                                                 {group.type === 'multi' && active && <Check className="h-3 w-3" />}
                                                 <OptionImage option={option} />
@@ -382,7 +462,7 @@ const FiltersPopover: React.FC<{
                                         key={option.value}
                                         type="button"
                                         aria-pressed={activeSort === option.value}
-                                        onClick={() => onSortChange(option.value === sorting.default ? undefined : option.value)}
+                                        onClick={() => pick(() => onSortChange(option.value === sorting.default ? undefined : option.value))}
                                         className={chipClass(activeSort === option.value)}
                                     >
                                         {option.label}
@@ -395,7 +475,7 @@ const FiltersPopover: React.FC<{
                 <div className="shrink-0 border-t border-border/60 px-3 py-2 flex justify-end">
                     <button
                         type="button"
-                        onClick={onClear}
+                        onClick={() => pick(onClear)}
                         className="text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     >
                         Clear all

@@ -365,8 +365,13 @@ isn't valid stops the panel loading, and the panel shows the API's reason.
 Nothing in the panel is hardcoded. It shows what the template source returns:
 
 - **Search** goes to the source as `search`.
-- **Filters** come from the source's `filters()` reply. The first single-choice group (categories, on the Sabi Canvas API)
-  shows as chips; the others, and the sort orders, sit behind the Filters button. Each option can carry a live `count`.
+- **Filters** come from the source's `filters()` reply. Every group, and the sort orders, are under the Filters button;
+  the first single-choice group (categories, on the Sabi Canvas API) is also offered as chips. Each option can carry a
+  live `count`. No group is ever hidden: the panel also asks for the filters with nothing chosen, and keeps every group
+  and option from that full set on screen, even when the current choices leave them finding nothing (count 0).
+- **Page size** is chosen to start with: the panel opens filtered to the page's size (it counts on the Filters button) and
+  follows the page if it's resized, until someone picks another size or "Any size". Not in customer mode, where
+  templates are scaled into the print area. Sources opt in with `pageSizeFilter`.
 - **Paging** follows the source's `hasMore`; the next page loads as the list scrolls.
 
 Picking a template replaces what's on the active page with the design's first page, including its size and background
@@ -425,6 +430,9 @@ const myTemplates: TemplateSource = {
     //     sort: { default: 'popular', options: [{ value: 'popular', label: 'Most popular' }, { value: 'newest', label: 'Newest' }] },
     //   }
   },
+
+  // Optional. Start the panel filtered to the page's size: the group key and the value for a size.
+  pageSizeFilter: ({ width, height }) => ({ key: 'size', value: `${width}x${height}` }),
 
   // The design to apply, by the id from list() or the editor's templateId prop.
   async getDesign(id, { signal } = {}) {
