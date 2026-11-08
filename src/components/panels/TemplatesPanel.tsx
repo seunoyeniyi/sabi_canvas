@@ -394,7 +394,7 @@ const FiltersPopover: React.FC<{
                 >
                     <SlidersHorizontal className="h-3.5 w-3.5" />
                     {chosenCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] leading-4 text-center">
+                        <span className="absolute top-0.5 right-0.5 min-w-3 h-3 px-0.5 flex flex-col items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] leading-4 text-center">
                             {chosenCount}
                         </span>
                     )}
