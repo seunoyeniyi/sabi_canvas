@@ -454,6 +454,10 @@ const myTemplates: TemplateSource = {
 <EditorLayout config={{ templates: { source: myTemplates } }} />
 ```
 
+A template can be in several categories: give them all in `categories`, the main one first, and the main one again
+in `category` for code that reads only one. The Sabi Canvas API fills both (older replies send only `category`, which
+the default source turns into a one-item `categories`).
+
 Templates you return with `hasAccess: false` show a lock (and `badge`, e.g. `Pro`). Picking one still calls
 `getDesign`, so your backend decides. If it throws, `config.templates.onLockedTemplate(template, error)` is called, so you
 can offer an upgrade or sign-in; without it, a dialog says which plan the template needs. Give your errors a numeric

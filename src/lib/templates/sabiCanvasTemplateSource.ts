@@ -49,7 +49,10 @@ interface ApiTemplate {
   slug: string;
   name: string;
   description: string | null;
+  /** The main category. */
   category: { slug: string; name: string; image: string | null } | null;
+  /** Every category, the main one first. Missing from replies before templates could have several. */
+  categories?: { slug: string; name: string; image: string | null }[];
   plan: string;
   hasAccess: boolean;
   thumbnail: string | null;
@@ -103,6 +106,7 @@ function toSummary(template: ApiTemplate): TemplateSummary {
     width: template.size?.width || DEFAULT_SIZE,
     height: template.size?.height || DEFAULT_SIZE,
     category: template.category,
+    categories: template.categories ?? (template.category ? [template.category] : []),
     tags: template.tags ?? [],
     hasAccess: template.hasAccess,
     badge: locked && template.plan && template.plan !== FREE_PLAN ? capitalise(template.plan) : undefined,

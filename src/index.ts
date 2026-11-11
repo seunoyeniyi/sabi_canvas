@@ -147,6 +147,7 @@ export type {
   SabiCanvasTemplatesConfig,
   TemplateSource,
   TemplateSummary,
+  TemplateCategoryRef,
   TemplateDesign,
   TemplateContent,
   TemplatePageContent,

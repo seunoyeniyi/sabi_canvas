@@ -10,6 +10,13 @@ import type { CustomFont } from './custom-fonts';
  * Templates panel shows whatever the source returns, filters included.
  */
 
+/** A category as a template names it. */
+export interface TemplateCategoryRef {
+  slug: string;
+  name: string;
+  image?: string | null;
+}
+
 /** A template as a gallery lists it, without its design. */
 export interface TemplateSummary {
   /** Unique id, passed back to `TemplateSource.getDesign`. */
@@ -23,7 +30,10 @@ export interface TemplateSummary {
   /** The design's size in pixels. Cards keep this shape. */
   width: number;
   height: number;
-  category?: { slug: string; name: string; image?: string | null } | null;
+  /** The main category: the first of `categories`. */
+  category?: TemplateCategoryRef | null;
+  /** Every category the template is in, the main one first. A design can suit several. */
+  categories?: TemplateCategoryRef[];
   tags?: string[];
   /**
    * `false` shows the template with a lock. Picking it still asks the source
