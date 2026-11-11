@@ -2,7 +2,8 @@ import React, { useState, useRef, useCallback, useEffect, useContext } from 'rea
 import { QueryClient, QueryClientContext, QueryClientProvider } from '@tanstack/react-query';
 import Konva from 'konva';
 import { Download, FileCode2, FileDown, FileUp, Printer, Frame, Loader2 } from 'lucide-react';
-import { convertPolotnoDesign } from '@sabi-canvas/lib/polotnoConverter';
+import { importPolotnoDesign } from '@sabi-canvas/lib/polotnoConverter';
+import type { PolotnoFontFile } from '@sabi-canvas/lib/polotnoConverter';
 import { toast } from 'sonner';
 import { EditorProvider, useEditor } from '@sabi-canvas/contexts/EditorContext';
 import { CanvasObjectsProvider, useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
@@ -164,7 +165,8 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     addObject,
   } = useCanvasObjects();
 
-  const { customFonts, loadProjectFonts } = useCustomFonts();
+  const { customFonts, loadProjectFonts, addCustomFont } = useCustomFonts();
+  const { uploadFontFile } = useSabiCanvasConfig();
 
   const hasSelection = selectedIds && selectedIds.length > 0;
 
@@ -403,6 +405,48 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     polotnoImportInputRef.current?.click();
   }, []);
 
+  /**
+   * Adds a Polotno design's own fonts to the project's fonts (uploaded through
+   * the host's uploader when there is one). Returns how many couldn't be added.
+   */
+  const addPolotnoFonts = useCallback(
+    async (fontFiles: PolotnoFontFile[]): Promise<number> => {
+      const known = new Set(customFonts.map((font) => font.family.toLowerCase()));
+      let failed = 0;
+
+      for (const { family, file } of fontFiles) {
+        if (known.has(family.toLowerCase())) continue;
+        try {
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+          });
+
+          let assetSrc: string | undefined;
+          let assetPublicId: string | undefined;
+          if (uploadFontFile) {
+            try {
+              const uploaded = await uploadFontFile(file);
+              assetSrc = uploaded.src;
+              assetPublicId = uploaded.publicId;
+            } catch {
+              // The font still works from its data; it just isn't hosted.
+            }
+          }
+
+          await addCustomFont({ family, fileName: file.name, mimeType: file.type || 'font/ttf', dataUrl, assetSrc, assetPublicId });
+          known.add(family.toLowerCase());
+        } catch {
+          failed += 1;
+        }
+      }
+      return failed;
+    },
+    [customFonts, uploadFontFile, addCustomFont],
+  );
+
   const handleImportPolotnoFile = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -410,15 +454,26 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
 
       if (!file) return;
 
+      let json: unknown;
       try {
-        const text = await file.text();
-        const json = JSON.parse(text) as unknown;
-        const result = convertPolotnoDesign(json);
+        json = JSON.parse(await file.text()) as unknown;
+      } catch {
+        toast.error('Failed to read or parse the Polotno JSON file.');
+        return;
+      }
+
+      const toastId = toast.loading('Importing Polotno design…');
+      try {
+        // Downloads picture sizes (for crops), linked SVGs and the design's fonts.
+        const result = await importPolotnoDesign(json);
 
         if ('error' in result) {
-          toast.error(result.error);
+          toast.error(result.error, { id: toastId });
           return;
         }
+
+        // Fonts first, so the text is laid out with them from the start.
+        const fontsFailed = await addPolotnoFonts(result.fontFiles ?? []);
 
         // The design goes into the project that is open now. Its id and title
         // are left alone so auto-save keeps writing to the same project.
@@ -443,12 +498,22 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
         const totalObjects = result.pages.reduce((sum, p) => sum + p.objects.length, 0);
         toast.success(
           `Imported ${result.pages.length} page(s) with ${totalObjects} object(s) from Polotno design.`,
+          { id: toastId },
         );
+
+        const notes = [...result.notes];
+        if (fontsFailed) notes.push(`${fontsFailed} font(s) couldn't be added to the project.`);
+        if (notes.length) {
+          toast.warning('Some parts look different from Polotno', {
+            description: notes.join(' '),
+            duration: 12000,
+          });
+        }
       } catch {
-        toast.error('Failed to read or parse the Polotno JSON file.');
+        toast.error('Failed to import the Polotno design.', { id: toastId });
       }
     },
-    [pages, loadProjectData, insertPages, setActivePage],
+    [pages, loadProjectData, insertPages, setActivePage, addPolotnoFonts],
   );
 
   const handleImportJsonFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {

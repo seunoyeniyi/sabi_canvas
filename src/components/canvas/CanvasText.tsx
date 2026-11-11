@@ -5,6 +5,7 @@ import { CanvasObject, TextObject } from '@sabi-canvas/types/canvas-objects';
 import { getFontFallbackStack } from '@sabi-canvas/lib/fontLoader';
 import { layoutRichText, drawRichText } from '@sabi-canvas/lib/richText';
 import { relayoutText, useFontLoadVersion } from '@sabi-canvas/hooks/useFontLoadVersion';
+import { getShadowProps } from '@sabi-canvas/lib/shadow';
 
 interface CanvasTextProps {
   object: TextObject;
@@ -240,13 +241,7 @@ export const CanvasText: React.FC<CanvasTextProps> = ({
     onHover?.(null);
   }, [onHover]);
 
-  const shadowProps = object.shadowBlur ? {
-    shadowColor: object.shadowColor || 'rgba(0,0,0,0.5)',
-    shadowBlur: object.shadowBlur,
-    shadowOffsetX: object.shadowOffsetX || 0,
-    shadowOffsetY: object.shadowOffsetY || 0,
-    shadowOpacity: object.shadowOpacity || 0.5,
-  } : {};
+  const shadowProps = getShadowProps(object);
 
   const commonEventProps = {
     onClick: handleClick,
@@ -273,6 +268,10 @@ export const CanvasText: React.FC<CanvasTextProps> = ({
   const curve = object.textCurve ?? 0;
   const isCurved = !isEditing && Math.abs(curve) >= 1;
   const hasBg = !!(object.textBgColor);
+  // Konva only draws shadows on shapes, not on the Group. With a background the
+  // box casts the shadow; otherwise the letters do.
+  const textShadowProps = hasBg ? {} : shadowProps;
+  const bgShadowProps = hasBg ? shadowProps : {};
   const bgPadding = object.textBgPadding ?? 8;
   const lsParam = object.letterSpacing ?? 0;
 
@@ -406,6 +405,7 @@ export const CanvasText: React.FC<CanvasTextProps> = ({
           width={object.width}
           height={object.height}
           sceneFunc={curvedSceneFunc}
+          {...textShadowProps}
           hitFunc={(ctx, shape) => {
             ctx.beginPath();
             (ctx as unknown as CanvasRenderingContext2D & { rect: (...a: number[]) => void }).rect(0, 0, object.width, object.height);
@@ -424,6 +424,7 @@ export const CanvasText: React.FC<CanvasTextProps> = ({
           y={0}
           width={object.width}
           height={Math.max(1, isEditing ? object.height : richLayout.totalHeight)}
+          {...textShadowProps}
           sceneFunc={(ctx, _shape) => {
             if (!richLayout) return;
             const nativeCtx = (ctx as unknown as { _context: CanvasRenderingContext2D })._context;
@@ -460,6 +461,7 @@ export const CanvasText: React.FC<CanvasTextProps> = ({
         stroke={object.textStrokeColor}
         strokeWidth={object.textStrokeWidth ?? 0}
         strokeEnabled={!!(object.textStrokeColor && (object.textStrokeWidth ?? 0) > 0)}
+        {...textShadowProps}
       />
     );
   })();
@@ -469,7 +471,6 @@ export const CanvasText: React.FC<CanvasTextProps> = ({
       x={object.x}
       y={object.y}
       {...commonTransformProps}
-      {...shadowProps}
       draggable={isDraggable}
       visible={object.visible}
       listening={!isEditing}
@@ -486,6 +487,7 @@ export const CanvasText: React.FC<CanvasTextProps> = ({
           opacity={object.textBgOpacity ?? 1}
           cornerRadius={object.textBgCornerRadius ?? 0}
           listening={false}
+          {...bgShadowProps}
         />
       )}
       {isEditing && (

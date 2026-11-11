@@ -217,6 +217,11 @@ export interface ImageObject extends BaseCanvasObject {
   cropHeight?: number;
   // Mask shape
   maskShape?: ImageMaskShape;
+  /** Mirror the picture left-to-right / top-to-bottom within its box. */
+  flipX?: boolean;
+  flipY?: boolean;
+  /** Rounded corners in pixels. Ignored while a mask shape is set. */
+  cornerRadius?: number;
   // Border / stroke
   stroke?: string;
   strokeWidth?: number;

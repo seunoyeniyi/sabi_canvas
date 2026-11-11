@@ -4,6 +4,7 @@ import { Image, Group, Rect, Arc, Circle, Line } from 'react-konva';
 import Konva from 'konva';
 import type { Filter } from 'konva/lib/Node';
 import { ImageObject, CanvasObject, ImageMaskShape } from '@sabi-canvas/types/canvas-objects';
+import { getShadowProps } from '@sabi-canvas/lib/shadow';
 
 interface CanvasImageProps {
   object: ImageObject;
@@ -114,6 +115,21 @@ const getClipFunc = (
     default:
       return undefined;
   }
+};
+
+/** Clip to a rectangle with rounded corners of radius `r` (pixels). */
+const getRoundedRectClip = (width: number, height: number, r: number) => (ctx: Konva.Context) => {
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(width - r, 0);
+  ctx.arcTo(width, 0, width, r, r);
+  ctx.lineTo(width, height - r);
+  ctx.arcTo(width, height, width - r, height, r);
+  ctx.lineTo(r, height);
+  ctx.arcTo(0, height, 0, height - r, r);
+  ctx.lineTo(0, r);
+  ctx.arcTo(0, 0, r, 0, r);
+  ctx.closePath();
 };
 
 export const CanvasImage: React.FC<CanvasImageProps> = ({
@@ -577,9 +593,21 @@ export const CanvasImage: React.FC<CanvasImageProps> = ({
     displayY = object.y - expandOffsetY;
   }
 
-  // Mask shape clipping (not applied during crop mode)
+  // Mask shape clipping (not applied during crop mode). Rounded corners apply
+  // when no mask shape is set.
   const maskShape = (!isCropMode && object.maskShape) || 'none';
-  const clipFunc = getClipFunc(maskShape, object.width, object.height);
+  const cornerRadius = !isCropMode && maskShape === 'none'
+    ? Math.min(Math.max(0, object.cornerRadius ?? 0), object.width / 2, object.height / 2)
+    : 0;
+  const clipFunc = getClipFunc(maskShape, object.width, object.height)
+    ?? (cornerRadius > 0 ? getRoundedRectClip(object.width, object.height, cornerRadius) : undefined);
+
+  // Mirroring happens inside the box, so the picture stays where it is (not in crop mode).
+  const flipX = !isCropMode && !!object.flipX;
+  const flipY = !isCropMode && !!object.flipY;
+
+  // Konva draws shadows on shapes only, so the picture itself casts it.
+  const shadowProps = isCropMode ? {} : getShadowProps(object);
 
   // Border / stroke overlay (suppressed in crop mode)
   const hasBorder = !isCropMode && !!object.stroke && (object.strokeWidth ?? 0) > 0;
@@ -592,6 +620,7 @@ export const CanvasImage: React.FC<CanvasImageProps> = ({
       fill="transparent"
       stroke={object.stroke}
       strokeWidth={object.strokeWidth}
+      cornerRadius={cornerRadius}
       listening={false}
       perfectDrawEnabled={false}
     />
@@ -599,7 +628,7 @@ export const CanvasImage: React.FC<CanvasImageProps> = ({
 
   // When there is a clip mask OR a border, use a Group wrapper so both the
   // image and any overlay (border / clip) share the same transform.
-  const needsGroup = !!(clipFunc || hasBorder);
+  const needsGroup = !!(clipFunc || hasBorder || flipX || flipY);
 
   const imageNode = (
     <Image
@@ -608,15 +637,15 @@ export const CanvasImage: React.FC<CanvasImageProps> = ({
       // In crop mode (always non-group): anchor the image at the rotation pivot (object.x/y)
       // and use offsetX/offsetY to shift the full image behind the crop region. This keeps the
       // Konva node type as Image throughout so the transformer never loses its attachment.
-      x={needsGroup ? 0 : object.x}
-      y={needsGroup ? 0 : object.y}
+      x={needsGroup ? (flipX ? object.width : 0) : object.x}
+      y={needsGroup ? (flipY ? object.height : 0) : object.y}
       offsetX={needsGroup ? 0 : (isCropMode ? expandOffsetX : 0)}
       offsetY={needsGroup ? 0 : (isCropMode ? expandOffsetY : 0)}
       width={displayW}
       height={displayH}
       rotation={needsGroup ? 0 : object.rotation}
-      scaleX={needsGroup ? 1 : object.scaleX}
-      scaleY={needsGroup ? 1 : object.scaleY}
+      scaleX={needsGroup ? (flipX ? -1 : 1) : object.scaleX}
+      scaleY={needsGroup ? (flipY ? -1 : 1) : object.scaleY}
       opacity={needsGroup ? 1 : object.opacity}
       draggable={needsGroup ? false : (object.draggable && !object.locked && isDragEnabled && !isCropMode)}
       visible={object.visible}
@@ -630,6 +659,7 @@ export const CanvasImage: React.FC<CanvasImageProps> = ({
       onDragMove={needsGroup ? undefined : onDragMove}
       onDragEnd={needsGroup ? undefined : handleDragEnd}
       name={needsGroup ? undefined : object.id}
+      {...shadowProps}
       {...cropProps}
     />
   );

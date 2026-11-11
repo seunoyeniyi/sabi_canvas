@@ -172,7 +172,14 @@ export type { SabiCanvasTemplateSourceOptions } from './lib/templates/sabiCanvas
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 export { cn } from './lib/utils';
-export { convertPolotnoDesign } from './lib/polotnoConverter';
+export { convertPolotnoDesign, importPolotnoDesign } from './lib/polotnoConverter';
+export type {
+  PolotnoImportResult,
+  PolotnoImportError,
+  PolotnoImportOptions,
+  PolotnoFontSource,
+  PolotnoFontFile,
+} from './lib/polotnoConverter';
 export { loadFontFamily, getFontFallbackStack, isFontLoaded, preloadFonts } from './lib/fontLoader';
 export { getGoogleFontCatalog, getFontDefinition, GOOGLE_FONT_CATALOG } from './lib/fontCatalog';
 export { spansToHtml, spansToPlainText } from './lib/richText';

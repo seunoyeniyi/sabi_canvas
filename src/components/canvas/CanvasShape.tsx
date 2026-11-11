@@ -5,6 +5,7 @@ import { DEFAULT_FONT_FAMILY } from '@sabi-canvas/lib/fontCatalog';
 import { getFontFallbackStack } from '@sabi-canvas/lib/fontLoader';
 import { layoutRichText, drawRichText } from '@sabi-canvas/lib/richText';
 import { useFontLoadVersion } from '@sabi-canvas/hooks/useFontLoadVersion';
+import { getShadowProps } from '@sabi-canvas/lib/shadow';
 import {
   CanvasObject,
   RectangleObject,
@@ -159,14 +160,9 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
     }
   }, [isSelected, object.id, onShapeTextEditRequest]);
 
-  // Shadow props if defined
-  const shadowProps = object.shadowBlur ? {
-    shadowColor: object.shadowColor || 'rgba(0,0,0,0.5)',
-    shadowBlur: object.shadowBlur,
-    shadowOffsetX: object.shadowOffsetX || 0,
-    shadowOffsetY: object.shadowOffsetY || 0,
-    shadowOpacity: object.shadowOpacity || 0.5,
-  } : {};
+  // Konva draws shadows on shapes only, so these go on the drawn shape below,
+  // never on the wrapping Group.
+  const shadowProps = getShadowProps(object);
 
   const commonProps = {
     x: object.x,
@@ -189,7 +185,6 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
     onMouseEnter: handleNodeMouseEnter,
     onMouseLeave: handleNodeMouseLeave,
     name: object.id,
-    ...shadowProps,
   };
 
   // Check if this shape has inner text or supports it
@@ -331,6 +326,7 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
             strokeWidth={rect.strokeWidth}
             cornerRadius={rect.cornerRadius}
             perfectDrawEnabled={false}
+            {...shadowProps}
           />
           {renderInnerText(0, 0, rect.width, rect.height)}
         </Group>
@@ -353,6 +349,7 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
             stroke={circle.stroke}
             strokeWidth={circle.strokeWidth}
             perfectDrawEnabled={false}
+            {...shadowProps}
           />
           {renderInnerText(-radius, -radius, radius * 2, radius * 2)}
         </Group>
@@ -375,6 +372,7 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
             stroke={ellipse.stroke}
             strokeWidth={ellipse.strokeWidth}
             perfectDrawEnabled={false}
+            {...shadowProps}
           />
           {renderInnerText(-ellipse.radiusX, -ellipse.radiusY, ellipse.radiusX * 2, ellipse.radiusY * 2)}
         </Group>
@@ -397,6 +395,7 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
             stroke={triangle.stroke}
             strokeWidth={triangle.strokeWidth}
             perfectDrawEnabled={false}
+            {...shadowProps}
           />
           {renderInnerText(-triangle.width / 2, -triangle.height / 2, triangle.width, triangle.height)}
         </Group>
@@ -419,6 +418,7 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
             stroke={polygon.stroke}
             strokeWidth={polygon.strokeWidth}
             perfectDrawEnabled={false}
+            {...shadowProps}
           />
           {renderInnerText(-polygon.width / 2, -polygon.height / 2, polygon.width, polygon.height)}
         </Group>
@@ -442,6 +442,7 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
             stroke={star.stroke}
             strokeWidth={star.strokeWidth}
             perfectDrawEnabled={false}
+            {...shadowProps}
           />
           {renderInnerText(-star.width / 2, -star.height / 2, star.width, star.height)}
         </Group>
@@ -459,6 +460,7 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
           lineCap={line.lineCap || 'round'}
           lineJoin={line.lineJoin || 'round'}
           dash={line.dash}
+          {...shadowProps}
         />
       );
     }
@@ -476,6 +478,7 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
           pointerWidth={arrow.pointerWidth}
           pointerAtBeginning={arrow.pointerAtBeginning}
           pointerAtEnding={arrow.pointerAtEnding !== false}
+          {...shadowProps}
         />
       );
     }
@@ -490,6 +493,7 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
             stroke={path.stroke}
             strokeWidth={path.strokeWidth}
             perfectDrawEnabled={false}
+            {...shadowProps}
           />
           {renderInnerText(0, 0, path.width, path.height)}
         </Group>

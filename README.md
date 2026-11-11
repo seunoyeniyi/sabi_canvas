@@ -795,6 +795,41 @@ import type {
 
 ---
 
+## Importing Polotno designs
+
+With `enableJsonDevTools`, the app bar's **Import Polotno Design** puts a Polotno JSON export into the open
+project. To do it from your own code:
+
+```ts
+import { importPolotnoDesign } from 'sabi-canvas';
+
+const result = await importPolotnoDesign(json); // downloads picture sizes, linked SVGs and fonts
+if ('error' in result) throw new Error(result.error);
+
+result.pages;     // CanvasPage[], each with its own size
+result.fontFiles; // the design's own fonts as Files: add them with useCustomFonts().addCustomFont
+result.notes;     // plain-language list of anything that couldn't be brought over exactly
+```
+
+`convertPolotnoDesign(json)` does the same without downloading anything, so picture crops and the colours of
+SVGs stored as links are left out.
+
+| Polotno | Imported as |
+|---|---|
+| text (plain or HTML) | text or rich text, with letter spacing, background, stroke, curve and casing |
+| image, gif | picture with crop, flip, rounded corners, border and filters |
+| svg | picture; colour swaps stay editable in the colour panel |
+| line | line, or arrow when an end is an arrow |
+| figure | rectangle, ellipse, or a picture of the shape (triangle, right triangle, diamond, pentagon, hexagon, star, cross, arrows, heart, speech bubble) |
+| group | its elements, placed on the page |
+| page background | colour, picture or gradient |
+
+Not imported yet, and listed in `notes` when a design uses them: video and table elements, the other
+Polotno shapes (blobs, clouds and so on), clip and mask shapes on pictures, blend modes, borders around text
+boxes, circle/square/bar line ends, animations and audio.
+
+---
+
 ## Tailwind CSS v4 setup
 
 Sabi Canvas ships its components as Tailwind utility classes and **requires Tailwind CSS v4** in the host app
