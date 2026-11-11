@@ -129,11 +129,31 @@ export interface SabiCanvasConfig {
    */
   colorSwatches?: string[];
   /**
+   * The thumbnail saved with a project (on every auto-save, and used for
+   * project and template cards). Bigger and higher quality looks sharper but
+   * makes each save heavier.
+   */
+  thumbnail?: SabiCanvasThumbnailConfig;
+  /**
    * Templates panel. By default it lists the free Sabi Canvas templates, with
    * the filters the API offers. Pass `source` to serve your own templates and
    * filters, or `panel` to replace the panel entirely.
    */
   templates?: SabiCanvasTemplatesConfig;
+}
+
+/** See `SabiCanvasConfig.thumbnail`. */
+export interface SabiCanvasThumbnailConfig {
+  /** Longest side in pixels, never larger than the design itself. Default 600. */
+  maxSide?: number;
+  /** Quality from 0 to 1 for JPEG and WebP. Default 0.7. */
+  quality?: number;
+  /**
+   * Image type. Default 'image/webp', about a third of the size of JPEG at the
+   * same quality (browsers that can't write WebP, such as Safari, save JPEG).
+   * 'image/png' is much larger.
+   */
+  mimeType?: 'image/jpeg' | 'image/webp' | 'image/png';
 }
 
 // ---------------------------------------------------------------------------

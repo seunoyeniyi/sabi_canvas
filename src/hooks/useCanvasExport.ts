@@ -3,6 +3,7 @@ import Konva from 'konva';
 import { jsPDF } from 'jspdf';
 import { ensureFontFamiliesReady } from '@sabi-canvas/lib/fontLoader';
 import type { CanvasBackground } from '@sabi-canvas/types/pages';
+import type { SabiCanvasThumbnailConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 
 // ─── Background rendering helpers (mirror of SafeArea.tsx helpers) ────────────
 
@@ -101,6 +102,18 @@ async function addExportBackground(
 }
 
 /**
+ * Thumbnail defaults, used where the host doesn't set `config.thumbnail`.
+ * Thumbnails are sent with every auto-save and downloaded by every card in a
+ * gallery, so they stay small: WebP is about a third of the size of a JPEG
+ * at the same quality (roughly 10 KB for a typical 600px design).
+ */
+export const DEFAULT_THUMBNAIL_CONFIG: Required<SabiCanvasThumbnailConfig> = {
+  maxSide: 600,
+  quality: 0.7,
+  mimeType: 'image/webp',
+};
+
+/**
  * Captures a low-resolution thumbnail of only the design's safe area (drawing area).
  * Unlike `stage.toDataURL()`, this excludes the grey viewport outside the canvas.
  *
@@ -111,9 +124,13 @@ export async function captureSafeAreaThumbnail(
   stage: Konva.Stage,
   canvasSize: { width: number; height: number },
   background?: CanvasBackground,
+  options: SabiCanvasThumbnailConfig = {},
 ): Promise<string | null> {
   const { width: designWidth, height: designHeight } = canvasSize;
-  const pixelRatio = 0.3;
+  const maxSide = Math.max(16, options.maxSide ?? DEFAULT_THUMBNAIL_CONFIG.maxSide);
+  const quality = Math.min(1, Math.max(0.05, options.quality ?? DEFAULT_THUMBNAIL_CONFIG.quality));
+  const mimeType = options.mimeType ?? DEFAULT_THUMBNAIL_CONFIG.mimeType;
+  const pixelRatio = Math.min(1, maxSide / Math.max(1, designWidth, designHeight));
 
   const exportWidth = Math.max(1, Math.round(designWidth * pixelRatio));
   const exportHeight = Math.max(1, Math.round(designHeight * pixelRatio));
@@ -158,7 +175,12 @@ export async function captureSafeAreaThumbnail(
     Konva.Util.error = () => undefined;
     let dataUrl: string;
     try {
-      dataUrl = exportStage.toDataURL({ mimeType: 'image/jpeg', quality: 0.3 });
+      dataUrl = exportStage.toDataURL({ mimeType, quality });
+      // A browser that can't write the type gives a PNG instead (Safari can't
+      // write WebP), which is far larger: use JPEG then.
+      if (mimeType !== 'image/png' && !dataUrl.startsWith(`data:${mimeType}`)) {
+        dataUrl = exportStage.toDataURL({ mimeType: 'image/jpeg', quality });
+      }
     } finally {
       Konva.Util.error = originalKonvaError;
     }

@@ -5,6 +5,7 @@ import { CanvasPage } from '@sabi-canvas/types/pages';
 import { Project, generateProjectId, pageToProjectPage } from '@sabi-canvas/types/project';
 import { saveProject, setLastProjectId } from '@sabi-canvas/hooks/useProjectManager';
 import type { CustomFont } from '@sabi-canvas/types/custom-fonts';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 
 const DEBOUNCE_MS = 1500;
 
@@ -48,6 +49,11 @@ export const useAutoSave = ({
 
   const customFontsRef = useRef<CustomFont[] | undefined>(customFonts);
   useEffect(() => { customFontsRef.current = customFonts; }, [customFonts]);
+
+  // Thumbnail size and quality from the host's config (config.thumbnail).
+  const { thumbnail: thumbnailConfig } = useSabiCanvasConfig();
+  const thumbnailConfigRef = useRef(thumbnailConfig);
+  useEffect(() => { thumbnailConfigRef.current = thumbnailConfig; }, [thumbnailConfig]);
 
   const isMockupEnabledRef = useRef<boolean | undefined>(isMockupEnabled);
   useEffect(() => { isMockupEnabledRef.current = isMockupEnabled; }, [isMockupEnabled]);
@@ -144,7 +150,7 @@ export const useAutoSave = ({
       try {
         const stage = getStage();
         if (stage) {
-          const result = await captureSafeAreaThumbnail(stage, canvasSize, activePage?.background);
+          const result = await captureSafeAreaThumbnail(stage, canvasSize, activePage?.background, thumbnailConfigRef.current);
           if (result) thumbnail = result;
         }
       } catch {

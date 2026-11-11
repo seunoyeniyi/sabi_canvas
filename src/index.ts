@@ -20,6 +20,7 @@ export type {
   SabiCanvasAIProviderConfig,
   SabiCanvasProviderProps,
   SabiCanvasUploadedImage,
+  SabiCanvasThumbnailConfig,
 } from './contexts/SabiCanvasConfigContext';
 
 // ─── Top-level Editor Components ──────────────────────────────────────────────
