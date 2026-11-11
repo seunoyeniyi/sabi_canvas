@@ -5,6 +5,7 @@ import { TableObject, TableCell } from '@sabi-canvas/types/canvas-objects';
 import { CanvasObject } from '@sabi-canvas/types/canvas-objects';
 import { DEFAULT_FONT_FAMILY } from '@sabi-canvas/lib/fontCatalog';
 import { getFontFallbackStack } from '@sabi-canvas/lib/fontLoader';
+import { useFontLoadVersion } from '@sabi-canvas/hooks/useFontLoadVersion';
 
 interface CanvasTableProps {
   object: TableObject;
@@ -43,6 +44,13 @@ export const CanvasTable: React.FC<CanvasTableProps> = ({
 
   const isEditingThisTable =
     editingCell !== null && editingCell.tableId === object.id;
+
+  // Goes up when a cell font finishes loading; cell texts are remounted so
+  // Konva measures their line breaks again with the real font.
+  const fontVersion = useFontLoadVersion([
+    object.defaultFontFamily ?? DEFAULT_FONT_FAMILY,
+    ...object.cells.flatMap((row) => row.map((cell) => cell.fontFamily)),
+  ]);
 
   // Clear cell selection when table is deselected
   React.useEffect(() => {
@@ -342,6 +350,7 @@ export const CanvasTable: React.FC<CanvasTableProps> = ({
               {/* Cell text , hidden for the actively edited cell */}
               {!isActiveCell && (
                 <Text
+                  key={`cell-text-${fontVersion}`}
                   x={x + object.cellPadding}
                   y={y + object.cellPadding}
                   width={w - 2 * object.cellPadding}

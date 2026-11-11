@@ -231,10 +231,29 @@ function convertSvgObject(polotno: PolotnoSvgObject): ImageObject {
   return result;
 }
 
+/**
+ * Text objects here have no text-transform setting, so the casing Polotno
+ * shows is written into the text itself.
+ */
+function applyTextTransform(text: string, transform: string | undefined): string {
+  switch (transform) {
+    case 'uppercase':
+      return text.toUpperCase();
+    case 'lowercase':
+      return text.toLowerCase();
+    case 'capitalize':
+      return text.replace(/(^|\s)(\S)/g, (_match, space: string, letter: string) => space + letter.toUpperCase());
+    default:
+      return text;
+  }
+}
+
 function convertTextObject(polotno: PolotnoTextObject): TextObject {
-  // Polotno splits into fontStyle (normal/italic) and fontWeight (normal/bold);
-  // Canvas Architect combines them into a single fontStyle field.
-  const isBold = polotno.fontWeight === 'bold';
+  // Polotno splits into fontStyle (normal/italic) and fontWeight ('normal',
+  // 'bold' or a number such as '700'); Canvas Architect combines them into a
+  // single fontStyle field.
+  const numericWeight = Number(polotno.fontWeight);
+  const isBold = polotno.fontWeight === 'bold' || (Number.isFinite(numericWeight) && numericWeight >= 600);
   const isItalic = polotno.fontStyle === 'italic';
   let fontStyle: TextObject['fontStyle'] = 'normal';
   if (isBold && isItalic) fontStyle = 'bold italic';
@@ -252,16 +271,20 @@ function convertTextObject(polotno: PolotnoTextObject): TextObject {
       ? polotno.align
       : 'left';
 
+  const fontSize = polotno.fontSize ?? 24;
+
   const result: TextObject = {
     ...mapBaseFields(polotno),
     type: 'text',
-    text: polotno.text,
-    fontSize: polotno.fontSize ?? 24,
+    text: applyTextTransform(polotno.text ?? '', polotno.textTransform),
+    fontSize,
     fontFamily: polotno.fontFamily ?? 'Arial',
     fontStyle,
     textDecoration,
-    lineHeight: polotno.lineHeight,
-    letterSpacing: polotno.letterSpacing,
+    lineHeight: typeof polotno.lineHeight === 'number' ? polotno.lineHeight : undefined,
+    // Polotno stores letter spacing as a share of the font size (0.1 = 10%);
+    // here it is in pixels.
+    letterSpacing: (polotno.letterSpacing ?? 0) * fontSize,
     fill: polotno.fill ?? '#000000',
     align,
   };
@@ -285,10 +308,102 @@ function convertTextObject(polotno: PolotnoTextObject): TextObject {
 
 // ─── Page background ──────────────────────────────────────────────────────────
 
+// Polotno keeps a page background in one string: a CSS colour, an image
+// address, or a CSS gradient.
+
+const IMAGE_SOURCE_PATTERN = /^(https?:\/\/|\/\/|data:image\/|blob:)/i;
+
+/** Splits on commas that are not inside brackets, e.g. inside rgba(...). */
+function splitTopLevel(value: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const char of value) {
+    if (char === '(') depth += 1;
+    if (char === ')') depth = Math.max(0, depth - 1);
+    if (char === ',' && depth === 0) {
+      parts.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
+}
+
+const DIRECTION_ANGLES: Record<string, number> = {
+  'to top': 0,
+  'to top right': 45,
+  'to right top': 45,
+  'to right': 90,
+  'to bottom right': 135,
+  'to right bottom': 135,
+  'to bottom': 180,
+  'to bottom left': 225,
+  'to left bottom': 225,
+  'to left': 270,
+  'to top left': 315,
+  'to left top': 315,
+};
+
+/** Reads a CSS angle ("135deg", "0.25turn", "1.5rad", "to right"); null if it isn't one. */
+function parseGradientAngle(token: string): number | null {
+  const value = token.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (value in DIRECTION_ANGLES) return DIRECTION_ANGLES[value];
+  const match = /^(-?\d*\.?\d+)(deg|turn|rad|grad)?$/.exec(value);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  switch (match[2]) {
+    case 'turn': return amount * 360;
+    case 'rad': return (amount * 180) / Math.PI;
+    case 'grad': return amount * 0.9;
+    default: return amount;
+  }
+}
+
+/** "rgba(1,2,3,1) 40%" → "rgba(1,2,3,1)". Stop positions aren't kept: stops are spread evenly here. */
+function stripStopPosition(stop: string): string {
+  return stop.replace(/(\s+-?\d*\.?\d+(%|px)?)+$/, '').trim();
+}
+
+const RADIAL_SHAPE_PATTERN = /\b(circle|ellipse|closest-side|closest-corner|farthest-side|farthest-corner|at)\b/i;
+
+function parseGradient(bg: string): CanvasBackground | null {
+  const match = /^(repeating-)?(linear|radial)-gradient\((.*)\)$/i.exec(bg.trim());
+  if (!match) return null;
+
+  const kind = match[2].toLowerCase();
+  const parts = splitTopLevel(match[3]);
+  if (parts.length === 0) return null;
+
+  if (kind === 'linear') {
+    const angle = parseGradientAngle(parts[0]);
+    const stops = (angle === null ? parts : parts.slice(1)).map(stripStopPosition).filter(Boolean);
+    if (stops.length === 0) return null;
+    return { type: 'linear-gradient', colors: stops, angle: angle ?? 180 };
+  }
+
+  const stops = (RADIAL_SHAPE_PATTERN.test(parts[0]) ? parts.slice(1) : parts)
+    .map(stripStopPosition)
+    .filter(Boolean);
+  if (stops.length === 0) return null;
+  return { type: 'radial-gradient', colors: stops };
+}
+
 function parsePageBackground(bg: string | undefined): CanvasBackground {
-  if (!bg || bg === 'transparent') return { type: 'transparent' };
-  // Polotno stores CSS color strings: rgba(...), hex, etc.
-  return { type: 'solid', color: bg };
+  const value = bg?.trim();
+  if (!value || value === 'transparent') return { type: 'transparent' };
+
+  // url("...") as written in CSS, or a plain image address.
+  const cssUrl = /^url\(\s*['"]?(.*?)['"]?\s*\)$/i.exec(value);
+  if (cssUrl) return { type: 'image', src: cssUrl[1] };
+  if (IMAGE_SOURCE_PATTERN.test(value)) return { type: 'image', src: value };
+
+  const gradient = parseGradient(value);
+  if (gradient) return gradient;
+
+  return { type: 'solid', color: value };
 }
 
 // ─── Object dispatch ──────────────────────────────────────────────────────────

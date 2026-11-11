@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Text, Shape, Rect, Group } from 'react-konva';
 import Konva from 'konva';
 import { CanvasObject, TextObject } from '@sabi-canvas/types/canvas-objects';
-import { getFontFallbackStack, loadFontFamily } from '@sabi-canvas/lib/fontLoader';
+import { getFontFallbackStack } from '@sabi-canvas/lib/fontLoader';
 import { layoutRichText, drawRichText } from '@sabi-canvas/lib/richText';
+import { relayoutText, useFontLoadVersion } from '@sabi-canvas/hooks/useFontLoadVersion';
 
 interface CanvasTextProps {
   object: TextObject;
@@ -32,6 +33,12 @@ export const CanvasText: React.FC<CanvasTextProps> = ({
 }) => {
   const textRef = useRef<Konva.Text>(null);
   const shapeRef = useRef<Konva.Shape>(null);
+
+  // Goes up when this text's fonts finish loading, so its layout is redone.
+  const fontVersion = useFontLoadVersion([
+    object.fontFamily,
+    ...(object.richText?.map((span) => span.fontFamily) ?? []),
+  ]);
 
   const setStageCursor = useCallback((e: Konva.KonvaEventObject<MouseEvent | DragEvent>, cursor: string) => {
     const container = e.target.getStage()?.container();
@@ -120,6 +127,7 @@ export const CanvasText: React.FC<CanvasTextProps> = ({
 
   // --- Rich text layout (memoized) ---
   const richLayout = useMemo(() => {
+    void fontVersion; // measure again once the fonts have loaded
     if (!object.richText || object.richText.length === 0) return null;
     return layoutRichText(object.richText, {
       maxWidth: object.width,
@@ -145,6 +153,7 @@ export const CanvasText: React.FC<CanvasTextProps> = ({
     object.lineHeight,
     object.letterSpacing,
     object.align,
+    fontVersion,
   ]);
 
   // Sync rich-text height to canvas object
@@ -170,21 +179,21 @@ export const CanvasText: React.FC<CanvasTextProps> = ({
   }, [richLayout, object.textCurve, object.text, object.fill, object.fontSize, object.textStrokeColor, object.textStrokeWidth]);
 
   // --- Font loading ---
+  // Konva works out line breaks when the text is set. If the font arrived after
+  // that, the lines were measured with a fallback font: lay them out again.
+  // (Rich text is redone by its layout memo, which depends on fontVersion.)
   useEffect(() => {
-    let cancelled = false;
+    if (fontVersion === 0) return;
 
-    const syncFont = async () => {
-      const result = await loadFontFamily(object.fontFamily, { timeoutMs: 2400 });
-      if (cancelled || result.status !== 'loaded') return;
+    relayoutText(textRef.current);
+    shapeRef.current?.getLayer()?.batchDraw();
 
-      textRef.current?.getLayer()?.batchDraw();
-      shapeRef.current?.getLayer()?.batchDraw();
-      updateMeasuredHeight();
-    };
-
-    syncFont();
-    return () => { cancelled = true; };
-  }, [object.fontFamily, object.fontStyle, object.fontSize, updateMeasuredHeight]);
+    if (isEditing) return;
+    if (Math.abs(object.textCurve ?? 0) >= 1) updateCurvedTextHeight();
+    else if (!object.richText) updateMeasuredHeight();
+  // Only when a font finishes loading; the other effects handle prop changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fontVersion]);
 
   // --- Event handlers ---
   const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {

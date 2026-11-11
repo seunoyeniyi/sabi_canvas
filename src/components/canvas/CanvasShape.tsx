@@ -4,6 +4,7 @@ import Konva from 'konva';
 import { DEFAULT_FONT_FAMILY } from '@sabi-canvas/lib/fontCatalog';
 import { getFontFallbackStack } from '@sabi-canvas/lib/fontLoader';
 import { layoutRichText, drawRichText } from '@sabi-canvas/lib/richText';
+import { useFontLoadVersion } from '@sabi-canvas/hooks/useFontLoadVersion';
 import {
   CanvasObject,
   RectangleObject,
@@ -196,6 +197,14 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
   const innerRichText = (object as any).innerRichText as TextSpan[] | undefined;
   const hasInnerText = supportsInnerText && (object.innerText || (innerRichText && innerRichText.length > 0));
 
+  // Goes up when the inner text's fonts finish loading. The rich path is laid
+  // out on every render; the plain Text is remounted so Konva measures it again.
+  const innerFontVersion = useFontLoadVersion(
+    hasInnerText
+      ? [object.innerTextFontFamily ?? DEFAULT_FONT_FAMILY, ...(innerRichText?.map((span) => span.fontFamily) ?? [])]
+      : [],
+  );
+
   // Compute the inner Text node for shapes that have innerText
   const renderInnerText = useCallback((
     textX: number,
@@ -275,6 +284,7 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
     // --- Plain text path ---
     return (
       <Text
+        key={`inner-text-${innerFontVersion}`}
         name={`_innerText_${object.id}`}
         x={textX / sx}
         y={textY / sy}
@@ -300,7 +310,7 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
         perfectDrawEnabled={false}
       />
     );
-  }, [hasInnerText, innerRichText, object, isEditingShapeText]);
+  }, [hasInnerText, innerRichText, object, isEditingShapeText, innerFontVersion]);
 
   // For shapes that support inner text, we need double-click handlers on the shape node
   const shapeInteractionProps = supportsInnerText ? {
