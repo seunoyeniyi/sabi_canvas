@@ -156,6 +156,8 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     exportActivePageJson,
     importActivePageJson,
     loadProjectData,
+    insertPages,
+    setActivePage,
     undo,
     redo,
     selectedIds,
@@ -418,9 +420,25 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
           return;
         }
 
-        loadProjectData(result.pages, result.pages[0].id, { width: result.width, height: result.height });
-        setProjectTitle('Polotno Import');
-        setProjectId(null);
+        // The design goes into the project that is open now. Its id and title
+        // are left alone so auto-save keeps writing to the same project.
+        const designSize = { width: result.width, height: result.height };
+        const isBlankProject = pages.length === 1 && pages[0].objects.length === 0;
+
+        if (isBlankProject) {
+          // Nothing to keep yet: the imported pages take the empty page's place.
+          const imported = result.pages.map((page) => ({ ...page, size: page.size ?? designSize }));
+          loadProjectData(imported, imported[0].id, designSize);
+        } else {
+          // Keep the user's pages and add the imported ones after them.
+          const imported = result.pages.map((page, index) => ({
+            ...page,
+            name: `Page ${pages.length + index + 1}`,
+            size: page.size ?? designSize,
+          }));
+          insertPages(imported, pages[pages.length - 1].id);
+          setActivePage(imported[0].id);
+        }
 
         const totalObjects = result.pages.reduce((sum, p) => sum + p.objects.length, 0);
         toast.success(
@@ -430,7 +448,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
         toast.error('Failed to read or parse the Polotno JSON file.');
       }
     },
-    [loadProjectData],
+    [pages, loadProjectData, insertPages, setActivePage],
   );
 
   const handleImportJsonFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {

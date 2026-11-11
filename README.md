@@ -336,7 +336,7 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 | `config.templates.onLockedTemplate` | `(template, error) => void` | , | Called when a locked template (`hasAccess: false`) is refused, e.g. to offer an upgrade. Without it, a dialog says which plan it needs |
 | `config.templates.onTemplateApplied` | `(design) => void` | , | Called after a template is applied to the canvas |
 | `saveAction` | `AppBarSaveAction` | , | Optional custom action button rendered in the app bar before the Download button. Useful for "Save", "Publish", or any app-specific primary action. See below. |
-| `enableJsonDevTools` | `boolean` | `false` | Show JSON inspector panel (dev only) |
+| `enableJsonDevTools` | `boolean` | `false` | Adds dev tools to the app bar: export/import the active page as JSON, and import a Polotno design into the open project (it replaces a single empty page, otherwise its pages are added after the existing ones) |
 | `className` | `string` | , | Extra CSS class on the root element |
 
 ---
