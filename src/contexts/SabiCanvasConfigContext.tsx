@@ -90,6 +90,13 @@ export interface SabiCanvasConfig {
    */
   uploadImageFile?: (file: File, options?: { maxSize?: number }) => Promise<SabiCanvasUploadedImage>;
   /**
+   * Optional. Builds the address used for the small previews in the Uploads
+   * panels; adding an upload to the canvas always uses its original address.
+   * By default a Cloudinary image loads a 600px copy and any other address is
+   * used as it is. Pass `(src) => src` to always show the original.
+   */
+  previewImageUrl?: (src: string) => string;
+  /**
    * Optional font upload adapter. When provided, My Fonts uploads can be routed
    * through your backend uploader before being registered in the editor.
    */

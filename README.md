@@ -322,6 +322,7 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 | `onSelectProject` | `(project: Project) => void` | , | When provided, clicking a project calls this instead of loading it into the current canvas. Use to navigate to another design |
 | `hideTitle` | `boolean` | `false` | Hide the project title in the app bar |
 | `config.uploadImageFile` | `(file, options?) => Promise<{ src; width?; height?; }>` | , | Optional host upload adapter. Use your own backend/cloud provider and return a hosted image URL |
+| `config.previewImageUrl` | `(src) => string` | 600px copy for Cloudinary images | Optional. Builds the address for the small previews in the Uploads panels. Adding an upload to the canvas always uses its original address. Pass `(src) => src` to always show the original |
 | `config.uploadFontFile` | `(file) => Promise<{ src; publicId?; }>` | , | Optional host font upload adapter. Return a hosted URL and optional backend file id |
 | `config.deleteFontFile` | `({ src?, publicId? }) => Promise<void>` | , | Optional host font delete adapter. Called when a custom font is deleted |
 | `config.listRecentUploads` | `({ limit? }) => Promise<Array<{ src; width?; height?; ... }>>` | , | Optional adapter to load Upload panel history from your backend |
@@ -636,6 +637,7 @@ const editorConfig = {
 Notes:
 
 - If `uploadImageFile` is omitted, sabi-canvas keeps its legacy local fallback behavior.
+- The Uploads panels show a 600px copy of each Cloudinary image (`res.cloudinary.com/.../image/upload/...`), so a grid of print-size uploads stays light. Other addresses are shown as they are. Set `config.previewImageUrl` to change this.
 - The package does not assume Axios, Fetch, Cloudinary, NestJS, or any specific backend.
 - Your backend should optimize uploaded images for canvas performance (for example width cap + good-quality compression).
 

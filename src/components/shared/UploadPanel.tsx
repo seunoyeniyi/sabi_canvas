@@ -17,6 +17,8 @@ import {
 } from "@sabi-canvas/ui/dropdown-menu";
 import { CanvasObject } from '@sabi-canvas/types/canvas-objects';
 import { isSvgSrc } from '@sabi-canvas/lib/svgColorUtils';
+import { defaultPreviewImageUrl } from '@sabi-canvas/lib/cloudinaryImage';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 
 /** If src is an SVG HTTP URL, fetch it and return a data URI so SVG color
  * editing utilities can operate on it. Returns the original src on failure. */
@@ -39,6 +41,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onClose }) => {
   const { uploadImage, isUploadingImage, uploadError } = useCanvasActions();
   const { addImage, updateObject } = useCanvasObjects();
   const { uploads, addUpload, isLoadingUploads } = useRecentUploads();
+  const previewImageUrl = useSabiCanvasConfig().previewImageUrl ?? defaultPreviewImageUrl;
   const { replacingImageId, setReplacingImageId } = useEditor();
   const [isReplaceUploading, setIsReplaceUploading] = React.useState(false);
 
@@ -217,7 +220,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onClose }) => {
                   onClick={(e) => handleRecentClick(e, img.src, img.width, img.height)}
                 >
                   <img
-                    src={img.src}
+                    src={previewImageUrl(img.src)}
                     alt="Recent upload"
                     className="w-full h-full object-cover transition-transform group-hover:scale-105"
                   />

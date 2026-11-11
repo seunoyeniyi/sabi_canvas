@@ -18,6 +18,8 @@ import { useCanvasActions } from '@sabi-canvas/hooks/useCanvasActions';
 import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
 import { RecentImage, useRecentUploads } from '@sabi-canvas/hooks/useRecentUploads';
 import { isSvgSrc } from '@sabi-canvas/lib/svgColorUtils';
+import { defaultPreviewImageUrl } from '@sabi-canvas/lib/cloudinaryImage';
+import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 
 interface UploadsPanelProps {
   onAssetInserted?: () => void;
@@ -45,6 +47,7 @@ export const UploadsPanel: React.FC<UploadsPanelProps> = ({ onAssetInserted }) =
   const { uploadImage, isUploadingImage, uploadError } = useCanvasActions();
   const { addImage } = useCanvasObjects();
   const { uploads, removeUpload, isLoadingUploads } = useRecentUploads();
+  const previewImageUrl = useSabiCanvasConfig().previewImageUrl ?? defaultPreviewImageUrl;
   const [deleteCandidate, setDeleteCandidate] = useState<RecentImage | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -118,7 +121,7 @@ export const UploadsPanel: React.FC<UploadsPanelProps> = ({ onAssetInserted }) =
                     title="Add to canvas"
                   >
                     <img
-                      src={upload.src}
+                      src={previewImageUrl(upload.src)}
                       alt="Uploaded item"
                       className="h-full w-full object-cover transition-transform group-hover:scale-105"
                     />
