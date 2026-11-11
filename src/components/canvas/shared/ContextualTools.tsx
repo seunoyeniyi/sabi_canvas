@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { HexColorPicker } from 'react-colorful';
 import {
   Square,
   Circle,
@@ -28,6 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@sabi-ca
 import { Slider } from '@sabi-canvas/ui/slider';
 import { Input } from '@sabi-canvas/ui/input';
 import { Label } from '@sabi-canvas/ui/label';
+import { ColorPickerPanel, CHECKERBOARD_CLASS, checkerboardStyle } from './ColorPicker';
 import { Separator } from '@sabi-canvas/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sabi-canvas/ui/tooltip';
 import { cn } from '@sabi-canvas/lib/utils';
@@ -123,6 +123,8 @@ export interface ColorPickerButtonProps {
   icon?: React.ReactNode;
   label: string;
   side?: "top" | "bottom" | "left" | "right";
+  /** Offer transparency (slider, opacity box, "no colour"). Default true. */
+  allowAlpha?: boolean;
 }
 
 export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
@@ -130,18 +132,10 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
   onChange,
   icon,
   label,
-  side = "bottom"
+  side = "bottom",
+  allowAlpha = true,
 }) => {
-  const [localColor, setLocalColor] = useState(color || '#ffffff');
-
-  useEffect(() => {
-    setLocalColor(color || '#ffffff');
-  }, [color]);
-
-  const handleColorChange = (newColor: string) => {
-    setLocalColor(newColor);
-    onChange(newColor);
-  };
+  const isWhiteOrEmpty = !color || color.toLowerCase() === '#ffffff';
 
   return (
     <Popover>
@@ -151,14 +145,17 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
             // variant="ghost"
             size="icon"
             aria-label={label}
-            className="h-8 w-8 relative group shrink-0 rounded-sm border border-panel-border transition-transform hover:scale-110"
-            style={{ backgroundColor: color || '#ffffff' }}
+            className={cn(
+              "h-8 w-8 relative group shrink-0 rounded-sm border border-panel-border transition-transform hover:scale-110",
+              CHECKERBOARD_CLASS,
+            )}
+            style={checkerboardStyle(color || '#ffffff')}
           >
             <div
               className="absolute inset-1.5 flex items-center justify-center"
             >
               {icon && React.cloneElement(icon as React.ReactElement<any>, {
-                className: cn("h-3 w-3", (color === '#ffffff' || !color) ? "" : "text-background/80 mix-blend-difference"),
+                className: cn("h-3 w-3", isWhiteOrEmpty ? "text-foreground" : "text-background/80 mix-blend-difference"),
               })}
             </div>
           </Button>
@@ -168,29 +165,14 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
         className="w-auto p-3"
         align="center"
         side={side}
-        onMouseDown={(e) => e.preventDefault()}
+        // Keep the text selection while picking (inline text editing), but let
+        // the hex and opacity boxes take focus so they can be typed in.
+        onMouseDown={(e) => {
+          if (!(e.target instanceof HTMLInputElement)) e.preventDefault();
+        }}
       >
         <Label className="text-xs mb-3 block font-medium">{label}</Label>
-        <div className="flex flex-col gap-3">
-          <HexColorPicker color={localColor} onChange={handleColorChange} />
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <div className="flex items-center gap-1 border border-input rounded-md px-2 py-1 h-8">
-                <span className="text-xs text-muted-foreground">#</span>
-                <input
-                  className="flex-1 bg-transparent border-none text-xs focus:outline-hidden uppercase"
-                  value={localColor.replace('#', '')}
-                  onChange={(e) => {
-                    const val = '#' + e.target.value.replace('#', '');
-                    setLocalColor(val);
-                    if (val.length === 7) onChange(val);
-                  }}
-                  maxLength={6}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <ColorPickerPanel color={color || '#ffffff'} onChange={onChange} allowAlpha={allowAlpha} />
       </PopoverContent>
     </Popover>
   );
@@ -409,7 +391,7 @@ export const ShadowButton: React.FC<{
           <div className="space-y-1"><Label className="text-[10px]">Off X</Label><Slider value={[offsetX]} onValueChange={([val]) => onChange({ shadowOffsetX: val })} min={-50} max={50} /></div>
           <div className="space-y-1"><Label className="text-[10px]">Off Y</Label><Slider value={[offsetY]} onValueChange={([val]) => onChange({ shadowOffsetY: val })} min={-50} max={50} /></div>
         </div>
-        <div className="flex items-center gap-2"><Label className="text-[10px]">Color</Label><Input type="color" value={color} onChange={(e) => onChange({ shadowColor: e.target.value })} className="w-6 h-6 p-0 border-0" /></div>
+        <div className="flex items-center gap-2"><Label className="text-[10px]">Color</Label><ColorPickerButton label="Shadow Color" side={side} color={color} onChange={(next) => onChange({ shadowColor: next })} /></div>
       </div>
     </PopoverContent>
   </Popover>

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { HexColorPicker } from 'react-colorful';
 import { ImageIcon, Loader2, Palette, Search, Upload, X } from 'lucide-react';
 import { Button } from '@sabi-canvas/ui/button';
 import { Input } from '@sabi-canvas/ui/input';
@@ -9,6 +8,7 @@ import { Skeleton } from '@sabi-canvas/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@sabi-canvas/ui/popover';
 import { cn } from '@sabi-canvas/lib/utils';
 import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
+import { ColorPickerPanel, CHECKERBOARD_CLASS, checkerboardStyle } from '@sabi-canvas/components/canvas/shared/ColorPicker';
 import { toast } from 'sonner';
 import type { CanvasBackground } from '@sabi-canvas/types/pages';
 import { useRecentUploads } from '@sabi-canvas/hooks/useRecentUploads';
@@ -309,32 +309,20 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
                   aria-label="Pick custom color"
                   className={cn(
                     'flex items-center justify-center w-8 h-8 shrink-0 rounded-md border-2 transition-all hover:scale-110',
+                    CHECKERBOARD_CLASS,
                     currentBg?.type === 'solid' &&
                       !COMPACT_SOLID_PRESETS.includes(currentBg.color.toLowerCase())
                       ? 'border-primary ring-2 ring-primary/30'
                       : 'border-border'
                   )}
-                  style={{ backgroundColor: localColor }}
+                  style={checkerboardStyle(localColor)}
                 >
                   <Palette className="h-3.5 w-3.5 text-gray-500 drop-shadow-sm" />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-3" side="right" align="start">
                 <Label className="text-xs mb-2 block font-medium">Pick Color</Label>
-                <HexColorPicker color={localColor} onChange={handleColorChange} />
-                <div className="flex items-center gap-1 border border-input rounded-md px-2 py-1 h-8 mt-2">
-                  <span className="text-xs text-muted-foreground">#</span>
-                  <input
-                    className="flex-1 bg-transparent border-none text-xs focus:outline-hidden uppercase"
-                    value={localColor.replace('#', '')}
-                    onChange={(e) => {
-                      const val = '#' + e.target.value.replace('#', '');
-                      setLocalColor(val);
-                      if (val.length === 7) handleColorChange(val);
-                    }}
-                    maxLength={6}
-                  />
-                </div>
+                <ColorPickerPanel color={localColor} onChange={handleColorChange} />
               </PopoverContent>
             </Popover>
 
@@ -345,15 +333,10 @@ export const BackgroundPanel: React.FC<BackgroundPanelProps> = ({ onClose }) => 
               aria-label="No background (transparent)"
               className={cn(
                 'w-8 h-8 shrink-0 rounded-md border-2 transition-all hover:scale-110',
+                CHECKERBOARD_CLASS,
                 isTransparent ? 'border-primary ring-2 ring-primary/30' : 'border-border'
               )}
-              style={{
-                backgroundImage:
-                  'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)',
-                backgroundSize: '8px 8px',
-                backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
-                backgroundColor: '#fff',
-              }}
+              style={checkerboardStyle()}
             />
 
             {/* Solid colour presets */}

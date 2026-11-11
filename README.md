@@ -329,6 +329,7 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 | `config.disableRecentUploadsLocalStorage` | `boolean` | `false` | Disable localStorage for recent uploads and keep the list memory-only |
 | `config.disableCustomFontsLocalStorage` | `boolean` | `false` | Disable localStorage for custom fonts state in sabi_canvas |
 | `config.disableRecentFontsLocalStorage` | `boolean` | `false` | Disable localStorage for recent font picks in FontFamilyPicker |
+| `config.colorSwatches` | `string[]` | built-in palette | Swatches in every colour picker (any CSS colour, including `rgba(…)`). The picker shows two rows of 8: colours already used in the design first, then these |
 | `config.sabiCanvasApiKey` | `string` | , | Optional Sabi Canvas API key. Paid templates your plan includes open too. See [Templates](#templates) |
 | `config.templates.source` | `TemplateSource` | Sabi Canvas API | Where the Templates panel and `templateId` get templates, filters and designs. See [Templates](#templates) |
 | `config.templates.panel` | `ComponentType<{ onClose }>` | , | Replaces the Templates panel with your own component |

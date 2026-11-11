@@ -30,12 +30,15 @@ function parseColor(str: string | undefined | null): string | null {
   const s = str.trim();
   if (s === '' || s === 'inherit' || s === 'initial' || s === 'transparent') return null;
 
-  // rgb(r, g, b)
-  const rgbMatch = s.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/);
+  // rgb(r, g, b) or rgba(r, g, b, a)
+  const rgbMatch = s.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/);
   if (rgbMatch) {
     const r = parseInt(rgbMatch[1]);
     const g = parseInt(rgbMatch[2]);
     const b = parseInt(rgbMatch[3]);
+    const alpha = rgbMatch[4] === undefined ? 1 : parseFloat(rgbMatch[4]);
+    // See-through colours are kept as rgba so their transparency survives.
+    if (alpha < 1) return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     // Treat black as "no color override" since it's the default
     if (r === 0 && g === 0 && b === 0) return null;
     return rgbToHex(r, g, b);

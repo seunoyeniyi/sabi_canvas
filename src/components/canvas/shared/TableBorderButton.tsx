@@ -7,6 +7,7 @@ import { Label } from '@sabi-canvas/ui/label';
 import { Separator } from '@sabi-canvas/ui/separator';
 import { cn } from '@sabi-canvas/lib/utils';
 import type { TableBorderConfig, TableBorderStyle } from '@sabi-canvas/types/canvas-objects';
+import { ColorPickerButton } from './ContextualTools';
 
 interface TableBorderButtonProps {
   border: TableBorderConfig;
@@ -157,11 +158,10 @@ export const TableBorderButton: React.FC<TableBorderButtonProps> = ({ border, on
         <div>
           <Label className="text-xs text-muted-foreground mb-1.5 block">Color</Label>
           <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={border.color}
-              onChange={(e) => onChange({ color: e.target.value })}
-              className="h-7 w-7 cursor-pointer rounded border border-border p-0.5 bg-transparent"
+            <ColorPickerButton
+              label="Border Color"
+              color={border.color}
+              onChange={(color) => onChange({ color })}
             />
             <span className="text-xs text-muted-foreground font-mono">{border.color}</span>
           </div>

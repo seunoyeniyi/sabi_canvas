@@ -30,6 +30,8 @@ import { useIsDesktop } from '@sabi-canvas/hooks/useMediaQuery';
 import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
 import { useSelectedObject } from '@sabi-canvas/hooks/useSelectedObject';
 import { CanvasObject, ImageObject, TableObject } from '@sabi-canvas/types/canvas-objects';
+import { ColorPickerButton } from '@sabi-canvas/components/canvas/shared/ContextualTools';
+import { parseCssColor } from '@sabi-canvas/lib/color';
 
 type TextSelection = Extract<CanvasObject, { type: 'text' }>;
 
@@ -476,9 +478,8 @@ const ContextualPropertyContent: React.FC = () => {
             <div>
               <Label className="text-xs text-muted-foreground mb-1 block">Cell Fill</Label>
               <div className="flex items-center gap-2">
-                <Input type="color" value={tableObject.defaultCellFill}
-                  onChange={(e) => updateTable({ defaultCellFill: e.target.value })}
-                  className="h-8 w-10 p-1" />
+                <ColorPickerButton label="Cell Fill" side="left" color={tableObject.defaultCellFill}
+                  onChange={(color) => updateTable({ defaultCellFill: color })} />
                 <span className="text-xs text-muted-foreground font-mono">{tableObject.defaultCellFill}</span>
               </div>
             </div>
@@ -487,9 +488,8 @@ const ContextualPropertyContent: React.FC = () => {
               <div>
                 <Label className="text-xs text-muted-foreground mb-1 block">Header Fill</Label>
                 <div className="flex items-center gap-2">
-                  <Input type="color" value={tableObject.headerFill}
-                    onChange={(e) => updateTable({ headerFill: e.target.value })}
-                    className="h-8 w-10 p-1" />
+                  <ColorPickerButton label="Header Fill" side="left" color={tableObject.headerFill}
+                    onChange={(color) => updateTable({ headerFill: color })} />
                   <span className="text-xs text-muted-foreground font-mono">{tableObject.headerFill}</span>
                 </div>
               </div>
@@ -498,9 +498,8 @@ const ContextualPropertyContent: React.FC = () => {
             <div>
               <Label className="text-xs text-muted-foreground mb-1 block">Text Color</Label>
               <div className="flex items-center gap-2">
-                <Input type="color" value={tableObject.defaultTextColor}
-                  onChange={(e) => updateTable({ defaultTextColor: e.target.value })}
-                  className="h-8 w-10 p-1" />
+                <ColorPickerButton label="Text Color" side="left" color={tableObject.defaultTextColor}
+                  onChange={(color) => updateTable({ defaultTextColor: color })} />
                 <span className="text-xs text-muted-foreground font-mono">{tableObject.defaultTextColor}</span>
               </div>
             </div>
@@ -520,20 +519,21 @@ const ContextualPropertyContent: React.FC = () => {
       {hasFill && (
         <PropertySection title={isText ? 'Color' : 'Fill'} icon={<Palette className="h-4 w-4" />}>
           <div className="flex items-center gap-3">
-            <Input
-              type="color"
-              value={String(fillValue)}
-              onChange={(e) => {
-                if (isMultiSelect) updateMany({ fill: e.target.value } as Partial<CanvasObject>);
-                else updateSingle({ fill: e.target.value } as Partial<CanvasObject>);
+            <ColorPickerButton
+              label={isText ? 'Color' : 'Fill'}
+              side="left"
+              color={String(fillValue)}
+              onChange={(color) => {
+                if (isMultiSelect) updateMany({ fill: color } as Partial<CanvasObject>);
+                else updateSingle({ fill: color } as Partial<CanvasObject>);
               }}
-              className="h-10 w-14 p-1"
             />
             <Input
               value={String(fillValue)}
               onChange={(e) => {
                 const next = e.target.value;
-                if (!next.startsWith('#') || (next.length !== 7 && next !== 'transparent')) return;
+                // Any CSS colour, including rgba(…) and 'transparent'.
+                if (!parseCssColor(next)) return;
                 if (isMultiSelect) updateMany({ fill: next } as Partial<CanvasObject>);
                 else updateSingle({ fill: next } as Partial<CanvasObject>);
               }}
@@ -547,11 +547,11 @@ const ContextualPropertyContent: React.FC = () => {
         <PropertySection title="Stroke" icon={<Palette className="h-4 w-4" />}>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <Input
-                type="color"
-                value={String(strokeValue)}
-                onChange={(e) => updateSingle({ stroke: e.target.value } as Partial<CanvasObject>)}
-                className="h-10 w-14 p-1"
+              <ColorPickerButton
+                label="Stroke"
+                side="left"
+                color={String(strokeValue)}
+                onChange={(color) => updateSingle({ stroke: color } as Partial<CanvasObject>)}
               />
               <Input
                 value={String(strokeValue)}
@@ -580,11 +580,11 @@ const ContextualPropertyContent: React.FC = () => {
         <PropertySection title="Border" icon={<Palette className="h-4 w-4" />}>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <Input
-                type="color"
-                value={(selectedObject as ImageObject).stroke ?? '#ffffff'}
-                onChange={(e) => updateSingle({ stroke: e.target.value } as Partial<CanvasObject>)}
-                className="h-10 w-14 p-1"
+              <ColorPickerButton
+                label="Border"
+                side="left"
+                color={(selectedObject as ImageObject).stroke ?? '#ffffff'}
+                onChange={(color) => updateSingle({ stroke: color } as Partial<CanvasObject>)}
               />
               <Input
                 value={(selectedObject as ImageObject).stroke ?? ''}

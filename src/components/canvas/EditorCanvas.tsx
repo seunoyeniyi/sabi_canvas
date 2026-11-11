@@ -729,6 +729,11 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
         document.execCommand('styleWithCSS', false, 'true');
         document.execCommand('fontName', false, value);
         document.execCommand('styleWithCSS', false, 'false');
+      } else if (cmd === 'foreColor') {
+        // As a CSS colour: an old-style <font color> can't hold transparency.
+        document.execCommand('styleWithCSS', false, 'true');
+        document.execCommand('foreColor', false, value);
+        document.execCommand('styleWithCSS', false, 'false');
       } else {
         document.execCommand(cmd, false, value);
       }
@@ -884,6 +889,11 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
       if (cmd === 'fontFamily') {
         document.execCommand('styleWithCSS', false, 'true');
         document.execCommand('fontName', false, value);
+        document.execCommand('styleWithCSS', false, 'false');
+      } else if (cmd === 'foreColor') {
+        // As a CSS colour: an old-style <font color> can't hold transparency.
+        document.execCommand('styleWithCSS', false, 'true');
+        document.execCommand('foreColor', false, value);
         document.execCommand('styleWithCSS', false, 'false');
       } else {
         document.execCommand(cmd, false, value);

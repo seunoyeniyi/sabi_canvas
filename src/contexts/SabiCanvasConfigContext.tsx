@@ -122,6 +122,13 @@ export interface SabiCanvasConfig {
    */
   disableRecentFontsLocalStorage?: boolean;
   /**
+   * Colours offered as swatches in every colour picker (any CSS colour,
+   * including see-through ones such as 'rgba(0, 0, 0, 0.5)'). Defaults to a
+   * built-in palette. The picker shows two rows of eight swatches: colours
+   * already used in the design first, then these.
+   */
+  colorSwatches?: string[];
+  /**
    * Templates panel. By default it lists the free Sabi Canvas templates, with
    * the filters the API offers. Pass `source` to serve your own templates and
    * filters, or `panel` to replace the panel entirely.
