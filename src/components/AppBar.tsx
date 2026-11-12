@@ -10,9 +10,10 @@ import {
   Moon,
   MoreHorizontal,
   FileBox,
-  PenLine
+  PenLine,
+  Loader2
 } from 'lucide-react';
-import { AppBarProps } from '@sabi-canvas/types/editor';
+import type { AppBarProps, SaveActionContext } from '@sabi-canvas/types/editor';
 import { Button } from '@sabi-canvas/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sabi-canvas/ui/tooltip';
 import {
@@ -27,6 +28,11 @@ import { cn } from '@sabi-canvas/lib/utils';
 import { useIsMobile } from '@sabi-canvas/hooks/useMediaQuery';
 import { useTheme } from '@sabi-canvas/providers/theme-provider';
 
+/** For an AppBar used on its own, outside EditorLayout, which has no design to hand over. */
+const NO_SAVE_ACTION_CONTEXT: SaveActionContext = {
+  snapshot: () => Promise.reject(new Error('A snapshot is only available inside EditorLayout')),
+};
+
 export const AppBar: React.FC<AppBarProps> = ({
   logo,
   title = 'Untitled',
@@ -38,12 +44,29 @@ export const AppBar: React.FC<AppBarProps> = ({
   canRedo = false,
   actions = [],
   saveAction,
+  saveActionContext,
   centerContent,
   className,
   hideTitle = false,
   onThemeToggle,
 }) => {
   const isMobile = useIsMobile();
+
+  // While the host's save action works (it returned a promise), show a spinner and ignore further clicks
+  const [saveBusy, setSaveBusy] = useState(false);
+  const runSaveAction = async () => {
+    if (!saveAction || saveBusy) return;
+    const result = saveAction.onClick(saveActionContext ?? NO_SAVE_ACTION_CONTEXT);
+    if (!(result instanceof Promise)) return;
+    setSaveBusy(true);
+    try {
+      await result;
+    } catch {
+      // The host reports its own errors
+    } finally {
+      setSaveBusy(false);
+    }
+  };
   const { theme, setTheme } = useTheme();
 
   // DOM-based theme detection , reactive to host app theme changes (e.g. next-themes)
@@ -205,11 +228,12 @@ export const AppBar: React.FC<AppBarProps> = ({
               <Button
                 variant={saveAction.variant ?? 'outline'}
                 size="sm"
-                onClick={saveAction.onClick}
-                disabled={saveAction.disabled}
+                onClick={runSaveAction}
+                disabled={saveAction.disabled || saveBusy}
+                aria-busy={saveBusy || undefined}
                 className={cn('h-8 gap-1.5 px-3 text-xs font-medium', saveAction.className)}
               >
-                {saveAction.icon}
+                {saveBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : saveAction.icon}
                 <span>{saveAction.label}</span>
               </Button>
             )}
@@ -290,11 +314,13 @@ export const AppBar: React.FC<AppBarProps> = ({
               <Button
                 variant={saveAction.variant ?? 'outline'}
                 size="sm"
-                onClick={saveAction.onClick}
-                disabled={saveAction.disabled}
+                onClick={runSaveAction}
+                disabled={saveAction.disabled || saveBusy}
+                aria-busy={saveBusy || undefined}
+                aria-label={saveAction.label}
                 className={cn('h-8 gap-1.5 px-3 text-xs font-medium', saveAction.className)}
               >
-                {saveAction.icon || <PenLine className="h-4 w-4" />}
+                {saveBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : saveAction.icon || <PenLine className="h-4 w-4" />}
                 <span className="hidden md:inline">{saveAction.label}</span>
               </Button>
             )}

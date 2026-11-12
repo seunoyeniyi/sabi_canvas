@@ -1361,7 +1361,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
                 showGrid={showGrid && config.showGrid}
                 gridSize={config.gridSize * dimensions.scale * (isMobile ? 2 : 1)}
                 fillColor={config.safeAreaColor}
-                borderColor="hsl(217, 91%, 60%)"
+                borderColor="hsl(217, 0%, 60%)"
                 background={activePage.background}
               />
             )}

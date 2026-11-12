@@ -1,3 +1,5 @@
+import type { Project } from './project';
+
 // Sabi Canvas Type Definitions
 // These types define the component API shapes for the editor package
 
@@ -21,6 +23,8 @@ export interface AppBarProps {
    * button. Designed for Save / Publish workflows.
    */
   saveAction?: AppBarSaveAction;
+  /** Passed to `saveAction.onClick`. EditorLayout provides it. */
+  saveActionContext?: SaveActionContext;
   centerContent?: React.ReactNode;
   className?: string;
   hideTitle?: boolean;
@@ -40,6 +44,18 @@ export interface AppBarAction {
   disabled?: boolean;
 }
 
+/** What the editor hands the save action when it's clicked. */
+export interface SaveActionContext {
+  /**
+   * The design exactly as it is on screen, with a thumbnail captured now
+   * (sized by `config.thumbnail`, as auto-save makes it): what auto-save
+   * would send next, even if it hasn't run yet. Saves nothing. `id` is empty
+   * when the design hasn't been saved yet. `thumbnail` is missing if the
+   * capture failed.
+   */
+  snapshot: () => Promise<Project>;
+}
+
 /**
  * Configuration for the primary save/publish action button rendered in the
  * AppBar just before the Download button. The label and behaviour are fully
@@ -49,7 +65,12 @@ export interface AppBarAction {
 export interface AppBarSaveAction {
   /** Button label text, e.g. "Save", "Publish", "Save & Publish". */
   label: string;
-  onClick: () => void;
+  /**
+   * Called with the design as it is right now (see `SaveActionContext`).
+   * Return a promise to keep the button busy (a spinner, and further clicks
+   * ignored) until it settles, e.g. while you capture a snapshot.
+   */
+  onClick: (context: SaveActionContext) => void | Promise<void>;
   /** Optional leading icon element. */
   icon?: React.ReactNode;
   disabled?: boolean;

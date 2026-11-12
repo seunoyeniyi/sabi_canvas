@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import Konva from 'konva';
 import { captureSafeAreaThumbnail } from '@sabi-canvas/hooks/useCanvasExport';
 import { CanvasPage } from '@sabi-canvas/types/pages';
@@ -28,6 +28,15 @@ interface UseAutoSaveOptions {
   isMockupEnabled?: boolean;
 }
 
+export interface UseAutoSaveResult {
+  /**
+   * The design as it is right now, with a freshly captured thumbnail: what
+   * the next auto-save would send. Saves nothing. `id` is empty for a design
+   * that hasn't been saved yet.
+   */
+  snapshot: () => Promise<Project>;
+}
+
 export const useAutoSave = ({
   pages,
   activePageId,
@@ -39,7 +48,7 @@ export const useAutoSave = ({
   onSave,
   customFonts,
   isMockupEnabled,
-}: UseAutoSaveOptions): void => {
+}: UseAutoSaveOptions): UseAutoSaveResult => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const projectIdRef = useRef<string | null>(projectId);
   const isFirstMountRef = useRef(true);
@@ -73,6 +82,45 @@ export const useAutoSave = ({
   useEffect(() => {
     projectIdRef.current = projectId;
   }, [projectId]);
+
+  // The design and its thumbnail, from the latest state. Shared by auto-save
+  // and snapshot() so both always describe the design the same way.
+  const captureProject = useCallback(async (id: string, createdAt: number): Promise<Project> => {
+    const pages = pagesRef.current;
+    const activePageId = activePageIdRef.current;
+    const activePage = pages.find((p) => p.id === activePageId) ?? pages[0];
+    const canvasSize = activePage?.size ?? { width: 1080, height: 1080 };
+
+    // Cropped to the safe area (the design itself, not the whole viewport)
+    let thumbnail: string | undefined;
+    try {
+      const stage = getStage();
+      if (stage) {
+        const result = await captureSafeAreaThumbnail(stage, canvasSize, activePage?.background, thumbnailConfigRef.current);
+        if (result) thumbnail = result;
+      }
+    } catch {
+      // Thumbnail capture failure is non-fatal
+    }
+
+    return {
+      id,
+      title: projectTitleRef.current,
+      createdAt,
+      updatedAt: Date.now(),
+      thumbnail,
+      pages: pages.map(pageToProjectPage),
+      activePageId,
+      canvasSize,
+      customFonts: customFontsRef.current?.length ? customFontsRef.current : undefined,
+      isMockupEnabled: isMockupEnabledRef.current ?? false,
+    };
+  }, [getStage]);
+
+  const snapshot = useCallback(
+    () => captureProject(projectIdRef.current ?? '', createdAtRef.current),
+    [captureProject],
+  );
 
   // Content fingerprint: only includes things that matter for saving.
   // Deliberately excludes viewState (zoom/pan) so scrolling/zooming never triggers a save.
@@ -129,12 +177,6 @@ export const useAutoSave = ({
     timerRef.current = setTimeout(async () => {
       timerRef.current = null;
 
-      const pages = pagesRef.current;
-      const activePageId = activePageIdRef.current;
-      const projectTitle = projectTitleRef.current;
-      const activePage = pages.find((p) => p.id === activePageId) ?? pages[0];
-      const canvasSize = activePage?.size ?? { width: 1080, height: 1080 };
-
       let currentProjectId = projectIdRef.current;
       const isNew = currentProjectId === null;
 
@@ -145,31 +187,7 @@ export const useAutoSave = ({
         onProjectCreated(currentProjectId);
       }
 
-      // Capture thumbnail cropped to the safe area (design area only, not the whole viewport).
-      let thumbnail: string | undefined;
-      try {
-        const stage = getStage();
-        if (stage) {
-          const result = await captureSafeAreaThumbnail(stage, canvasSize, activePage?.background, thumbnailConfigRef.current);
-          if (result) thumbnail = result;
-        }
-      } catch {
-        // Thumbnail capture failure is non-fatal
-      }
-
-      const now = Date.now();
-      const project: Project = {
-        id: currentProjectId,
-        title: projectTitle,
-        createdAt: isNew ? createdAtRef.current : now,
-        updatedAt: now,
-        thumbnail,
-        pages: pages.map(pageToProjectPage),
-        activePageId,
-        canvasSize,
-        customFonts: customFontsRef.current?.length ? customFontsRef.current : undefined,
-        isMockupEnabled: isMockupEnabledRef.current ?? false,
-      };
+      const project = await captureProject(currentProjectId!, isNew ? createdAtRef.current : Date.now());
 
       // For existing projects, preserve original createdAt from storage
       // (only needed for the localStorage path)
@@ -215,4 +233,6 @@ export const useAutoSave = ({
       }
     };
   }, []);
+
+  return { snapshot };
 };

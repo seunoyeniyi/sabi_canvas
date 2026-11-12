@@ -506,8 +506,11 @@ The `saveAction` prop lets you inject a custom button into the editor app bar , 
 interface AppBarSaveAction {
   /** Button label text. */
   label: string;
-  /** Called when the button is clicked. */
-  onClick: () => void;
+  /**
+   * Called when the button is clicked, with the design as it is right now.
+   * Return a promise to keep the button busy (spinner, further clicks ignored) until it settles.
+   */
+  onClick: (context: SaveActionContext) => void | Promise<void>;
   /** Optional icon element (e.g. a Lucide icon). Rendered before the label. */
   icon?: React.ReactNode;
   /** Disable the button (e.g. while a save is in progress). */
@@ -520,6 +523,33 @@ interface AppBarSaveAction {
   /** Extra CSS class applied to the button. */
   className?: string;
 }
+```
+
+```ts
+interface SaveActionContext {
+  /**
+   * The design exactly as it is on screen, with a thumbnail captured now (sized by `config.thumbnail`, like
+   * auto-save's). What auto-save would send next, even if it hasn't run yet. Saves nothing. `id` is empty for a
+   * design that hasn't been saved; `thumbnail` is missing if the capture failed.
+   */
+  snapshot: () => Promise<Project>;
+}
+```
+
+### Example , publish what's on screen
+
+Auto-save waits a moment after each change, so the last change may not be saved (or its thumbnail made) when the
+button is clicked. Take a snapshot to show and publish exactly what's on screen:
+
+```tsx
+const saveAction: AppBarSaveAction = {
+  label: 'Publish',
+  // The button shows a spinner while the snapshot is taken
+  onClick: async ({ snapshot }) => {
+    const design = await snapshot();
+    openPublishDialog({ thumbnail: design.thumbnail, pages: design.pages });
+  },
+};
 ```
 
 ### Example , dynamic Save / Publish button

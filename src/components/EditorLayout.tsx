@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect, useContext } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useContext, useMemo } from 'react';
 import { QueryClient, QueryClientContext, QueryClientProvider } from '@tanstack/react-query';
 import Konva from 'konva';
 import { Download, FileCode2, FileDown, FileUp, Printer, Frame, Loader2 } from 'lucide-react';
@@ -22,7 +22,7 @@ import { DownloadDialog } from './DownloadDialog';
 import { TemplateLockedDialog, useTemplateLockedDialog } from './shared/TemplateLockedDialog';
 import { cn } from '@sabi-canvas/lib/utils';
 import { AppBarAction } from '@sabi-canvas/types/editor';
-import type { AppBarSaveAction } from '@sabi-canvas/types/editor';
+import type { AppBarSaveAction, SaveActionContext } from '@sabi-canvas/types/editor';
 import { useKeyboardShortcuts } from '@sabi-canvas/hooks/useKeyboardShortcuts';
 import { useAutoSave } from '@sabi-canvas/hooks/useAutoSave';
 import { getLastProjectId, getProject, setLastProjectId } from '@sabi-canvas/hooks/useProjectManager';
@@ -112,7 +112,8 @@ export interface EditorLayoutProps {
    * @example
    * saveAction={{
    *   label: template.status === 'published' ? 'Save' : 'Publish',
-   *   onClick: openTemplateForm,
+   *   // The button shows a spinner until this settles
+   *   onClick: async ({ snapshot }) => openTemplateForm(await snapshot()),
    * }}
    */
   saveAction?: AppBarSaveAction;
@@ -317,7 +318,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     return stageRef.current?.current ?? null;
   }, []);
 
-  useAutoSave({
+  const { snapshot } = useAutoSave({
     pages,
     activePageId,
     projectId,
@@ -328,6 +329,9 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     customFonts,
     isMockupEnabled,
   });
+
+  // Handed to the save action, so the host can see the design as it is now
+  const saveActionContext = useMemo<SaveActionContext>(() => ({ snapshot }), [snapshot]);
 
   const handleOpenProject = useCallback(
     (project: Project) => {
@@ -631,6 +635,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
         canRedo={canRedo}
         actions={appBarActions}
         saveAction={saveAction}
+        saveActionContext={saveActionContext}
         centerContent={appBarCenterContent}
         hideTitle={hideTitle}
         onThemeToggle={onThemeToggle}

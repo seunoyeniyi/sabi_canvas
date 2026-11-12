@@ -73,6 +73,7 @@ export { useCanvasActions } from './hooks/useCanvasActions';
 export { useCanvasExport } from './hooks/useCanvasExport';
 export { loadAllProjects, getProject, saveProject, deleteProject, getLastProjectId, setLastProjectId } from './hooks/useProjectManager';
 export { useAutoSave } from './hooks/useAutoSave';
+export type { UseAutoSaveResult } from './hooks/useAutoSave';
 export { useSelectedObject } from './hooks/useSelectedObject';
 export { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 export { useSmartAlignment } from './hooks/useSmartAlignment';
@@ -104,6 +105,7 @@ export type {
   AppBarProps,
   AppBarAction,
   AppBarSaveAction,
+  SaveActionContext,
   ToolbarProps,
   ToolItem,
   EditorDrawerProps,
