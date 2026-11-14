@@ -301,6 +301,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
   const future = activePage.future;
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoGroupRef = useRef(0);
   const clipboardRef = useRef<CanvasObject[]>([]);
   const pasteCountRef = useRef(1);
   const { canvasSize, setCanvasSize, editorMode, isMockupEnabled } = useEditor();
@@ -317,7 +318,15 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
       setPages((prev) => {
         const hasActive = prev.some((p) => p.id === activePageId);
         const safePages = hasActive ? prev : prev.length > 0 ? prev : [createEmptyPage('Page 1', 0)];
-        return safePages.map((p) => (p.id === activePageId ? updater(p) : p));
+        let changed = safePages !== prev;
+        const next = safePages.map((p) => {
+          if (p.id !== activePageId) return p;
+          const updated = updater(p);
+          if (updated !== p) changed = true;
+          return updated;
+        });
+        // Nothing changed (undo with no history, an edit to the same value): no re-render.
+        return changed ? next : prev;
       });
     },
     [activePageId]
@@ -325,33 +334,29 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
 
   const modifyObjects = useCallback(
     (updater: (prev: CanvasObject[]) => CanvasObject[], debounce = false) => {
+      // Debounced edits less than 500 ms apart share one undo step. The group
+      // is picked here, once, and the state update only compares it with the
+      // page's: React may run updates again or in another order (a paused
+      // transition, Strict Mode), and the history must come out the same.
+      let group: number | undefined;
+      if (debounce) {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        else undoGroupRef.current += 1;
+        group = undoGroupRef.current;
+        debounceTimerRef.current = setTimeout(() => {
+          debounceTimerRef.current = null;
+        }, 500);
+      } else if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+
       modifyActivePage((page) => {
         const prevObjs = page.objects;
         const nextObjs = synchronizeGroupChildren(updater(prevObjs));
         if (prevObjs === nextObjs) return page;
-
-        let newPast = page.past;
-        let newFuture = page.future;
-
-        if (debounce) {
-          if (!debounceTimerRef.current) {
-            newPast = [...newPast, prevObjs];
-            newFuture = [];
-          }
-          if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-          debounceTimerRef.current = setTimeout(() => {
-            debounceTimerRef.current = null;
-          }, 500);
-        } else {
-          if (debounceTimerRef.current) {
-            clearTimeout(debounceTimerRef.current);
-            debounceTimerRef.current = null;
-          }
-          newPast = [...newPast, prevObjs];
-          newFuture = [];
-        }
-
-        return { ...page, objects: nextObjs, past: newPast, future: newFuture };
+        if (group !== undefined && page.undoGroup === group) return { ...page, objects: nextObjs };
+        return { ...page, objects: nextObjs, past: [...page.past, prevObjs], future: [], undoGroup: group };
       });
     },
     [modifyActivePage]
@@ -1205,11 +1210,13 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
     }
   }, []);
 
+  // Undo and redo read the history inside the state update, not the rendered
+  // one: a change can still be on its way (a colour sent as a transition).
   const undo = useCallback(() => {
-    if (past.length === 0) return;
     clearDebounceTimer();
 
     modifyActivePage((page) => {
+      if (page.past.length === 0) return page;
       const previousState = page.past[page.past.length - 1];
       const newPast = page.past.slice(0, page.past.length - 1);
 
@@ -1221,13 +1228,13 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
         selectedIds: [],
       };
     });
-  }, [past.length, clearDebounceTimer, modifyActivePage]);
+  }, [clearDebounceTimer, modifyActivePage]);
 
   const redo = useCallback(() => {
-    if (future.length === 0) return;
     clearDebounceTimer();
 
     modifyActivePage((page) => {
+      if (page.future.length === 0) return page;
       const nextState = page.future[page.future.length - 1];
       const newFuture = page.future.slice(0, page.future.length - 1);
 
@@ -1239,7 +1246,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
         selectedIds: [],
       };
     });
-  }, [future.length, clearDebounceTimer, modifyActivePage]);
+  }, [clearDebounceTimer, modifyActivePage]);
 
   const loadProjectData = useCallback(
     (incomingPages: CanvasPage[], incomingActivePageId: string, fallbackSize?: { width: number; height: number }) => {

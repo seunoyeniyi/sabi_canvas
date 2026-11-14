@@ -18,6 +18,8 @@ export interface CanvasPage {
   selectedIds: string[];
   past: CanvasObject[][];
   future: CanvasObject[][];
+  /** Quick edits that share one undo step carry the same number. Not saved. */
+  undoGroup?: number;
   viewState: {
     zoom: number;
     position: { x: number; y: number };

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { startTransition, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { RgbaColorPicker, RgbColorPicker } from 'react-colorful';
 import { Pipette } from 'lucide-react';
 import { Button } from '@sabi-canvas/ui/button';
@@ -17,6 +17,14 @@ import {
 } from '@sabi-canvas/lib/color';
 
 const WHITE: RgbaColor = { r: 255, g: 255, b: 255, a: 1 };
+
+/**
+ * The picker's handle follows the pointer on every move. The editor gets the
+ * colour once the pointer pauses this long, or is let go, because each change
+ * redraws the whole editor. That redraw runs as a transition, which React
+ * pauses whenever the pointer moves again, so it never holds up the handle.
+ */
+const CHANGE_DELAY_MS = 120;
 
 /** Swatches fit two rows of eight, so the picker stays short on phones. */
 const SWATCH_COLUMNS = 8;
@@ -46,8 +54,13 @@ const getEyeDropper = (): (new () => EyeDropperApi) | undefined =>
     ? undefined
     : (window as unknown as { EyeDropper?: new () => EyeDropperApi }).EyeDropper;
 
+interface Swatch {
+  css: string;
+  rgba: RgbaColor;
+}
+
 interface SwatchGridProps {
-  colors: string[];
+  colors: Swatch[];
   current: RgbaColor;
   onPick: (color: RgbaColor) => void;
   /** Adds a "no colour" swatch in the first slot. */
@@ -76,20 +89,18 @@ const SwatchGrid: React.FC<SwatchGridProps> = ({ colors, current, onPick, withNo
         <span className="absolute left-1/2 top-[-20%] h-[140%] w-0.5 -translate-x-1/2 rotate-45 bg-destructive" />
       </button>
     )}
-    {colors.map((swatch) => {
-      const parsed = parseCssColor(swatch);
-      if (!parsed) return null;
-      const selected = isSameColor(parsed, current);
+    {colors.map(({ css, rgba }) => {
+      const selected = isSameColor(rgba, current);
       return (
         <button
-          key={swatch}
+          key={css}
           type="button"
-          title={swatch}
-          aria-label={`Colour ${swatch}`}
+          title={css}
+          aria-label={`Colour ${css}`}
           aria-pressed={selected}
-          onClick={() => onPick(parsed)}
+          onClick={() => onPick(rgba)}
           className={swatchClass(selected)}
-          style={checkerboardStyle(swatch)}
+          style={checkerboardStyle(css)}
         />
       );
     })}
@@ -121,26 +132,61 @@ export const ColorPickerPanel: React.FC<ColorPickerPanelProps> = ({
   const canvasObjects = useContext(CanvasObjectsContext);
 
   const [value, setValue] = useState<RgbaColor>(() => parseCssColor(color) ?? WHITE);
-  const [hexDraft, setHexDraft] = useState(() => toHex6(value).slice(1));
-  const [opacityDraft, setOpacityDraft] = useState(() => String(Math.round(value.a * 100)));
+  // Text being typed in the hex / opacity boxes; null shows the current colour.
+  const [hexDraft, setHexDraft] = useState<string | null>(null);
+  const [opacityDraft, setOpacityDraft] = useState<string | null>(null);
   // Taken once when the picker opens, so the list doesn't shift while picking.
   const [designColors] = useState(() => (canvasObjects ? collectDesignColors(canvasObjects.pages) : []));
 
-  // Follow outside changes (undo, another object selected).
+  // ── Sending changes to the editor ──
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  const pendingRef = useRef<string | null>(null);
+  // Colours sent that the editor hasn't shown back yet.
+  const sentRef = useRef<string[]>([]);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flush = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    const next = pendingRef.current;
+    if (next === null) return;
+    pendingRef.current = null;
+    sentRef.current = [...sentRef.current.slice(-19), next];
+    startTransition(() => onChangeRef.current(next));
+  }, []);
+
+  // Closing the picker sends the last colour.
+  useEffect(() => flush, [flush]);
+
+  const send = (next: string, immediately: boolean) => {
+    pendingRef.current = next;
+    if (immediately) {
+      flush();
+      return;
+    }
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(flush, CHANGE_DELAY_MS);
+  };
+
+  // Follow outside changes (undo, another object selected), but not our own
+  // colours coming back, nor an older one while a newer change is waiting.
   useEffect(() => {
+    if (pendingRef.current !== null) return;
+    const sent = sentRef.current;
+    if (sent.includes(color)) {
+      if (color === sent[sent.length - 1]) sentRef.current = [];
+      return;
+    }
     const parsed = parseCssColor(color);
     if (parsed) setValue((current) => (isSameColor(current, parsed) ? current : parsed));
   }, [color]);
 
-  useEffect(() => {
-    setHexDraft(toHex6(value).slice(1));
-    setOpacityDraft(String(Math.round(value.a * 100)));
-  }, [value]);
-
-  const commit = (next: RgbaColor) => {
+  /** `immediately` for single actions (swatch, typed value); dragging waits. */
+  const commit = (next: RgbaColor, immediately = true) => {
     const safe = allowAlpha ? next : { ...next, a: 1 };
     setValue(safe);
-    onChange(formatColor(safe));
+    send(formatColor(safe), immediately);
   };
 
   /**
@@ -178,14 +224,14 @@ export const ColorPickerPanel: React.FC<ColorPickerPanelProps> = ({
   const swatches = useMemo(() => {
     const slots = SWATCH_COLUMNS * SWATCH_ROWS - (allowAlpha ? 1 : 0);
     const seen = new Set<string>();
-    const list: string[] = [];
-    for (const swatch of [...designColors, ...palette]) {
-      const parsed = parseCssColor(swatch);
-      if (!parsed || (!allowAlpha && parsed.a < 1)) continue;
-      const key = formatColor(parsed);
+    const list: Swatch[] = [];
+    for (const css of [...designColors, ...palette]) {
+      const rgba = parseCssColor(css);
+      if (!rgba || (!allowAlpha && rgba.a < 1)) continue;
+      const key = formatColor(rgba);
       if (seen.has(key)) continue;
       seen.add(key);
-      list.push(swatch);
+      list.push({ css, rgba });
       if (list.length === slots) break;
     }
     return list;
@@ -196,15 +242,19 @@ export const ColorPickerPanel: React.FC<ColorPickerPanelProps> = ({
       <div
         onPointerDownCapture={(event) => noteTouchedPart(event.target)}
         onKeyDownCapture={(event) => noteTouchedPart(event.target)}
+        // Letting go applies the colour straight away.
+        onPointerUp={flush}
+        onPointerCancel={flush}
+        onKeyUp={flush}
       >
         {allowAlpha ? (
           <RgbaColorPicker
             color={value}
-            onChange={(next) => commit(touchedPartRef.current === 'color' ? visibleIfHidden(next) : next)}
+            onChange={(next) => commit(touchedPartRef.current === 'color' ? visibleIfHidden(next) : next, false)}
             style={{ width: '100%', height: 168 }}
           />
         ) : (
-          <RgbColorPicker color={value} onChange={(next) => commit({ ...next, a: 1 })} style={{ width: '100%', height: 168 }} />
+          <RgbColorPicker color={value} onChange={(next) => commit({ ...next, a: 1 }, false)} style={{ width: '100%', height: 168 }} />
         )}
       </div>
 
@@ -213,7 +263,7 @@ export const ColorPickerPanel: React.FC<ColorPickerPanelProps> = ({
           <span className="text-xs text-muted-foreground">#</span>
           <input
             aria-label="Hex colour"
-            value={hexDraft}
+            value={hexDraft ?? toHex6(value).slice(1)}
             maxLength={6}
             spellCheck={false}
             onChange={(event) => {
@@ -223,9 +273,9 @@ export const ColorPickerPanel: React.FC<ColorPickerPanelProps> = ({
               if (rgb) commit(visibleIfHidden({ ...rgb, a: value.a }));
             }}
             onBlur={() => {
-              const rgb = parseHexInput(hexDraft);
+              const rgb = hexDraft === null ? null : parseHexInput(hexDraft);
               if (rgb && toHex6(rgb) !== toHex6(value)) commit(visibleIfHidden({ ...rgb, a: value.a }));
-              else if (!rgb) setHexDraft(toHex6(value).slice(1));
+              setHexDraft(null);
             }}
             className="w-full min-w-0 bg-transparent text-xs uppercase focus:outline-hidden"
           />
@@ -235,13 +285,17 @@ export const ColorPickerPanel: React.FC<ColorPickerPanelProps> = ({
             <input
               aria-label="Opacity"
               inputMode="numeric"
-              value={opacityDraft}
+              value={opacityDraft ?? String(Math.round(value.a * 100))}
               onChange={(event) => {
                 const draft = event.target.value.replace(/\D/g, '').slice(0, 3);
                 setOpacityDraft(draft);
-                if (draft !== '') commit({ ...value, a: Math.min(100, Number(draft)) / 100 });
+                // Typing "50" passes through "5": wait for the pause.
+                if (draft !== '') commit({ ...value, a: Math.min(100, Number(draft)) / 100 }, false);
               }}
-              onBlur={() => setOpacityDraft(String(Math.round(value.a * 100)))}
+              onBlur={() => {
+                flush();
+                setOpacityDraft(null);
+              }}
               className="w-full min-w-0 bg-transparent text-right text-xs focus:outline-hidden"
             />
             <span className="text-xs text-muted-foreground">%</span>
