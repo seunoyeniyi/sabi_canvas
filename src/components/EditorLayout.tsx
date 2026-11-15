@@ -152,6 +152,12 @@ export interface EditorLayoutProps {
    */
   warnOnTabClose?: 'unsaved' | 'edited' | false;
   /**
+   * Hides the menu button (☰) and its side drawer (projects, uploads,
+   * help…), e.g. when your app lists designs itself. Put your own way out in
+   * `appBarStart`, such as a back arrow. Customer mode never shows them.
+   */
+  hideMenu?: boolean;
+  /**
    * Hides the "Enable Mockup" button (setting up a product picture and print
    * area), e.g. for customers who only design. Customer mode never shows it.
    */
@@ -222,7 +228,7 @@ async function waitForPictures(stage: Konva.Stage, expected: number, timeoutMs =
   }
 }
 
-const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, projectTitleOverride, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction, customerMode = false, hideDownload = false, downloadButton, hideMockupToggle = false, warnOnTabClose = 'unsaved', editorRef, appBarCenter, appBarStart, mobileToolPanelHeight }) => {
+const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, projectTitleOverride, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction, customerMode = false, hideDownload = false, downloadButton, hideMockupToggle = false, warnOnTabClose = 'unsaved', hideMenu = false, editorRef, appBarCenter, appBarStart, mobileToolPanelHeight }) => {
   useKeyboardShortcuts();
 
   const {
@@ -890,7 +896,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
       <AppBar
         title={projectTitle}
         onTitleChange={setProjectTitle}
-        onMenuToggle={customerMode ? undefined : toggleDrawer}
+        onMenuToggle={customerMode || hideMenu ? undefined : toggleDrawer}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
@@ -909,7 +915,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
       <div className="flex flex-1 overflow-hidden">
         {/* Left Drawer (Desktop: persistent mini/expanded). Not while a
             customer designs a product: other projects don't belong there. */}
-        {!customerMode && <EditorDrawer
+        {!customerMode && !hideMenu && <EditorDrawer
           isOpen={isDrawerOpen}
           onClose={toggleDrawer}
           side="left"

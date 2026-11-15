@@ -113,7 +113,7 @@ export const useAutoSave = ({
 
   // The design and its thumbnail, from the latest state. Shared by auto-save
   // and snapshot() so both always describe the design the same way.
-  const captureProject = useCallback(async (id: string, createdAt: number): Promise<Project> => {
+  const captureProject = useCallback(async (id: string, createdAt: number, { withThumbnail = true }: { withThumbnail?: boolean } = {}): Promise<Project> => {
     const pages = pagesRef.current;
     const activePageId = activePageIdRef.current;
     const activePage = pages.find((p) => p.id === activePageId) ?? pages[0];
@@ -122,7 +122,7 @@ export const useAutoSave = ({
     // Cropped to the safe area (the design itself, not the whole viewport)
     let thumbnail: string | undefined;
     try {
-      const stage = getStage();
+      const stage = withThumbnail ? getStage() : null;
       if (stage) {
         const result = await captureSafeAreaThumbnail(stage, canvasSize, activePage?.background, thumbnailConfigRef.current);
         if (result) thumbnail = result;
@@ -220,7 +220,9 @@ export const useAutoSave = ({
 
   // Saves the design as it is now. Run by the debounce timer, and at once
   // when the editor closes with a save still waiting, so leaving never drops it.
-  const runSave = async () => {
+  // `withThumbnail: false` while the editor closes: its canvas is going away and
+  // would draw a blank picture, so the design's last thumbnail is kept instead
+  const runSave = async ({ withThumbnail = true }: { withThumbnail?: boolean } = {}) => {
     let currentProjectId = projectIdRef.current;
     const isNew = currentProjectId === null;
 
@@ -237,7 +239,7 @@ export const useAutoSave = ({
     const noteSaved = () => {
       if (touched && openedKeyRef.current !== null) savedKeyRef.current = savingKey;
     };
-    const project = await captureProject(currentProjectId!, isNew ? createdAtRef.current : Date.now());
+    const project = await captureProject(currentProjectId!, isNew ? createdAtRef.current : Date.now(), { withThumbnail });
     savesInFlightRef.current += 1;
 
     // For existing projects, preserve original createdAt from storage
@@ -320,7 +322,7 @@ export const useAutoSave = ({
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
-        void runSaveRef.current();
+        void runSaveRef.current({ withThumbnail: false });
       }
     };
   }, []);
