@@ -130,25 +130,71 @@ export function createMockupProject(options: MockupProjectOptions): Project {
   };
 }
 
+/** Where the design goes on a side, as fractions (0–1) of the page. */
+export interface PrintAreaFractions {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * A page's objects with another product picture and, optionally, another
+ * print area. When the print area moves or changes size, the customer's
+ * items move and scale with it, so their design keeps its place on the print.
+ */
+export function withMockup(
+  objects: CanvasObject[],
+  pageSize: { width: number; height: number },
+  change: { src?: string; printArea?: PrintAreaFractions },
+): CanvasObject[] {
+  const oldArea = objects.find((object) => object.type === 'print-area') as PrintAreaObject | undefined;
+  const next = change.printArea && oldArea
+    ? {
+        x: Math.round(clamp01(change.printArea.x) * pageSize.width),
+        y: Math.round(clamp01(change.printArea.y) * pageSize.height),
+        width: Math.max(1, Math.round(clamp01(change.printArea.width) * pageSize.width)),
+        height: Math.max(1, Math.round(clamp01(change.printArea.height) * pageSize.height)),
+      }
+    : null;
+  const oldW = oldArea ? oldArea.width * (oldArea.scaleX || 1) : 0;
+  const oldH = oldArea ? oldArea.height * (oldArea.scaleY || 1) : 0;
+  const moved = !!(next && oldArea && (next.x !== oldArea.x || next.y !== oldArea.y || next.width !== oldW || next.height !== oldH));
+  // One scale for both directions keeps the design's proportions
+  const scale = moved ? Math.min(next!.width / Math.max(1, oldW), next!.height / Math.max(1, oldH)) : 1;
+
+  return objects.map((object) => {
+    if (change.src && object.type === 'image' && object.objectRole === 'mockup' && object.name === MOCKUP_PICTURE_NAME) {
+      return (object as ImageObject).src === change.src ? object : ({ ...(object as ImageObject), src: change.src } as CanvasObject);
+    }
+    if (!moved) return object;
+    if (object.type === 'print-area') {
+      return { ...object, x: next!.x, y: next!.y, width: next!.width, height: next!.height, scaleX: 1, scaleY: 1 } as CanvasObject;
+    }
+    if (object.objectRole === 'customer') {
+      return {
+        ...object,
+        x: next!.x + (object.x - oldArea!.x) * scale,
+        y: next!.y + (object.y - oldArea!.y) * scale,
+        scaleX: (object.scaleX || 1) * scale,
+        scaleY: (object.scaleY || 1) * scale,
+      } as CanvasObject;
+    }
+    return object;
+  });
+}
+
 /**
  * The same design with another product picture on one side, e.g. after the
- * customer picks another colour. The customer's work is kept. The picture
- * should have the same shape as the one it replaces.
+ * customer picks another colour, and optionally that colour's own print area.
+ * The customer's work is kept (and moved with the print area). In an open
+ * editor use `editorRef.current.replaceMockup`.
  */
-export function replaceMockupPicture(project: Project, pageId: string, src: string): Project {
+export function replaceMockupPicture(project: Project, pageId: string, src: string, printArea?: PrintAreaFractions): Project {
   return {
     ...project,
     pages: project.pages.map((page) =>
-      page.id !== pageId
-        ? page
-        : {
-            ...page,
-            objects: page.objects.map((object) =>
-              object.type === 'image' && object.objectRole === 'mockup' && object.name === MOCKUP_PICTURE_NAME
-                ? { ...(object as ImageObject), src }
-                : object,
-            ),
-          },
+      page.id !== pageId ? page : { ...page, objects: withMockup(page.objects, page.size ?? project.canvasSize, { src, printArea }) },
     ),
   };
 }

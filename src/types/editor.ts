@@ -109,6 +109,12 @@ export interface EditorApi {
    * picture of the same shape as the one it replaces.
    */
   replaceMockupPicture: (pageId: string, src: string) => void;
+  /**
+   * The same, with that picture's own print area (fractions of the page) when
+   * it differs, e.g. a colour photographed a little differently. The
+   * customer's items move and scale with the print area.
+   */
+  replaceMockup: (pageId: string, change: { src?: string; printArea?: import('@sabi-canvas/lib/printOnDemand').PrintAreaFractions }) => void;
 }
 
 /**

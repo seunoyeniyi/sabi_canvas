@@ -908,7 +908,8 @@ The editor can also be mounted off screen (give its container a real width and h
 | Export | What it does |
 |---|---|
 | `createMockupProject({ sides, title?, pageSize?, printAreaColor? })` | A new design on a product, one page per side (page id = side id). A side without `picture` is a plain page in the print's shape (`printAspect`) |
-| `replaceMockupPicture(project, pageId, src)` | Swaps a side's product picture in a saved design (e.g. another colour). In an open editor use `editorRef.current.replaceMockupPicture(pageId, src)`, which keeps the undo history too |
+| `replaceMockupPicture(project, pageId, src, printArea?)` | Swaps a side's product picture in a saved design (e.g. another colour), optionally with that picture's own print area; the customer's items move and scale with it. In an open editor use `editorRef.current.replaceMockup(pageId, { src, printArea })`, which keeps the undo history too |
+| `withMockup(objects, pageSize, { src?, printArea? })` | The same for one page's objects |
 | `analyzePrintDesign(pages, specs, { minDpi?, goodDpi?, tolerance? })` | Preflight: `empty`, `blurry` (< 100 DPI), `soft` (< 150 DPI), `cut-off`, `outside` |
 | `printPixels(width, height, unit, dpi)` | A print size in pixels (`unit`: `'cm'`, `'in'` or `'mm'`) |
 | `customerObjects(page)`, `printAreaOf(page)` | The customer's items on a page, and its print area |

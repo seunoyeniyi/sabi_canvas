@@ -12,7 +12,7 @@ import {
   generateObjectId,
 } from '@sabi-canvas/types/canvas-objects';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
-import { MOCKUP_PICTURE_NAME } from '@sabi-canvas/lib/printOnDemand';
+import { withMockup, type PrintAreaFractions } from '@sabi-canvas/lib/printOnDemand';
 import { ActivePageImportResult, ActivePageJsonPayload, CanvasBackground, CanvasPage } from '@sabi-canvas/types/pages';
 
 interface CanvasObjectsContextValue {
@@ -92,6 +92,8 @@ interface CanvasObjectsContextValue {
    * picture made by `createMockupProject` changes.
    */
   replaceMockupPicture: (pageId: string, src: string) => void;
+  /** The same, with that picture's own print area too; the customer's items move and scale with it. */
+  replaceMockup: (pageId: string, change: { src?: string; printArea?: PrintAreaFractions }) => void;
 }
 
 const CanvasObjectsContext = createContext<CanvasObjectsContextValue | undefined>(undefined);
@@ -1256,27 +1258,24 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
     });
   }, [clearDebounceTimer, modifyActivePage]);
 
-  const replaceMockupPicture = useCallback((pageId: string, src: string) => {
-    const swap = (objects: CanvasObject[]) =>
-      objects.map((object) =>
-        object.type === 'image' && object.objectRole === 'mockup' && object.name === MOCKUP_PICTURE_NAME && (object as ImageObject).src !== src
-          ? ({ ...(object as ImageObject), src } as CanvasObject)
-          : object,
-      );
+  const replaceMockup = useCallback((pageId: string, change: { src?: string; printArea?: PrintAreaFractions }) => {
     setPages((prev) =>
-      prev.map((page) =>
-        page.id !== pageId
-          ? page
-          : {
-              ...page,
-              objects: swap(page.objects),
-              // Undo and redo keep the new picture: it isn't one of the customer's edits
-              past: page.past.map(swap),
-              future: page.future.map(swap),
-            },
-      ),
+      prev.map((page) => {
+        if (page.id !== pageId) return page;
+        const size = page.size ?? canvasSize;
+        const swap = (objects: CanvasObject[]) => withMockup(objects, size, change);
+        return {
+          ...page,
+          objects: swap(page.objects),
+          // Undo and redo keep the new picture and print area: they aren't the customer's edits
+          past: page.past.map(swap),
+          future: page.future.map(swap),
+        };
+      }),
     );
-  }, []);
+  }, [canvasSize]);
+
+  const replaceMockupPicture = useCallback((pageId: string, src: string) => replaceMockup(pageId, { src }), [replaceMockup]);
 
   const loadProjectData = useCallback(
     (incomingPages: CanvasPage[], incomingActivePageId: string, fallbackSize?: { width: number; height: number }) => {
@@ -1446,6 +1445,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
       importActivePageJson,
       loadProjectData,
       replaceMockupPicture,
+      replaceMockup,
     }),
     [
       pages,
@@ -1496,6 +1496,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
       importActivePageJson,
       loadProjectData,
       replaceMockupPicture,
+      replaceMockup,
     ]
   );
 

@@ -212,6 +212,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     selectedIds,
     addObject,
     replaceMockupPicture,
+    replaceMockup,
   } = useCanvasObjects();
 
   const { customFonts, loadProjectFonts, addCustomFont } = useCustomFonts();
@@ -474,7 +475,11 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     }
   }, [canvasSize, getStage, isMockupEnabled, setActivePage]);
 
-  useImperativeHandle(editorRef, () => ({ snapshot, exportPages, replaceMockupPicture }), [snapshot, exportPages, replaceMockupPicture]);
+  useImperativeHandle(
+    editorRef,
+    () => ({ snapshot, exportPages, replaceMockupPicture, replaceMockup }),
+    [snapshot, exportPages, replaceMockupPicture, replaceMockup],
+  );
 
   // Handed to the save action, so the host can see the design as it is now
   const saveActionContext = useMemo<SaveActionContext>(() => ({ snapshot, exportPages }), [snapshot, exportPages]);

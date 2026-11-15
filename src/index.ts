@@ -187,12 +187,14 @@ export {
   customerObjects,
   printAreaOf,
   printPixels,
+  withMockup,
   INCHES_PER,
   MOCKUP_PICTURE_NAME,
 } from './lib/printOnDemand';
 export type {
   MockupSide,
   MockupProjectOptions,
+  PrintAreaFractions,
   PrintSpec,
   PrintIssue,
   PrintIssueKind,

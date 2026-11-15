@@ -15,6 +15,7 @@ export const CLOUDINARY_PRESETS = {
   logo: 'c_limit,w_600,h_300,q_auto,f_png',
   thumb: 'c_limit,w_600,h_600,q_auto,f_webp',
   full: 'c_limit,w_1600,h_1600,q_auto,f_webp',
+  emailImage: 'c_limit,w_600,h_600,q_auto,f_jpg',
 } as const;
 export type CloudinaryPreset = keyof typeof CLOUDINARY_PRESETS;
 
