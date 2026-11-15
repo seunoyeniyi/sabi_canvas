@@ -75,6 +75,18 @@ export const PageNavigation: React.FC = () => {
                 : "bg-card/80 hover:bg-muted text-muted-foreground border-border"
             )}
             onClick={() => setActivePage(page.id)}
+            // A page (or product side) is chosen with the keyboard too
+            role="button"
+            tabIndex={0}
+            aria-pressed={page.id === activePageId}
+            aria-label={editingId === page.id ? undefined : page.name}
+            onKeyDown={(e) => {
+              if (editingId === page.id) return;
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setActivePage(page.id);
+              }
+            }}
           >
             <FileText className="w-3.5 h-3.5 opacity-90" />
             {editingId === page.id ? (

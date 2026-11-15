@@ -70,7 +70,8 @@ export { CustomFontsProvider, useCustomFonts } from './contexts/CustomFontsConte
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 export { useCanvasActions } from './hooks/useCanvasActions';
-export { useCanvasExport } from './hooks/useCanvasExport';
+export { useCanvasExport, renderStageArea } from './hooks/useCanvasExport';
+export type { RenderStageAreaOptions } from './hooks/useCanvasExport';
 export { loadAllProjects, getProject, saveProject, deleteProject, getLastProjectId, setLastProjectId } from './hooks/useProjectManager';
 export { useAutoSave } from './hooks/useAutoSave';
 export type { UseAutoSaveResult } from './hooks/useAutoSave';
@@ -106,6 +107,9 @@ export type {
   AppBarAction,
   AppBarSaveAction,
   SaveActionContext,
+  EditorApi,
+  ExportPagesOptions,
+  ExportedPage,
   ToolbarProps,
   ToolItem,
   EditorDrawerProps,
@@ -120,6 +124,7 @@ export type {
   // Canvas objects
   CanvasObject,
   BaseCanvasObject,
+  PrintAreaObject,
   TextObject,
   ImageObject,
   GroupObject,
@@ -173,6 +178,26 @@ export {
   SabiCanvasApiError,
 } from './lib/templates/sabiCanvasTemplateSource';
 export type { SabiCanvasTemplateSourceOptions } from './lib/templates/sabiCanvasTemplateSource';
+
+// ─── Print on demand ──────────────────────────────────────────────────────────
+export {
+  createMockupProject,
+  replaceMockupPicture,
+  analyzePrintDesign,
+  customerObjects,
+  printAreaOf,
+  printPixels,
+  INCHES_PER,
+  MOCKUP_PICTURE_NAME,
+} from './lib/printOnDemand';
+export type {
+  MockupSide,
+  MockupProjectOptions,
+  PrintSpec,
+  PrintIssue,
+  PrintIssueKind,
+  AnalyzePrintOptions,
+} from './lib/printOnDemand';
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 export { cn } from './lib/utils';

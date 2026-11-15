@@ -31,6 +31,7 @@ import { useTheme } from '@sabi-canvas/providers/theme-provider';
 /** For an AppBar used on its own, outside EditorLayout, which has no design to hand over. */
 const NO_SAVE_ACTION_CONTEXT: SaveActionContext = {
   snapshot: () => Promise.reject(new Error('A snapshot is only available inside EditorLayout')),
+  exportPages: () => Promise.reject(new Error('Pages can only be exported inside EditorLayout')),
 };
 
 export const AppBar: React.FC<AppBarProps> = ({
@@ -139,14 +140,17 @@ export const AppBar: React.FC<AppBarProps> = ({
     >
       {/* Left Section: Menu + Logo */}
       <div className="flex items-center gap-2 min-w-0 shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onMenuToggle}
-          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-toolbar-hover"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+        {onMenuToggle && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onMenuToggle}
+            aria-label="Menu"
+            className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-toolbar-hover"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
 
         {logo || (<></>)}
 
@@ -321,7 +325,7 @@ export const AppBar: React.FC<AppBarProps> = ({
                 className={cn('h-8 gap-1.5 px-3 text-xs font-medium', saveAction.className)}
               >
                 {saveBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : saveAction.icon || <PenLine className="h-4 w-4" />}
-                <span className="hidden md:inline">{saveAction.label}</span>
+                <span className={saveAction.labelOnPhones ? undefined : 'hidden md:inline'}>{saveAction.label}</span>
               </Button>
             )}
 

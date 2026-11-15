@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useRe
 import {
   CanvasObject,
   GroupObject,
+  ImageObject,
   createDefaultObject,
   createDefaultTableObject,
   createImageObject,
@@ -11,6 +12,7 @@ import {
   generateObjectId,
 } from '@sabi-canvas/types/canvas-objects';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
+import { MOCKUP_PICTURE_NAME } from '@sabi-canvas/lib/printOnDemand';
 import { ActivePageImportResult, ActivePageJsonPayload, CanvasBackground, CanvasPage } from '@sabi-canvas/types/pages';
 
 interface CanvasObjectsContextValue {
@@ -84,6 +86,12 @@ interface CanvasObjectsContextValue {
 
   // Project persistence
   loadProjectData: (pages: CanvasPage[], activePageId: string, fallbackSize?: { width: number; height: number }) => void;
+  /**
+   * Print on demand: shows another product picture on a page (e.g. another
+   * colour), keeping the customer's design and undo history. Only the
+   * picture made by `createMockupProject` changes.
+   */
+  replaceMockupPicture: (pageId: string, src: string) => void;
 }
 
 const CanvasObjectsContext = createContext<CanvasObjectsContextValue | undefined>(undefined);
@@ -1248,6 +1256,28 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
     });
   }, [clearDebounceTimer, modifyActivePage]);
 
+  const replaceMockupPicture = useCallback((pageId: string, src: string) => {
+    const swap = (objects: CanvasObject[]) =>
+      objects.map((object) =>
+        object.type === 'image' && object.objectRole === 'mockup' && object.name === MOCKUP_PICTURE_NAME && (object as ImageObject).src !== src
+          ? ({ ...(object as ImageObject), src } as CanvasObject)
+          : object,
+      );
+    setPages((prev) =>
+      prev.map((page) =>
+        page.id !== pageId
+          ? page
+          : {
+              ...page,
+              objects: swap(page.objects),
+              // Undo and redo keep the new picture: it isn't one of the customer's edits
+              past: page.past.map(swap),
+              future: page.future.map(swap),
+            },
+      ),
+    );
+  }, []);
+
   const loadProjectData = useCallback(
     (incomingPages: CanvasPage[], incomingActivePageId: string, fallbackSize?: { width: number; height: number }) => {
       clearDebounceTimer();
@@ -1415,6 +1445,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
       exportActivePageJson,
       importActivePageJson,
       loadProjectData,
+      replaceMockupPicture,
     }),
     [
       pages,
@@ -1464,6 +1495,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
       exportActivePageJson,
       importActivePageJson,
       loadProjectData,
+      replaceMockupPicture,
     ]
   );
 

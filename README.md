@@ -339,6 +339,11 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 | `config.templates.onLockedTemplate` | `(template, error) => void` | , | Called when a locked template (`hasAccess: false`) is refused, e.g. to offer an upgrade. Without it, a dialog says which plan it needs |
 | `config.templates.onTemplateApplied` | `(design) => void` | , | Called after a template is applied to the canvas |
 | `saveAction` | `AppBarSaveAction` | , | Optional custom action button rendered in the app bar before the Download button. Useful for "Save", "Publish", or any app-specific primary action. See below. |
+| `customerMode` | `boolean` | `false` | Print on demand: a customer designs on a product. Open a design made with `createMockupProject`; the product picture and print area stay locked, new items land inside the print area, and the mockup controls, page management and side menu are hidden. See [Print on demand](#print-on-demand) |
+| `hideDownload` | `boolean` | `false` | Hides the Download button, e.g. when designs are only sold printed |
+| `appBarStart` | `ReactNode` | , | Your own content at the start of the top bar, before the title, e.g. a back button out of the editor |
+| `appBarCenter` | `ReactNode` | , | Your own content in the middle of the top bar, e.g. a product's colour and size picker. Swap the product picture with `editorRef.current.replaceMockupPicture(pageId, src)`; the design and undo history stay |
+| `editorRef` | `Ref<EditorApi>` | , | Receives `{ snapshot, exportPages }` once the editor mounts, to save or export from outside the editor |
 | `enableJsonDevTools` | `boolean` | `false` | Adds dev tools to the app bar: export/import the active page as JSON, and import a Polotno design into the open project (it replaces a single empty page, otherwise its pages are added after the existing ones) |
 | `className` | `string` | , | Extra CSS class on the root element |
 
@@ -513,6 +518,8 @@ interface AppBarSaveAction {
   onClick: (context: SaveActionContext) => void | Promise<void>;
   /** Optional icon element (e.g. a Lucide icon). Rendered before the label. */
   icon?: React.ReactNode;
+  /** Show the label on phones too; by default phones show only the icon. */
+  labelOnPhones?: boolean;
   /** Disable the button (e.g. while a save is in progress). */
   disabled?: boolean;
   /**
@@ -533,6 +540,8 @@ interface SaveActionContext {
    * design that hasn't been saved; `thumbnail` is missing if the capture failed.
    */
   snapshot: () => Promise<Project>;
+  /** Pictures of the pages: proofs and print files. See "Print on demand". */
+  exportPages: (options?: ExportPagesOptions) => Promise<ExportedPage[]>;
 }
 ```
 
@@ -799,8 +808,15 @@ import { EditorLayout } from 'sabi-canvas';
 import { SabiCanvasProvider, useSabiCanvasConfig, getSabiCanvasConfig } from 'sabi-canvas';
 import type { SabiCanvasConfig, SabiCanvasAIConfig } from 'sabi-canvas';
 
-// App bar
-import type { AppBarSaveAction } from 'sabi-canvas';
+// App bar and editor API
+import type { AppBarSaveAction, SaveActionContext, EditorApi, ExportPagesOptions, ExportedPage } from 'sabi-canvas';
+
+// Print on demand
+import {
+  createMockupProject, replaceMockupPicture, analyzePrintDesign, printPixels,
+  customerObjects, printAreaOf, renderStageArea,
+} from 'sabi-canvas';
+import type { MockupSide, PrintIssue, PrintSpec } from 'sabi-canvas';
 
 // Individual panels (for custom layouts)
 import {
@@ -830,6 +846,75 @@ import type {
 > **Removed in 0.4:** `DESIGN_TEMPLATES`, `TEMPLATE_CATEGORIES`, and the `DesignTemplate` / `TemplateCategory` /
 > `TemplateCategoryItem` types. Templates now come from a template source; use `useTemplateList` and
 > `useTemplateFilters` to list them in your own pages.
+
+---
+
+## Print on demand
+
+Customers design the product they buy (a T-shirt, a mug), the way Printful's and Customily's designers work: each **side** of the product (front, back, sleeve…) is a page holding the product's picture and a **print area**, both locked. The customer designs inside the print area; anything crossing its edge is cut, on screen and in the print file.
+
+```tsx
+import { EditorLayout, createMockupProject, analyzePrintDesign, printPixels } from 'sabi-canvas';
+import type { EditorApi } from 'sabi-canvas';
+
+const project = createMockupProject({
+  title: 'Team shirt',
+  sides: [
+    {
+      id: 'front',
+      name: 'Front',
+      picture: { src: 'https://…/tee-front.jpg', width: 1600, height: 1600 },
+      // Fractions (0–1) of the picture: where the design goes
+      printArea: { x: 0.3, y: 0.22, width: 0.4, height: 0.5 },
+    },
+    { id: 'back', name: 'Back', picture: { src: 'https://…/tee-back.jpg', width: 1600, height: 1600 }, printArea: { x: 0.3, y: 0.18, width: 0.4, height: 0.5 } },
+  ],
+});
+
+<EditorLayout
+  customerMode
+  hideDownload
+  initialProject={project}
+  onSave={async (latest) => keepDraft(latest)}
+  saveAction={{
+    label: 'Review design',
+    variant: 'default',
+    onClick: async ({ snapshot, exportPages }) => {
+      // A 1600px proof of each side, product picture included
+      const pages = await exportPages({ preview: { maxSide: 1600, mimeType: 'image/jpeg', quality: 0.9 } });
+      const design = await snapshot();
+      // Empty sides, pictures too small for their printed size, items cut off by the print area
+      const issues = analyzePrintDesign(design.pages, { front: { widthInches: 10, heightInches: 12.5 } });
+      showProof(pages, issues);
+    },
+  }}
+/>;
+```
+
+**Print files.** `exportPages({ printFile })` draws only what the customer added, inside the print area, on a transparent background, at the pixel size you return per page. Text and shapes are redrawn sharp at any size; pictures print at up to their own resolution (upload them at full size with `config.uploadImageFile`). Files are limited to `maxPixels` (16.7 million by default, what iPhones can draw) and made smaller beyond that.
+
+```ts
+const api = useRef<EditorApi>(null);
+// <EditorLayout editorRef={api} … />
+const files = await api.current!.exportPages({
+  pageIds: ['front'],
+  printFile: () => printPixels(25, 31.25, 'cm', 150), // 1476 × 1845 px
+});
+// files[0].printFile is a PNG Blob
+```
+
+The editor can also be mounted off screen (give its container a real width and height) just to make print files from a saved design.
+
+| Export | What it does |
+|---|---|
+| `createMockupProject({ sides, title?, pageSize?, printAreaColor? })` | A new design on a product, one page per side (page id = side id). A side without `picture` is a plain page in the print's shape (`printAspect`) |
+| `replaceMockupPicture(project, pageId, src)` | Swaps a side's product picture in a saved design (e.g. another colour). In an open editor use `editorRef.current.replaceMockupPicture(pageId, src)`, which keeps the undo history too |
+| `analyzePrintDesign(pages, specs, { minDpi?, goodDpi?, tolerance? })` | Preflight: `empty`, `blurry` (< 100 DPI), `soft` (< 150 DPI), `cut-off`, `outside` |
+| `printPixels(width, height, unit, dpi)` | A print size in pixels (`unit`: `'cm'`, `'in'` or `'mm'`) |
+| `customerObjects(page)`, `printAreaOf(page)` | The customer's items on a page, and its print area |
+| `renderStageArea(stage, options)` | Low level: draws part of a Konva stage at any resolution (what `exportPages` uses) |
+
+In customer mode a design's own objects carry `objectRole: 'customer'`; the product picture and print area carry `objectRole: 'mockup'`.
 
 ---
 

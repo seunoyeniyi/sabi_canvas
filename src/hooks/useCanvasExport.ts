@@ -191,6 +191,121 @@ export async function captureSafeAreaThumbnail(
   }
 }
 
+/** What `renderStageArea` draws, and how. */
+export interface RenderStageAreaOptions {
+  /** The page's size in design units. */
+  designSize: { width: number; height: number };
+  /** The page's background. Left out when `transparent` is set. */
+  background?: CanvasBackground;
+  /** The part of the page to draw, in design units. Default: the whole page. */
+  region?: { x: number; y: number; width: number; height: number };
+  /** Output pixels per design unit, e.g. 2 for twice the page's size. */
+  pixelRatio: number;
+  /** Default `image/png`. */
+  mimeType?: string;
+  /** 0–1, for JPEG and WebP. */
+  quality?: number;
+  /** No background behind the design. */
+  transparent?: boolean;
+  /**
+   * Leave out the product picture (the mockup layer) and draw only what the
+   * customer added: a print file. Ignored when the editor isn't in customer mode.
+   */
+  designOnly?: boolean;
+}
+
+const isPrintAreaNode = (node: Konva.Node) => {
+  const nodeId = node.id();
+  return nodeId === 'print-area-frame' || nodeId === 'print-area-label';
+};
+
+/**
+ * Draws part of the page shown on `stage` off screen, at any resolution:
+ * text and shapes are redrawn sharp, pictures at up to their own resolution.
+ * Selection handles, guides and the print area's dashed frame are left out,
+ * and in customer mode the customer's items are cut to the print area, as on
+ * screen. Waits for the fonts in use first.
+ */
+export async function renderStageArea(stage: Konva.Stage, options: RenderStageAreaOptions & { as: 'blob' }): Promise<Blob>;
+export async function renderStageArea(stage: Konva.Stage, options: RenderStageAreaOptions & { as?: 'dataUrl' }): Promise<string>;
+export async function renderStageArea(
+  stage: Konva.Stage,
+  options: RenderStageAreaOptions & { as?: 'blob' | 'dataUrl' },
+): Promise<Blob | string> {
+  const { designSize, background, region, pixelRatio, mimeType = 'image/png', quality, transparent, designOnly } = options;
+
+  const textNodes = stage.find('Text');
+  const stageFontFamilies = Array.from(new Set(textNodes
+    .map((node) => {
+      if (!(node instanceof Konva.Text)) return '';
+      return node.fontFamily().split(',')[0]?.replace(/["']/g, '').trim() ?? '';
+    })
+    .filter(Boolean)));
+
+  await ensureFontFamiliesReady(stageFontFamilies, { concurrency: 4, maxFonts: 300, timeoutMs: 2600 });
+
+  const area = region ?? { x: 0, y: 0, width: designSize.width, height: designSize.height };
+  const exportWidth = Math.max(1, Math.round(area.width * pixelRatio));
+  const exportHeight = Math.max(1, Math.round(area.height * pixelRatio));
+
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+  document.body.appendChild(container);
+
+  const exportStage = new Konva.Stage({ container, width: exportWidth, height: exportHeight });
+  const exportLayer = new Konva.Layer();
+  exportStage.add(exportLayer);
+
+  try {
+    await addExportBackground(exportLayer, background, exportWidth, exportHeight, !!transparent);
+
+    // Offset to the region's corner and scaled to the output resolution. The
+    // clip is in design units.
+    const exportContentGroup = new Konva.Group({
+      x: -area.x * pixelRatio,
+      y: -area.y * pixelRatio,
+      scaleX: pixelRatio,
+      scaleY: pixelRatio,
+      clipX: area.x,
+      clipY: area.y,
+      clipWidth: area.width,
+      clipHeight: area.height,
+    });
+
+    const contentLayer = stage.getLayers()[0];
+    for (const child of contentLayer?.getChildren() ?? []) {
+      if (!(child instanceof Konva.Group)) continue;
+      if (child.name() === 'safe-area') continue;
+      if (designOnly && child.name() === 'canvas-mockup-layer') continue;
+
+      // The customer layer is cut to the print area on screen; keep that cut.
+      const clip = child.name() === 'canvas-customer-layer' ? child.clip() : undefined;
+      const target = clip?.width && clip?.height
+        ? new Konva.Group({ clipX: clip.x, clipY: clip.y, clipWidth: clip.width, clipHeight: clip.height })
+        : exportContentGroup;
+      if (target !== exportContentGroup) exportContentGroup.add(target);
+
+      for (const node of child.getChildren()) {
+        if (isPrintAreaNode(node)) continue;
+        target.add(node.clone());
+      }
+    }
+
+    exportLayer.add(exportContentGroup);
+    exportLayer.draw();
+
+    if (options.as === 'blob') {
+      return await exportStage.toBlob({ mimeType, quality }) as Blob;
+    }
+    return exportStage.toDataURL({ mimeType, quality });
+  } finally {
+    exportStage.destroy();
+    container.remove();
+  }
+}
+
 export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf';
 
 export interface ExportOptions {
@@ -384,104 +499,23 @@ export const useCanvasExport = (
     options: ExportOptions
   ): Promise<string | null> => {
     const { format, quality, sizeMultiplier, transparentBackground, printAreaBounds } = options;
-    const { width: designWidth, height: designHeight } = canvasSize;
 
-    const textNodes = stage.find('Text');
-    const stageFontFamilies = Array.from(new Set(textNodes
-      .map((node) => {
-        if (!(node instanceof Konva.Text)) return '';
-        return node.fontFamily().split(',')[0]?.replace(/["']/g, '').trim() ?? '';
-      })
-      .filter(Boolean)));
+    // For PDF, always render as high-quality PNG first
+    const mimeType = format === 'pdf' ? 'image/png' : MIME_TYPES[format];
+    const imgQuality = (format === 'png' || format === 'pdf') ? undefined : quality / 100;
 
-    await ensureFontFamiliesReady(stageFontFamilies, {
-      concurrency: 4,
-      maxFonts: 300,
-      timeoutMs: 2600,
+    return renderStageArea(stage, {
+      designSize: canvasSize,
+      background: pageBackground,
+      // Full canvas, or cropped to the print area
+      region: printAreaBounds,
+      pixelRatio: sizeMultiplier,
+      mimeType,
+      quality: imgQuality,
+      // Print-area exports are always transparent (customer design only, no mockup bg)
+      transparent: transparentBackground || !!printAreaBounds,
+      designOnly: !!printAreaBounds,
     });
-
-    // Determine output region: full canvas or cropped to print area
-    const refX = printAreaBounds?.x ?? 0;
-    const refY = printAreaBounds?.y ?? 0;
-    const refWidth = printAreaBounds?.width ?? designWidth;
-    const refHeight = printAreaBounds?.height ?? designHeight;
-
-    // Print-area exports are always transparent (customer design only, no mockup bg)
-    const useTransparentBg = transparentBackground || !!printAreaBounds;
-
-    const exportWidth = refWidth * sizeMultiplier;
-    const exportHeight = refHeight * sizeMultiplier;
-
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.top = '-9999px';
-    document.body.appendChild(container);
-
-    const exportStage = new Konva.Stage({
-      container,
-      width: exportWidth,
-      height: exportHeight,
-    });
-
-    const exportLayer = new Konva.Layer();
-    exportStage.add(exportLayer);
-
-    // Content group: offset to print-area origin and scaled to output resolution.
-    // clipX/clipY/clipWidth/clipHeight are in LOCAL (design) coordinates.
-    const exportContentGroup = new Konva.Group({
-      x: -refX * sizeMultiplier,
-      y: -refY * sizeMultiplier,
-      scaleX: sizeMultiplier,
-      scaleY: sizeMultiplier,
-      clipX: refX,
-      clipY: refY,
-      clipWidth: refWidth,
-      clipHeight: refHeight,
-    });
-
-    const contentLayer = stage.getLayers()[0];
-    const children = contentLayer?.getChildren() ?? [];
-
-    const isSafeAreaGroup = (group: Konva.Group) => group.name() === 'safe-area';
-    const isPrintAreaNode = (node: Konva.Node) => {
-      const nodeId = node.id();
-      return nodeId === 'print-area-frame' || nodeId === 'print-area-label';
-    };
-
-    for (const child of children) {
-      if (!(child instanceof Konva.Group)) continue;
-      if (isSafeAreaGroup(child)) continue;
-      // For print-area export, skip the mockup layer , only customer objects are exported
-      if (printAreaBounds && child.name() === 'canvas-mockup-layer') continue;
-
-      for (const node of child.getChildren()) {
-        if (isPrintAreaNode(node)) continue;
-        exportContentGroup.add(node.clone());
-      }
-    }
-
-    // Render background before content
-    await addExportBackground(exportLayer, pageBackground, exportWidth, exportHeight, useTransparentBg);
-
-    exportLayer.add(exportContentGroup);
-    exportLayer.draw();
-
-    try {
-      // For PDF, always render as high-quality PNG first
-      const mimeType = format === 'pdf' ? 'image/png' : MIME_TYPES[format];
-      const imgQuality = (format === 'png' || format === 'pdf') ? undefined : quality / 100;
-
-      const dataUrl = exportStage.toDataURL({
-        mimeType,
-        quality: imgQuality,
-      });
-
-      return dataUrl;
-    } finally {
-      exportStage.destroy();
-      container.remove();
-    }
   }, [canvasSize, pageBackground]);
 
   const generatePreview = useCallback(async (

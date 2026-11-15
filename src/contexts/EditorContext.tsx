@@ -40,16 +40,26 @@ const EditorContext = createContext<EditorContextValue | undefined>(undefined);
 export interface EditorProviderProps {
   children: React.ReactNode;
   initialState?: Partial<EditorState>;
+  /**
+   * Keeps the editor in customer mode with the mockup on: the product
+   * picture and print area can't be changed, whatever is loaded.
+   */
+  customerMode?: boolean;
 }
 
-export const EditorProvider: React.FC<EditorProviderProps> = ({ 
-  children, 
-  initialState = {} 
+export const EditorProvider: React.FC<EditorProviderProps> = ({
+  children,
+  initialState = {},
+  customerMode = false,
 }) => {
   const [state, setState] = useState<EditorState>({
     ...defaultState,
     ...initialState,
+    ...(customerMode ? { isMockupEnabled: true, editorMode: 'customer' as const } : {}),
   });
+  // Read by the setters below, which never change identity
+  const customerModeRef = useRef(customerMode);
+  customerModeRef.current = customerMode;
 
   const setTheme = useCallback((theme: EditorTheme) => {
     setState(prev => ({ ...prev, theme }));
@@ -237,14 +247,17 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }, []);
 
   const setEditorMode = useCallback((mode: EditorMode) => {
+    if (customerModeRef.current) return;
     setState(prev => ({ ...prev, editorMode: mode }));
   }, []);
 
   const toggleMockupEnabled = useCallback(() => {
+    if (customerModeRef.current) return;
     setState(prev => ({ ...prev, isMockupEnabled: !prev.isMockupEnabled, editorMode: 'mockup-design' }));
   }, []);
 
   const setMockupEnabled = useCallback((enabled: boolean) => {
+    if (customerModeRef.current) return;
     setState(prev => ({ ...prev, isMockupEnabled: enabled, editorMode: 'mockup-design' }));
   }, []);
 

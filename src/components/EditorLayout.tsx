@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useContext, useImperativeHandle, useMemo } from 'react';
 import { QueryClient, QueryClientContext, QueryClientProvider } from '@tanstack/react-query';
 import Konva from 'konva';
 import { Download, FileCode2, FileDown, FileUp, Printer, Frame, Loader2 } from 'lucide-react';
@@ -22,11 +22,13 @@ import { DownloadDialog } from './DownloadDialog';
 import { TemplateLockedDialog, useTemplateLockedDialog } from './shared/TemplateLockedDialog';
 import { cn } from '@sabi-canvas/lib/utils';
 import { AppBarAction } from '@sabi-canvas/types/editor';
-import type { AppBarSaveAction, SaveActionContext } from '@sabi-canvas/types/editor';
+import type { AppBarSaveAction, EditorApi, ExportedPage, ExportPagesOptions, SaveActionContext } from '@sabi-canvas/types/editor';
+import { renderStageArea } from '@sabi-canvas/hooks/useCanvasExport';
+import { customerObjects, printAreaOf } from '@sabi-canvas/lib/printOnDemand';
 import { useKeyboardShortcuts } from '@sabi-canvas/hooks/useKeyboardShortcuts';
 import { useAutoSave } from '@sabi-canvas/hooks/useAutoSave';
 import { getLastProjectId, getProject, setLastProjectId } from '@sabi-canvas/hooks/useProjectManager';
-import { DEFAULT_PROJECT_TITLE, projectPageToCanvasPage } from '@sabi-canvas/types/project';
+import { DEFAULT_PROJECT_TITLE, pageToProjectPage, projectPageToCanvasPage } from '@sabi-canvas/types/project';
 import { createPrintAreaObject } from '@sabi-canvas/types/canvas-objects';
 import { useTemplateDesignLoader } from '@sabi-canvas/hooks/useTemplates';
 import { fontFamiliesIn, toCanvasPages } from '@sabi-canvas/lib/templates/placeTemplate';
@@ -124,9 +126,54 @@ export interface EditorLayoutProps {
   logo?: React.ReactNode;
   /** App/brand name shown next to the logo in the drawer header. */
   drawerTitle?: string;
+  /**
+   * Print on demand: a customer designs on a product. Pass a design made with
+   * `createMockupProject` as `initialProject`. The product picture and print
+   * area stay locked, new items land inside the print area, and the mockup
+   * controls, page management and the side menu (projects, new design) are
+   * hidden. Each page is a side of the product.
+   */
+  customerMode?: boolean;
+  /** Hides the Download button, e.g. when designs are only sold printed. */
+  hideDownload?: boolean;
+  /**
+   * Your own content in the middle of the top bar, e.g. the product's colour
+   * and size picker while a customer designs it. Keep it compact on phones.
+   */
+  appBarCenter?: React.ReactNode;
+  /**
+   * Your own content at the start of the top bar, before the title, e.g. a
+   * back button out of the editor. Laid out with the bar, so it never covers
+   * the title.
+   */
+  appBarStart?: React.ReactNode;
+  /**
+   * Receives the editor's API once it mounts: take a snapshot or export the
+   * pages (proofs, print files) at any time, from outside the editor.
+   */
+  editorRef?: React.Ref<EditorApi>;
 }
 
-const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, projectTitleOverride, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction }) => {
+const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+/**
+ * Waits until every picture on the page has been drawn (or `timeoutMs`
+ * passes, e.g. when one can't be loaded). A picture shows a placeholder until
+ * it loads, so the stage's pictures are counted against the page's.
+ */
+async function waitForPictures(stage: Konva.Stage, expected: number, timeoutMs = 8000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const loaded = stage.find('Image').filter((node) => {
+      const image = (node as Konva.Image).image();
+      return !!image && (!(image instanceof HTMLImageElement) || (image.complete && image.naturalWidth > 0));
+    });
+    if (loaded.length >= expected) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
+
+const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, projectTitleOverride, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction, customerMode = false, hideDownload = false, editorRef, appBarCenter, appBarStart }) => {
   useKeyboardShortcuts();
 
   const {
@@ -164,6 +211,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     redo,
     selectedIds,
     addObject,
+    replaceMockupPicture,
   } = useCanvasObjects();
 
   const { customFonts, loadProjectFonts, addCustomFont } = useCustomFonts();
@@ -330,8 +378,106 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     isMockupEnabled,
   });
 
+  // Read inside exportPages, which waits across renders while it switches pages
+  const pagesRef = useRef(pages);
+  pagesRef.current = pages;
+  const activePageIdRef = useRef(activePageId);
+  activePageIdRef.current = activePageId;
+  const exportingRef = useRef<Promise<ExportedPage[]> | null>(null);
+
+  const exportPages = useCallback(async (options: ExportPagesOptions = {}): Promise<ExportedPage[]> => {
+    // One export at a time: each one switches the open page
+    while (exportingRef.current) await exportingRef.current.catch(() => undefined);
+
+    const run = async () => {
+      const startPageId = activePageIdRef.current;
+      const wanted = options.pageIds ? new Set(options.pageIds) : null;
+      const targets = pagesRef.current.filter((page) => !wanted || wanted.has(page.id));
+      const maxPixels = options.maxPixels ?? 16_777_216;
+      const results: ExportedPage[] = [];
+
+      try {
+        for (const target of targets) {
+          if (activePageIdRef.current !== target.id) {
+            setActivePage(target.id);
+            for (let i = 0; i < 60 && activePageIdRef.current !== target.id; i += 1) await nextFrame();
+          }
+          // Let react-konva draw the page before reading the stage
+          await nextFrame();
+          await nextFrame();
+
+          const page = pagesRef.current.find((p) => p.id === target.id) ?? target;
+          const stage = getStage();
+          if (!stage) throw new Error('The editor isn’t ready yet.');
+
+          const pictureCount = page.objects.filter((object) => object.type === 'image' && object.visible !== false).length;
+          await waitForPictures(stage, pictureCount);
+
+          const designSize = page.size ?? canvasSize;
+          const printArea = printAreaOf(page);
+          const mine = isMockupEnabled ? customerObjects(page) : page.objects;
+          const result: ExportedPage = { pageId: page.id, name: page.name, isEmpty: mine.length === 0 };
+
+          if (options.preview) {
+            const maxSide = options.preview.maxSide ?? 1600;
+            result.preview = await renderStageArea(stage, {
+              designSize,
+              background: page.background,
+              pixelRatio: maxSide / Math.max(designSize.width, designSize.height),
+              mimeType: options.preview.mimeType ?? 'image/png',
+              quality: options.preview.quality,
+              as: 'blob',
+            });
+          }
+
+          const wantedSize = options.printFile?.(pageToProjectPage(page));
+          if (wantedSize?.width && wantedSize.height) {
+            const region = printArea && isMockupEnabled
+              ? { x: printArea.x, y: printArea.y, width: printArea.width * printArea.scaleX, height: printArea.height * printArea.scaleY }
+              : { x: 0, y: 0, width: designSize.width, height: designSize.height };
+            let width = wantedSize.width;
+            let height = wantedSize.height;
+            if (width * height > maxPixels) {
+              const shrink = Math.sqrt(maxPixels / (width * height));
+              width = Math.floor(width * shrink);
+              height = Math.floor(height * shrink);
+            }
+            result.printFile = await renderStageArea(stage, {
+              designSize,
+              background: page.background,
+              region,
+              pixelRatio: width / region.width,
+              mimeType: 'image/png',
+              transparent: !!(printArea && isMockupEnabled),
+              designOnly: !!(printArea && isMockupEnabled),
+              as: 'blob',
+            });
+            result.printFileSize = { width, height: Math.round(region.height * (width / region.width)) || height };
+          }
+
+          results.push(result);
+        }
+      } finally {
+        if (activePageIdRef.current !== startPageId && pagesRef.current.some((p) => p.id === startPageId)) {
+          setActivePage(startPageId);
+        }
+      }
+      return results;
+    };
+
+    const job = run();
+    exportingRef.current = job;
+    try {
+      return await job;
+    } finally {
+      exportingRef.current = null;
+    }
+  }, [canvasSize, getStage, isMockupEnabled, setActivePage]);
+
+  useImperativeHandle(editorRef, () => ({ snapshot, exportPages, replaceMockupPicture }), [snapshot, exportPages, replaceMockupPicture]);
+
   // Handed to the save action, so the host can see the design as it is now
-  const saveActionContext = useMemo<SaveActionContext>(() => ({ snapshot }), [snapshot]);
+  const saveActionContext = useMemo<SaveActionContext>(() => ({ snapshot, exportPages }), [snapshot, exportPages]);
 
   const handleOpenProject = useCallback(
     (project: Project) => {
@@ -555,7 +701,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
   }, [addObject, canvasSize]);
 
   // AppBar center: mode toggle + add print area , only shown when mockup feature is enabled
-  const appBarCenterContent = isMockupEnabled ? (
+  const appBarCenterContent = isMockupEnabled && !customerMode ? (
     <div className="flex items-center gap-2">
       <div className="flex items-center rounded-full border border-border bg-muted p-0.5 text-sm">
         <button
@@ -596,8 +742,13 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
 
   // App bar actions
   const appBarActions: AppBarAction[] = [
-    { id: 'download', icon: <Download className="h-4.5 w-4.5" />, label: 'Download', onClick: () => setIsDownloadOpen(true) },
-    { id: 'mockup-toggle', icon: <Printer className={cn('h-4.5 w-4.5', isMockupEnabled && 'text-primary')} />, label: isMockupEnabled ? 'Disable Mockup' : 'Enable Mockup', onClick: toggleMockupEnabled },
+    ...(hideDownload
+      ? []
+      : [{ id: 'download', icon: <Download className="h-4.5 w-4.5" />, label: 'Download', onClick: () => setIsDownloadOpen(true) }]),
+    // A customer designing a product can't take the mockup off
+    ...(customerMode
+      ? []
+      : [{ id: 'mockup-toggle', icon: <Printer className={cn('h-4.5 w-4.5', isMockupEnabled && 'text-primary')} />, label: isMockupEnabled ? 'Disable Mockup' : 'Enable Mockup', onClick: toggleMockupEnabled }]),
     ...(enableJsonDevTools
       ? [
         {
@@ -628,7 +779,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
       <AppBar
         title={projectTitle}
         onTitleChange={setProjectTitle}
-        onMenuToggle={toggleDrawer}
+        onMenuToggle={customerMode ? undefined : toggleDrawer}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
@@ -636,15 +787,17 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
         actions={appBarActions}
         saveAction={saveAction}
         saveActionContext={saveActionContext}
-        centerContent={appBarCenterContent}
+        centerContent={appBarCenterContent ?? appBarCenter}
+        logo={appBarStart}
         hideTitle={hideTitle}
         onThemeToggle={onThemeToggle}
       />
 
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Drawer (Desktop: persistent mini/expanded) */}
-        <EditorDrawer
+        {/* Left Drawer (Desktop: persistent mini/expanded). Not while a
+            customer designs a product: other projects don't belong there. */}
+        {!customerMode && <EditorDrawer
           isOpen={isDrawerOpen}
           onClose={toggleDrawer}
           side="left"
@@ -659,7 +812,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
           onSelectProject={onSelectProject}
         >
           {/* Additional drawer content can go here */}
-        </EditorDrawer>
+        </EditorDrawer>}
 
         {/* Canvas Area with Overlay Toolbar */}
         <div className="relative flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -757,7 +910,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ config, ...props }) 
   return (
     <EditorQueryClient>
       <SabiCanvasProvider config={resolvedConfig}>
-        <EditorProvider>
+        <EditorProvider customerMode={props.customerMode}>
           <CanvasObjectsProvider>
             <CustomFontsProvider>
               <EditorLayoutContent {...props} />

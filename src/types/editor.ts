@@ -54,6 +54,61 @@ export interface SaveActionContext {
    * capture failed.
    */
   snapshot: () => Promise<Project>;
+  /** Pictures of the design's pages, e.g. proofs and print files. See `ExportPagesOptions`. */
+  exportPages: (options?: ExportPagesOptions) => Promise<ExportedPage[]>;
+}
+
+/** What `exportPages` makes for each page. */
+export interface ExportPagesOptions {
+  /** Pages to export, by id. Default: every page. */
+  pageIds?: string[];
+  /**
+   * A picture of each whole page as it looks in the editor, product picture
+   * included: a proof. Its longest side is `maxSide` pixels (default 1600).
+   * Left out when not set.
+   */
+  preview?: { maxSide?: number; mimeType?: 'image/png' | 'image/jpeg' | 'image/webp'; quality?: number };
+  /**
+   * A print file for each page: only what the customer added, inside the
+   * print area, on a transparent background, at the size returned in pixels
+   * (keep the print area's shape). Return nothing to skip a page. A page
+   * without a print area exports the whole page. Left out when not set.
+   */
+  printFile?: (page: import('./project').ProjectPage) => { width: number; height: number } | null | undefined;
+  /**
+   * The largest print file in pixels (width × height); bigger ones are made
+   * smaller, keeping their shape. Default 16,777,216, the most iPhones and
+   * iPads can draw.
+   */
+  maxPixels?: number;
+}
+
+export interface ExportedPage {
+  pageId: string;
+  name: string;
+  /** True when the customer hasn't added anything to this page (customer mode), or it has nothing at all. */
+  isEmpty: boolean;
+  preview?: Blob;
+  printFile?: Blob;
+  /** The print file's size in pixels, after any `maxPixels` limit. */
+  printFileSize?: { width: number; height: number };
+}
+
+/**
+ * What a host can do with an open editor, through `editorRef` on
+ * `EditorLayout`. Available once the editor has mounted.
+ */
+export interface EditorApi {
+  /** The design as it is right now (see `SaveActionContext.snapshot`). */
+  snapshot: () => Promise<Project>;
+  /** Pictures of the design's pages (see `ExportPagesOptions`). Shows each page while it's drawn, then returns to the page that was open. */
+  exportPages: (options?: ExportPagesOptions) => Promise<ExportedPage[]>;
+  /**
+   * Print on demand: shows another product picture on a side, e.g. when the
+   * customer picks another colour. Their design and undo history stay. Use a
+   * picture of the same shape as the one it replaces.
+   */
+  replaceMockupPicture: (pageId: string, src: string) => void;
 }
 
 /**
@@ -73,6 +128,12 @@ export interface AppBarSaveAction {
   onClick: (context: SaveActionContext) => void | Promise<void>;
   /** Optional leading icon element. */
   icon?: React.ReactNode;
+  /**
+   * Shows the label on phones too. By default phones show only the icon,
+   * which suits short, familiar actions ("Save") but not a step's name
+   * ("Review design").
+   */
+  labelOnPhones?: boolean;
   disabled?: boolean;
   /**
    * shadcn/ui Button variant. Defaults to `"outline"`.
