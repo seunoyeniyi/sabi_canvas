@@ -198,6 +198,12 @@ export interface ComposeMockupOptions {
   /** The print area on `base`, in its pixels. */
   area: { x: number; y: number; width: number; height: number };
   realism?: MockupRealism | null;
+  /**
+   * `composite` (default): the product with the design on it. `design`: only
+   * the lit, bent design on a see-through canvas the size of `base`, e.g. to
+   * lay over the product and move it while a print area is dragged.
+   */
+  output?: 'composite' | 'design';
 }
 
 /** Largest dip or arch of a curved edge, as a share of the print area's height. */
@@ -211,14 +217,18 @@ const MAX_TURN = 1.25;
  * The product with the design on it, lit by the picture, bent by its folds
  * and shaped to its surface. Returns a new canvas the size of `base`.
  */
-export function composeRealisticMockup({ base, design, area, realism }: ComposeMockupOptions): HTMLCanvasElement {
+export function composeRealisticMockup({ base, design, area, realism, output = 'composite' }: ComposeMockupOptions): HTMLCanvasElement {
   const r = resolveMockupRealism(realism);
+  const designOnly = output === 'design';
   const out = document.createElement('canvas');
   out.width = base.width;
   out.height = base.height;
   const outCtx = out.getContext('2d', { willReadFrequently: true });
   if (!outCtx) throw new Error('This browser can’t draw the preview.');
-  outCtx.drawImage(base, 0, 0);
+  // The light is always read from the product, even when only the design is returned
+  const baseCtx = designOnly ? base.getContext('2d', { willReadFrequently: true }) : outCtx;
+  if (!baseCtx) throw new Error('This browser can’t draw the preview.');
+  if (!designOnly) outCtx.drawImage(base, 0, 0);
 
   const areaW = Math.max(1, area.width);
   const areaH = Math.max(1, area.height);
@@ -236,8 +246,10 @@ export function composeRealisticMockup({ base, design, area, realism }: ComposeM
   const outerH = bottom - top;
   if (outerW <= 0 || outerH <= 0) return out;
 
-  const pixels = outCtx.getImageData(left, top, outerW, outerH);
+  const pixels = baseCtx.getImageData(left, top, outerW, outerH);
   const light = readMockupLight(pixels);
+  // Only the design: a see-through layer, the light still read from the product
+  const layer = designOnly ? outCtx.createImageData(outerW, outerH) : pixels;
 
   // The design's own pixels, at whatever resolution it was drawn (twice the
   // output is sharpest); samples are scaled to it
@@ -249,7 +261,7 @@ export function composeRealisticMockup({ base, design, area, realism }: ComposeM
   const toDesignX = designW / areaW;
   const toDesignY = designH / areaH;
   const src = designPixels.data;
-  const dst = pixels.data;
+  const dst = layer.data;
 
   const turn = r.roundness * MAX_TURN;
   const sinTurn = Math.sin(turn);
@@ -319,13 +331,20 @@ export function composeRealisticMockup({ base, design, area, realism }: ComposeM
 
       const o = i * 4;
       const coverage = Math.min(1, a);
+      if (designOnly) {
+        dst[o] = red;
+        dst[o + 1] = green;
+        dst[o + 2] = blue;
+        dst[o + 3] = coverage * 255;
+        continue;
+      }
       dst[o] = red * coverage + dst[o] * (1 - coverage);
       dst[o + 1] = green * coverage + dst[o + 1] * (1 - coverage);
       dst[o + 2] = blue * coverage + dst[o + 2] * (1 - coverage);
     }
   }
 
-  outCtx.putImageData(pixels, left, top);
+  outCtx.putImageData(layer, left, top);
   return out;
 }
 
