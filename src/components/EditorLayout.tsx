@@ -22,7 +22,7 @@ import { DownloadDialog } from './DownloadDialog';
 import { TemplateLockedDialog, useTemplateLockedDialog } from './shared/TemplateLockedDialog';
 import { cn } from '@sabi-canvas/lib/utils';
 import { AppBarAction } from '@sabi-canvas/types/editor';
-import type { AppBarSaveAction, EditorApi, ExportedPage, ExportPagesOptions, SaveActionContext } from '@sabi-canvas/types/editor';
+import type { AppBarSaveAction, EditorApi, ExportedPage, ExportPagesOptions, SaveActionContext, TouchSelectionOptions } from '@sabi-canvas/types/editor';
 import { renderStageArea } from '@sabi-canvas/hooks/useCanvasExport';
 import { customerObjects, MOCKUP_PICTURE_NAME, printAreaOf } from '@sabi-canvas/lib/printOnDemand';
 import { composeRealisticMockup, MOCKUP_LIGHTING_NAME } from '@sabi-canvas/lib/mockupRealism';
@@ -138,6 +138,12 @@ export interface EditorLayoutProps {
   /** Hides the Download button, e.g. when designs are only sold printed. */
   hideDownload?: boolean;
   /**
+   * Selecting several items on touch screens: press and hold then drag for a
+   * selection box, and a "Select more" button for tapping items in and out.
+   * Both on by default. See `TouchSelectionOptions`.
+   */
+  touchSelection?: TouchSelectionOptions;
+  /**
    * Your own content in the middle of the top bar, e.g. the product's colour
    * and size picker while a customer designs it. Keep it compact on phones.
    */
@@ -148,6 +154,11 @@ export interface EditorLayoutProps {
    * the title.
    */
   appBarStart?: React.ReactNode;
+  /**
+   * Height of the tool panel sheet (Text, Shapes, Uploads and the like) on
+   * phones and tablets, as any CSS length. Defaults to `85dvh`.
+   */
+  mobileToolPanelHeight?: string;
   /**
    * Receives the editor's API once it mounts: take a snapshot or export the
    * pages (proofs, print files) at any time, from outside the editor.
@@ -184,7 +195,7 @@ async function waitForPictures(stage: Konva.Stage, expected: number, timeoutMs =
   }
 }
 
-const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, projectTitleOverride, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction, customerMode = false, hideDownload = false, editorRef, appBarCenter, appBarStart }) => {
+const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, projectTitleOverride, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction, customerMode = false, hideDownload = false, editorRef, appBarCenter, appBarStart, mobileToolPanelHeight }) => {
   useKeyboardShortcuts();
 
   const {
@@ -914,7 +925,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
       </div>
 
       {/* Bottom Editor Toolbar (Mobile only) */}
-      <BottomToolbar />
+      <BottomToolbar panelHeight={mobileToolPanelHeight} />
 
       <input
         ref={jsonImportInputRef}
@@ -959,7 +970,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ config, ...props }) 
   return (
     <EditorQueryClient>
       <SabiCanvasProvider config={resolvedConfig}>
-        <EditorProvider customerMode={props.customerMode}>
+        <EditorProvider customerMode={props.customerMode} touchSelection={props.touchSelection}>
           <CanvasObjectsProvider>
             <CustomFontsProvider>
               <EditorLayoutContent {...props} />

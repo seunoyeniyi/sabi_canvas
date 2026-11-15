@@ -9,11 +9,16 @@ import { useEditor } from '@sabi-canvas/contexts/EditorContext';
 import { SidebarPanelId } from '@sabi-canvas/types/editor';
 import { useIsDesktop } from '@sabi-canvas/hooks/useMediaQuery';
 
+/** Default height of the phone/tablet tool panel sheet. */
+export const DEFAULT_MOBILE_TOOL_PANEL_HEIGHT = '85dvh';
+
 interface BottomToolbarProps {
   className?: string;
+  /** Height of the tool panel sheet on phones and tablets, as any CSS length. */
+  panelHeight?: string;
 }
 
-export const BottomToolbar: React.FC<BottomToolbarProps> = ({ className }) => {
+export const BottomToolbar: React.FC<BottomToolbarProps> = ({ className, panelHeight = DEFAULT_MOBILE_TOOL_PANEL_HEIGHT }) => {
   const isDesktop = useIsDesktop();
   const { activeToolPanel, toggleToolPanel, setActiveToolPanel, editorMode, isMockupEnabled } = useEditor();
   const activeTool = activeToolPanel;
@@ -103,7 +108,8 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({ className }) => {
       <Sheet open={!!activeTool && !isDesktop} onOpenChange={(open) => !open && closePanel()}>
         <SheetContent
           side="bottom"
-          className="h-[60vh] rounded-t-2xl px-0 flex flex-col"
+          className="rounded-t-2xl px-0 flex flex-col"
+          style={{ height: panelHeight }}
         >
           <SheetHeader className="shrink-0 px-4 pb-2 border-b border-border">
             <SheetTitle className="text-left">{getPanelTitle()}</SheetTitle>

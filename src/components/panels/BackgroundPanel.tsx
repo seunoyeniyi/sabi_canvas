@@ -177,7 +177,7 @@ const UnsplashBackgroundSection: React.FC<UnsplashBackgroundSectionProps> = ({
                   />
 
                   {/* Attribution overlay */}
-                  <div className="absolute inset-x-0 bottom-0 top-1/2 bg-linear-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-2 pointer-events-none">
+                  <div className="absolute inset-x-0 bottom-0 top-1/2 bg-linear-to-t from-black/80 via-black/30 to-transparent sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-2 pointer-events-none">
                     <p className="text-[9px] text-white/90 leading-tight text-center w-full pointer-events-auto pb-1 drop-shadow-md truncate px-1">
                       By{' '}
                       <a

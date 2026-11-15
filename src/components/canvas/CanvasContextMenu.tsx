@@ -29,9 +29,17 @@ import {
 
 interface CanvasContextMenuProps {
   children: React.ReactNode;
+  /**
+   * Touch screens: true where a press and hold must not open the menu (empty
+   * space, where it draws a selection box instead). A mouse's right-click
+   * always opens it.
+   */
+  suppressTouchMenuAt?: (clientX: number, clientY: number) => boolean;
 }
 
-export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({ children }) => {
+export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({ children, suppressTouchMenuAt }) => {
+  // The last pointer's kind, for long presses whose contextmenu event doesn't say
+  const lastPointerTypeRef = React.useRef<string>('mouse');
   const {
     selectedIds,
     deleteSelectedObjects,
@@ -59,7 +67,19 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({ children }
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger asChild>
+      <ContextMenuTrigger
+        asChild
+        // A handled (default-prevented) event stops the menu: the long-press
+        // timer starts on pointerdown, and Android also sends contextmenu
+        onPointerDown={(event) => {
+          lastPointerTypeRef.current = event.pointerType;
+          if (event.pointerType !== 'mouse' && suppressTouchMenuAt?.(event.clientX, event.clientY)) event.preventDefault();
+        }}
+        onContextMenu={(event) => {
+          const pointerType = (event.nativeEvent as PointerEvent).pointerType || lastPointerTypeRef.current;
+          if (pointerType !== 'mouse' && suppressTouchMenuAt?.(event.clientX, event.clientY)) event.preventDefault();
+        }}
+      >
         {children}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-56">

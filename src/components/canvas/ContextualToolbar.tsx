@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Konva from 'konva';
-import { Copy, Trash2, Lock, Unlock, PenSquare, Crop, Group, Ungroup } from 'lucide-react';
+import { Copy, Trash2, Lock, Unlock, PenSquare, Crop, Group, Ungroup, SquareDashedMousePointer } from 'lucide-react';
 import { Button } from '@sabi-canvas/ui/button';
 import { cn } from '@sabi-canvas/lib/utils';
 import { CanvasObject } from '@sabi-canvas/types/canvas-objects';
 import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
+import { useEditor } from '@sabi-canvas/contexts/EditorContext';
+import { useIsMobile } from '@sabi-canvas/hooks/use-mobile';
 import { useToolbarState } from './hooks/useToolbarState';
 import { ToolbarTooltip, PositionAlignButton, AIWriteButton } from './shared/ContextualTools';
 
@@ -53,6 +55,8 @@ export const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
   onTextEdit,
 }) => {
   const { selectedIds } = useCanvasObjects();
+  const { touchSelection, isSelectMoreMode, setSelectMoreMode } = useEditor();
+  const isMobile = useIsMobile();
   const toolbarState = useToolbarState({ selectedObject, designSize, onTextEdit });
 
   const {
@@ -280,6 +284,25 @@ export const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
         width: 'max-content'
       }}
     >
+      {/* Phones: tap more items into the selection (Shift-click on a computer).
+          Icon only, to keep the bar short; the "N selected · Done" chip that
+          appears explains the mode */}
+      {isMobile && touchSelection.selectMore && (
+        <ToolbarTooltip label="Select more" side={popoverSide}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Select more"
+            aria-pressed={isSelectMoreMode}
+            // A mode, so it shows clearly while it's on
+            className={cn('h-8 w-8 shrink-0', isSelectMoreMode && 'bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary')}
+            onClick={() => setSelectMoreMode(!isSelectMoreMode)}
+          >
+            <SquareDashedMousePointer className="h-4 w-4" />
+          </Button>
+        </ToolbarTooltip>
+      )}
+
       {isText && !isMultiSelect && (
         <ToolbarTooltip label="Edit Text" side={popoverSide}>
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleTextEdit}>

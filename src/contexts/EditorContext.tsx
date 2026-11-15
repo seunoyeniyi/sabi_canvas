@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
-import { EditorContextValue, EditorMode, EditorState, EditorTheme, InlineTextSelectionState, InteractionMode, SidebarPanelId } from '@sabi-canvas/types/editor';
+import { EditorContextValue, EditorMode, EditorState, EditorTheme, InlineTextSelectionState, InteractionMode, SidebarPanelId, TouchSelectionOptions } from '@sabi-canvas/types/editor';
 
 // Default to Instagram Post size (1080x1080)
 const defaultState: EditorState = {
@@ -45,13 +45,22 @@ export interface EditorProviderProps {
    * picture and print area can't be changed, whatever is loaded.
    */
   customerMode?: boolean;
+  /** Selecting several items on touch screens. See `TouchSelectionOptions`. */
+  touchSelection?: TouchSelectionOptions;
 }
 
 export const EditorProvider: React.FC<EditorProviderProps> = ({
   children,
   initialState = {},
   customerMode = false,
+  touchSelection: touchSelectionOptions,
 }) => {
+  const { pressAndHold = true, holdMs = 400, selectMore = true, showTip = true } = touchSelectionOptions ?? {};
+  const touchSelection = useMemo<Required<TouchSelectionOptions>>(
+    () => ({ pressAndHold, holdMs: Math.max(150, holdMs), selectMore, showTip }),
+    [pressAndHold, holdMs, selectMore, showTip],
+  );
+  const [isSelectMoreMode, setSelectMoreMode] = useState(false);
   const [state, setState] = useState<EditorState>({
     ...defaultState,
     ...initialState,
@@ -263,6 +272,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 
   const value = useMemo<EditorContextValue>(() => ({
     ...state,
+    touchSelection,
+    isSelectMoreMode: isSelectMoreMode && touchSelection.selectMore,
+    setSelectMoreMode,
     setTheme,
     toggleDrawer,
     closeDrawer,
@@ -305,7 +317,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     cropApply,
     cropReset,
     cropCancel,
-  }), [state, setTheme, toggleDrawer, closeDrawer, togglePropertyPanel, toggleEffectsPanel, setActiveTool, setActiveNavItem, setZoom, setInteractionMode, setActiveSidebarPanel, toggleSidebarPanel, setActiveToolPanel, toggleToolPanel, setCanvasSize, startTextEdit, stopTextEdit, startShapeTextEdit, stopShapeTextEdit, startTableCellEdit, stopTableCellEdit, setSelectedTableCells, setIsCropMode, setLastGraphicsSearch, setLastIconsSearch, setLastPhotosSearch, setLastBackgroundPhotosSearch, setLastElementsCategory, setInlineTextSelectionState, registerApplyInlineStyleFn, applyInlineTextStyle, setDrawTool, setDrawColor, setDrawSize, setDrawTension, setReplacingImageId, setEditorMode, toggleMockupEnabled, setMockupEnabled, registerCropActions, cropApply, cropReset, cropCancel]);
+  }), [state, touchSelection, isSelectMoreMode, setTheme, toggleDrawer, closeDrawer, togglePropertyPanel, toggleEffectsPanel, setActiveTool, setActiveNavItem, setZoom, setInteractionMode, setActiveSidebarPanel, toggleSidebarPanel, setActiveToolPanel, toggleToolPanel, setCanvasSize, startTextEdit, stopTextEdit, startShapeTextEdit, stopShapeTextEdit, startTableCellEdit, stopTableCellEdit, setSelectedTableCells, setIsCropMode, setLastGraphicsSearch, setLastIconsSearch, setLastPhotosSearch, setLastBackgroundPhotosSearch, setLastElementsCategory, setInlineTextSelectionState, registerApplyInlineStyleFn, applyInlineTextStyle, setDrawTool, setDrawColor, setDrawSize, setDrawTension, setReplacingImageId, setEditorMode, toggleMockupEnabled, setMockupEnabled, registerCropActions, cropApply, cropReset, cropCancel]);
 
   return (
     <EditorContext.Provider value={value}>

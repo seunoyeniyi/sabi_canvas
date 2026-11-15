@@ -1,6 +1,6 @@
 /* eslint-disable no-empty */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useRef, useEffect, useCallback, forwardRef, useImperativeHandle, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle, useState } from 'react';
 import { Stage, Layer, Group, Rect, Line } from 'react-konva';
 import Konva from 'konva';
 import { cn } from '@sabi-canvas/lib/utils';
@@ -44,6 +44,15 @@ export interface EditorCanvasHandle {
 
 const MOBILE_STAGE_PAN_TOUCH_SLOP = 8;
 
+/** A point in the window, in the stage's own coordinates (as `getRelativePointerPosition` gives). */
+function clientToStagePoint(stage: Konva.Stage, clientX: number, clientY: number) {
+  const rect = stage.container().getBoundingClientRect();
+  return stage.getAbsoluteTransform().copy().invert().point({ x: clientX - rect.left, y: clientY - rect.top });
+}
+
+/** Remembered once the press-and-hold tip has been seen, per browser. */
+const TOUCH_SELECT_TIP_KEY = 'sabi-canvas:touch-select-tip-seen';
+
 export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasProps>(({
   config: userConfig,
   zoom: externalZoom,
@@ -76,7 +85,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
     return () => observer.disconnect();
   }, []);
   const resolvedTheme = canvasConfig.resolvedTheme ?? domResolvedTheme;
-  const { editingTextId, startTextEdit, stopTextEdit, editingShapeTextId, startShapeTextEdit, stopShapeTextEdit, isCropMode, setIsCropMode, editingTableCell, startTableCellEdit, stopTableCellEdit, setSelectedTableCells, setInlineTextSelectionState, registerApplyInlineStyleFn, registerCropActions, drawColor, drawSize, drawTension, drawTool, editorMode, isMockupEnabled, activeToolPanel, setActiveToolPanel } = useEditor();
+  const { editingTextId, startTextEdit, stopTextEdit, editingShapeTextId, startShapeTextEdit, stopShapeTextEdit, isCropMode, setIsCropMode, editingTableCell, startTableCellEdit, stopTableCellEdit, setSelectedTableCells, setInlineTextSelectionState, registerApplyInlineStyleFn, registerCropActions, drawColor, drawSize, drawTension, drawTool, editorMode, isMockupEnabled, activeToolPanel, setActiveToolPanel, touchSelection, isSelectMoreMode, setSelectMoreMode } = useEditor();
   const [isObjectDragging, setIsObjectDragging] = useState(false);
   const [isTouchStagePanning, setIsTouchStagePanning] = useState(false);
   const [isStageZooming, setIsStageZooming] = useState(false);
@@ -114,6 +123,67 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
   });
   const positionRef = useRef({ x: 0, y: 0 });
   const suppressTapSelectionUntilRef = useRef(0);
+
+  // Press and hold, then drag: a selection box on touch screens, where a
+  // quick one-finger drag moves the view. `armed` once the hold is long
+  // enough; `boxing` once the finger moves after that.
+  const holdTimerRef = useRef<number | null>(null);
+  const touchBoxRef = useRef<{
+    armed: boolean;
+    boxing: boolean;
+    start: { x: number; y: number } | null;
+    current: { x: number; y: number } | null;
+  }>({ armed: false, boxing: false, start: null, current: null });
+  // Where the finger is held, for the cue that says a box can be drawn
+  const [holdCue, setHoldCue] = useState<{ x: number; y: number } | null>(null);
+  // Whether the current one-finger touch began on an empty spot: a tap there clears the selection
+  const touchStartedOnEmptyRef = useRef(false);
+
+  const cancelTouchBox = useCallback(() => {
+    if (holdTimerRef.current !== null) {
+      window.clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    touchBoxRef.current = { armed: false, boxing: false, start: null, current: null };
+    setHoldCue(null);
+  }, []);
+
+  useEffect(() => () => {
+    if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+  }, []);
+
+  // A one-time tip about press and hold, once a phone design has two or more items
+  const [showTouchSelectTip, setShowTouchSelectTip] = useState(false);
+  const dismissTouchSelectTip = useCallback(() => {
+    setShowTouchSelectTip(false);
+    try {
+      window.localStorage.setItem(TOUCH_SELECT_TIP_KEY, '1');
+    } catch {
+      // Storage can be off (private windows): the tip just shows again another time
+    }
+  }, []);
+  const selectableCount = useMemo(
+    () => objects.filter((o) => !o.parentId && o.type !== 'print-area' && (!(isMockupEnabled && editorMode === 'customer') || o.objectRole === 'customer')).length,
+    [objects, isMockupEnabled, editorMode],
+  );
+  useEffect(() => {
+    if (!isMobile || !touchSelection.pressAndHold || !touchSelection.showTip || selectableCount < 2) return;
+    let seen = false;
+    try {
+      seen = window.localStorage.getItem(TOUCH_SELECT_TIP_KEY) === '1';
+    } catch {
+      seen = false;
+    }
+    if (!seen) setShowTouchSelectTip(true);
+  }, [isMobile, touchSelection.pressAndHold, touchSelection.showTip, selectableCount]);
+
+  // "Select more" is for the page being edited, on a phone
+  useEffect(() => {
+    setSelectMoreMode(false);
+  }, [activePage?.id, setSelectMoreMode]);
+  useEffect(() => {
+    if (!isMobile) setSelectMoreMode(false);
+  }, [isMobile, setSelectMoreMode]);
 
   // Drawing state
   const [isDrawing, setIsDrawing] = useState(false);
@@ -985,6 +1055,73 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
   // Multi-select handlers
   const selectionRectRef = useRef<Konva.Rect>(null);
 
+  const objectIds = useMemo(() => new Set(objects.map((o) => o.id)), [objects]);
+
+  /**
+   * Whether a spot on the stage is empty: no item there (the page, the space
+   * around it, or a product picture the customer can't select), so a press
+   * and hold there draws a selection box rather than opening the menu.
+   */
+  const isEmptyCanvasTarget = useCallback((node: Konva.Node | null, stage: Konva.Stage) => {
+    let cursor: Konva.Node | null = node;
+    while (cursor && cursor !== stage) {
+      if (cursor instanceof Konva.Transformer) return false;
+      const name = cursor.name();
+      if (name === 'safe-area' || name === 'safe-area-overlay' || name === 'canvas-mockup-layer') return true;
+      if (name && objectIds.has(name)) return false;
+      cursor = cursor.getParent();
+    }
+    return true;
+  }, [objectIds]);
+
+  /** The same for a point in the window, for the menu's long press. */
+  const isEmptyAtClientPoint = useCallback((clientX: number, clientY: number) => {
+    const stage = stageRef.current;
+    if (!stage) return false;
+    const rect = stage.container().getBoundingClientRect();
+    return isEmptyCanvasTarget(stage.getIntersection({ x: clientX - rect.left, y: clientY - rect.top }), stage);
+  }, [isEmptyCanvasTarget]);
+
+  /**
+   * Selects what a box touches. `a` and `b` are opposite corners in the
+   * stage's own coordinates. `additive` keeps the current selection (Shift,
+   * or "Select more" on touch screens); otherwise an empty box clears it.
+   */
+  const selectInStageBox = useCallback((
+    stage: Konva.Stage,
+    a: { x: number; y: number },
+    b: { x: number; y: number },
+    additive: boolean,
+  ) => {
+    // To window coordinates, to compare with getClientRect
+    const transform = stage.getAbsoluteTransform();
+    const p1 = transform.point({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y) });
+    const p2 = transform.point({ x: Math.max(a.x, b.x), y: Math.max(a.y, b.y) });
+    const box = {
+      x: Math.min(p1.x, p2.x),
+      y: Math.min(p1.y, p2.y),
+      width: Math.abs(p2.x - p1.x),
+      height: Math.abs(p2.y - p1.y),
+    };
+
+    const selectedObjIds: string[] = [];
+    objects.forEach(obj => {
+      // In customer mode, mockup objects are not selectable via rubber-band
+      if (isMockupEnabled && editorMode === 'customer' && obj.objectRole !== 'customer') return;
+      const node = stage.findOne(`.${obj.id}`);
+      if (node && Konva.Util.haveIntersection(box, node.getClientRect())) {
+        selectedObjIds.push(resolveSelectableId(obj.id));
+      }
+    });
+
+    if (selectedObjIds.length > 0) {
+      selectObjects(Array.from(new Set(selectedObjIds)), additive);
+    } else if (!additive) {
+      // Dragged over empty space: clear the selection, unless adding to it
+      deselectAll();
+    }
+  }, [objects, isMockupEnabled, editorMode, resolveSelectableId, selectObjects, deselectAll]);
+
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (editingTextId) {
       commitInlineTextEdit();
@@ -1016,6 +1153,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
         setIsTouchGestureLocked(true);
         setSelectionRect(prev => ({ ...prev, visible: false }));
         singleTouchStagePanRef.current = { active: false, moved: false, startPoint: null, lastPoint: null };
+        cancelTouchBox();
         handleTouchStart(e as Konva.KonvaEventObject<TouchEvent>);
         return;
       }
@@ -1037,6 +1175,29 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
             lastPoint: { x: touch.clientX, y: touch.clientY },
           };
           setSelectionRect(prev => ({ ...prev, visible: false }));
+
+          // Held still long enough on an empty spot, the next drag draws a
+          // selection box instead (holding an item opens its menu, as before)
+          cancelTouchBox();
+          touchStartedOnEmptyRef.current = !!pointerStage && isEmptyCanvasTarget(e.target as Konva.Node, pointerStage);
+          if (touchSelection.pressAndHold && touchStartedOnEmptyRef.current) {
+            const held = { x: touch.clientX, y: touch.clientY };
+            holdTimerRef.current = window.setTimeout(() => {
+              holdTimerRef.current = null;
+              const pan = singleTouchStagePanRef.current;
+              const stage = stageRef.current;
+              if (!pan.active || pan.moved || !stage) return;
+              const start = clientToStagePoint(stage, held.x, held.y);
+              touchBoxRef.current = { armed: true, boxing: false, start, current: start };
+              const rect = containerRef.current?.getBoundingClientRect();
+              if (rect) setHoldCue({ x: held.x - rect.left, y: held.y - rect.top });
+              try {
+                navigator.vibrate?.(10);
+              } catch {
+                // Not every browser lets a page buzz the phone
+              }
+            }, touchSelection.holdMs);
+          }
           return;
         }
 
@@ -1083,7 +1244,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
       currentX: pos.x,
       currentY: pos.y,
     });
-  }, [editingTextId, editingValue, commitInlineTextEdit, editingShapeTextId, commitInlineShapeTextEdit, mode, interactive, handleTouchStart, isTouchGestureLocked, isMobile, isDesktop, isNodeWithinSelection, cancelActiveObjectDrags, safeAreaRect, dimensions, deselectAll, activeToolPanel, setActiveToolPanel]);
+  }, [editingTextId, editingValue, commitInlineTextEdit, editingShapeTextId, commitInlineShapeTextEdit, mode, interactive, handleTouchStart, isTouchGestureLocked, isMobile, isDesktop, isNodeWithinSelection, cancelActiveObjectDrags, safeAreaRect, dimensions, deselectAll, activeToolPanel, setActiveToolPanel, cancelTouchBox, touchSelection, isEmptyCanvasTarget]);
 
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (editingTextId) return; // move events are fine to skip , the pointerDown already committed the edit
@@ -1101,6 +1262,24 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
         const lastPoint = singleTouchStagePanRef.current.lastPoint;
         const startPoint = singleTouchStagePanRef.current.startPoint;
 
+        // After a press and hold: the drag draws a selection box, the view stays
+        const box = touchBoxRef.current;
+        const boxStage = e.target.getStage();
+        if (box.armed && box.start && boxStage) {
+          touchEvent.preventDefault();
+          const pos = clientToStagePoint(boxStage, touch.clientX, touch.clientY);
+          box.current = pos;
+          if (!box.boxing && startPoint && Math.hypot(touch.clientX - startPoint.x, touch.clientY - startPoint.y) >= 4) {
+            box.boxing = true;
+            setHoldCue(null);
+          }
+          if (box.boxing) {
+            setSelectionRect({ visible: true, startX: box.start.x, startY: box.start.y, currentX: pos.x, currentY: pos.y });
+          }
+          singleTouchStagePanRef.current.lastPoint = { x: touch.clientX, y: touch.clientY };
+          return;
+        }
+
         if (lastPoint && startPoint) {
           const dx = touch.clientX - lastPoint.x;
           const dy = touch.clientY - lastPoint.y;
@@ -1114,6 +1293,11 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
               singleTouchStagePanRef.current.moved = true;
               setIsTouchStagePanning(true);
               suppressTapSelectionUntilRef.current = Date.now() + 260;
+              // Moved before the hold was long enough: it's a pan, not a box
+              if (holdTimerRef.current !== null) {
+                window.clearTimeout(holdTimerRef.current);
+                holdTimerRef.current = null;
+              }
             }
           }
 
@@ -1178,6 +1362,35 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
       const wasSingleTouchStagePanActive = singleTouchStagePanRef.current.active;
       const didSingleTouchStagePanMove = singleTouchStagePanRef.current.moved;
 
+      // A press-and-hold box: select what it touches (adding to the selection in "Select more")
+      const box = touchBoxRef.current;
+      if (box.armed) {
+        const boxStage = e.target.getStage();
+        if (box.boxing && box.start && box.current && boxStage && e.type === 'touchend') {
+          selectInStageBox(boxStage, box.start, box.current, isSelectMoreMode);
+          suppressTapSelectionUntilRef.current = Date.now() + 260;
+          dismissTouchSelectTip();
+        }
+        setSelectionRect(prev => ({ ...prev, visible: false }));
+      }
+      if (remainingTouches === 0) cancelTouchBox();
+
+      // A plain tap on an empty spot clears the selection (and ends "Select
+      // more"). Done here: the browser's copied mouse events, which did it
+      // before, don't come once the long-press menu is held back there.
+      if (
+        e.type === 'touchend'
+        && remainingTouches === 0
+        && wasSingleTouchStagePanActive
+        && !didSingleTouchStagePanMove
+        && !box.armed
+        && touchStartedOnEmptyRef.current
+      ) {
+        deselectAll();
+        setSelectMoreMode(false);
+      }
+      if (remainingTouches === 0) touchStartedOnEmptyRef.current = false;
+
       if (remainingTouches < 2) {
         handleTouchEnd();
       }
@@ -1236,52 +1449,11 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
     const pos = stage.getRelativePointerPosition();
     if (!pos) return;
 
-    // The selection rect in Stage's relative coordinates
-    const sx = Math.min(selectionRect.startX, pos.x);
-    const sy = Math.min(selectionRect.startY, pos.y);
-    const ex = Math.max(selectionRect.startX, pos.x);
-    const ey = Math.max(selectionRect.startY, pos.y);
-
-    // Transform to absolute window coordinates so we can compare with getClientRect
-    const transform = stage.getAbsoluteTransform();
-    const p1 = transform.point({ x: sx, y: sy });
-    const p2 = transform.point({ x: ex, y: ey });
-
-    const box = {
-      x: Math.min(p1.x, p2.x),
-      y: Math.min(p1.y, p2.y),
-      width: Math.abs(p2.x - p1.x),
-      height: Math.abs(p2.y - p1.y),
-    };
-
-    const selectedObjIds: string[] = [];
-
-    objects.forEach(obj => {
-      // In customer mode, mockup objects are not selectable via rubber-band
-      if (isMockupEnabled && editorMode === 'customer' && obj.objectRole !== 'customer') return;
-
-      const node = stage.findOne(`.${obj.id}`);
-      if (node) {
-        const nodeBox = node.getClientRect();
-        if (Konva.Util.haveIntersection(box, nodeBox)) {
-          selectedObjIds.push(resolveSelectableId(obj.id));
-        }
-      }
-    });
-
     const isShiftKey = (e.evt as MouseEvent).shiftKey || false;
-
-    if (selectedObjIds.length > 0) {
-      selectObjects(Array.from(new Set(selectedObjIds)), isShiftKey);
-    } else {
-      // If we clicked/dragged on empty space with shift, don't clear the current selection
-      if (!isShiftKey) {
-        deselectAll();
-      }
-    }
+    selectInStageBox(stage, { x: selectionRect.startX, y: selectionRect.startY }, pos, isShiftKey);
 
     setSelectionRect(prev => ({ ...prev, visible: false }));
-  }, [editingTextId, selectionRect.startX, selectionRect.startY, selectionRect.visible, objects, selectObjects, deselectAll, interactive, handleTouchEnd, isTouchGestureLocked, resolveSelectableId, mode, drawColor, drawSize, drawTension, drawTool, addObject, safeAreaRect, dimensions, editorMode, isMockupEnabled]);
+  }, [editingTextId, selectionRect.startX, selectionRect.startY, selectionRect.visible, interactive, handleTouchEnd, isTouchGestureLocked, mode, drawColor, drawSize, drawTension, drawTool, addObject, selectInStageBox, isSelectMoreMode, cancelTouchBox, dismissTouchSelectTip, deselectAll, setSelectMoreMode]);
 
   const handleContextMenu = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     const stage = e.target.getStage();
@@ -1357,7 +1529,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
   );
 
   return (
-    <CanvasContextMenu>
+    <CanvasContextMenu suppressTouchMenuAt={touchSelection.pressAndHold ? isEmptyAtClientPoint : undefined}>
       <div
         ref={containerRef}
       className={cn(
@@ -1542,6 +1714,44 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
             <div className="text-sm font-medium text-primary">Drop images or SVGs here</div>
             <div className="text-xs text-muted-foreground">to add them to your canvas</div>
           </div>
+        </div>
+      )}
+
+      {/* Press and hold: a drag will now draw a selection box */}
+      {holdCue && (
+        <div aria-hidden className="pointer-events-none absolute z-40" style={{ left: holdCue.x, top: holdCue.y }}>
+          <span className="absolute -left-7 -top-7 h-14 w-14 animate-ping rounded-full bg-primary/25" />
+          <span className="absolute -left-4 -top-4 h-8 w-8 rounded-full border-2 border-primary bg-primary/15" />
+        </div>
+      )}
+
+      {/* "Select more": taps add or remove items until Done. At the bottom,
+          just above the page tabs (CanvasContainer keeps them 80px up on
+          phones): the settings bar covers the top */}
+      {isMobile && isSelectMoreMode && (
+        <div
+          role="status"
+          className="absolute bottom-36 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-panel-border bg-card/95 py-1 pl-3 pr-1 text-sm shadow-lg backdrop-blur-md"
+        >
+          <span>{selectedIds.length > 0 ? `${selectedIds.length} selected` : 'Tap items to select them'}</span>
+          <Button size="sm" className="h-7 rounded-full px-3" onClick={() => setSelectMoreMode(false)}>
+            Done
+          </Button>
+        </div>
+      )}
+
+      {/* The one-time press-and-hold tip */}
+      {isMobile && showTouchSelectTip && !isSelectMoreMode && (
+        <div
+          role="status"
+          className="absolute inset-x-3 bottom-36 z-40 mx-auto flex max-w-sm items-center gap-3 rounded-lg border border-panel-border bg-card/95 p-3 text-sm shadow-lg backdrop-blur-md"
+        >
+          <p className="flex-1 leading-snug">
+            To select several items, press and hold an empty spot, then drag over them.
+          </p>
+          <Button size="sm" variant="outline" className="h-8 shrink-0" onClick={dismissTouchSelectTip}>
+            Got it
+          </Button>
         </div>
       )}
 

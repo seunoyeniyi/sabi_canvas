@@ -110,6 +110,7 @@ export type {
   EditorApi,
   ExportPagesOptions,
   ExportedPage,
+  TouchSelectionOptions,
   ToolbarProps,
   ToolItem,
   EditorDrawerProps,

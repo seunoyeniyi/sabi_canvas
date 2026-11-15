@@ -81,7 +81,7 @@ export const CanvasObjects: React.FC<CanvasObjectsProps> = ({
     updateObject,
   } = useCanvasObjects();
 
-  const { editorMode, isMockupEnabled } = useEditor();
+  const { editorMode, isMockupEnabled, isSelectMoreMode } = useEditor();
 
   // Find the first print area object (used for customer drag constraints)
   const printAreaObj = React.useMemo(() => {
@@ -271,8 +271,9 @@ export const CanvasObjects: React.FC<CanvasObjectsProps> = ({
     // In customer mode, only objects explicitly tagged as 'customer' are selectable
     if (editorMode === 'customer' && obj && obj.objectRole !== 'customer') return;
     onObjectSelect?.();
-    selectObject(getSelectableId(id), addToSelection);
-  }, [editorMode, getSelectableId, objectMap, onObjectSelect, selectObject]);
+    // "Select more" on touch screens: each tap adds or removes, as Shift-click does
+    selectObject(getSelectableId(id), addToSelection || isSelectMoreMode);
+  }, [editorMode, getSelectableId, isSelectMoreMode, objectMap, onObjectSelect, selectObject]);
 
   const handleCanvasObjectDragMove = React.useCallback((event: Konva.KonvaEventObject<DragEvent>) => {
     if (altDragSessionRef.current.active) {
@@ -498,7 +499,8 @@ export const CanvasObjects: React.FC<CanvasObjectsProps> = ({
         isSelected={isSelected}
         isEditingText={editingTextId === object.id}
         isEditingShapeText={editingShapeTextId === object.id}
-        canClickToEdit={selectedIds.length === 1 && selectedIds[0] === object.id}
+        // Not while tapping items in and out of the selection
+        canClickToEdit={!isSelectMoreMode && selectedIds.length === 1 && selectedIds[0] === object.id}
         onSelect={handleSelect}
         onUpdate={updateObject}
         onDragStart={handleObjectDragStart}
@@ -518,6 +520,7 @@ export const CanvasObjects: React.FC<CanvasObjectsProps> = ({
     dragSelectedOnly,
     editorMode,
     isMockupEnabled,
+    isSelectMoreMode,
     editingShapeTextId,
     editingTableCell,
     editingTextId,

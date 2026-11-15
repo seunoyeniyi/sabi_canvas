@@ -327,7 +327,33 @@ export interface EditorState {
   isMockupEnabled: boolean;
 }
 
+/**
+ * Selecting several items on touch screens, where one finger moves the view.
+ * Pass to `<EditorLayout touchSelection={…} />`. Every field is optional.
+ */
+export interface TouchSelectionOptions {
+  /**
+   * Press and hold, then drag, to draw a selection box (a quick drag still
+   * moves the view). Default true.
+   */
+  pressAndHold?: boolean;
+  /** How long to hold before a drag draws the box, in milliseconds. Default 400. */
+  holdMs?: number;
+  /**
+   * A "Select more" button over the selection: while it's on, each tap adds
+   * or removes an item. Default true.
+   */
+  selectMore?: boolean;
+  /** A one-time tip about press and hold, once there are two or more items. Default true. */
+  showTip?: boolean;
+}
+
 export interface EditorContextValue extends EditorState {
+  /** Touch selection settings, every field filled in. */
+  touchSelection: Required<TouchSelectionOptions>;
+  /** "Select more" on touch screens: each tap adds or removes an item. */
+  isSelectMoreMode: boolean;
+  setSelectMoreMode: (on: boolean) => void;
   setTheme: (theme: EditorTheme) => void;
   toggleDrawer: () => void;
   closeDrawer: () => void;
