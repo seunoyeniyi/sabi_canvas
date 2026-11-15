@@ -5,6 +5,8 @@ import { CanvasPage } from '@sabi-canvas/types/pages';
 import { Project, generateProjectId, pageToProjectPage } from '@sabi-canvas/types/project';
 import { saveProject, setLastProjectId } from '@sabi-canvas/hooks/useProjectManager';
 import type { CustomFont } from '@sabi-canvas/types/custom-fonts';
+import type { CanvasObject, ImageObject } from '@sabi-canvas/types/canvas-objects';
+import type { EditorSaveState } from '@sabi-canvas/types/editor';
 import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 
 const DEBOUNCE_MS = 1500;
@@ -26,6 +28,25 @@ interface UseAutoSaveOptions {
   onSave?: (project: Project) => Promise<void>;
   customFonts?: CustomFont[];
   isMockupEnabled?: boolean;
+  /** Goes up each time a design is loaded; changes are counted afresh from then. */
+  loadVersion?: number;
+}
+
+/**
+ * Fields the editor fills in by itself (a text's height once its font loads,
+ * a picture's own size and colours): left out when comparing designs, so they
+ * never count as the user's changes.
+ */
+function withoutDerivedFields(object: CanvasObject) {
+  if (object.type === 'text') {
+    const { height: _height, ...rest } = object as CanvasObject & { height?: number };
+    return rest;
+  }
+  if (object.type === 'image') {
+    const { naturalWidth: _w, naturalHeight: _h, svgPalette: _p, ...rest } = object as ImageObject & { svgPalette?: unknown };
+    return rest;
+  }
+  return object;
 }
 
 export interface UseAutoSaveResult {
@@ -35,6 +56,12 @@ export interface UseAutoSaveResult {
    * that hasn't been saved yet.
    */
   snapshot: () => Promise<Project>;
+  /** Whether leaving would lose changes. See `EditorSaveState`. */
+  saveState: () => EditorSaveState;
+  /** The design as it is now counts as saved. */
+  markSaved: () => void;
+  /** Call on the user's first touch, click or key press: changes count from then. */
+  noteInteraction: () => void;
 }
 
 export const useAutoSave = ({
@@ -48,6 +75,7 @@ export const useAutoSave = ({
   onSave,
   customFonts,
   isMockupEnabled,
+  loadVersion = 0,
 }: UseAutoSaveOptions): UseAutoSaveResult => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const projectIdRef = useRef<string | null>(projectId);
@@ -122,6 +150,47 @@ export const useAutoSave = ({
     [captureProject],
   );
 
+  // ── Unsaved changes ──────────────────────────────────────────────────────
+  // `openedKey`: the design when the user first touched it after it opened
+  // (null until then: nothing they did yet). `savedKey`: the design last
+  // saved, or as opened. Both are fingerprints of what's saved.
+  const openedKeyRef = useRef<string | null>(null);
+  const savedKeyRef = useRef<string | null>(null);
+  const savesInFlightRef = useRef(0);
+
+  const designKey = useCallback(() => JSON.stringify([
+    pagesRef.current.map((p) => [p.id, p.name, p.order, p.size, p.background, p.objects.map(withoutDerivedFields)]),
+    projectTitleRef.current,
+    (customFontsRef.current ?? []).map((font) => font.id),
+    isMockupEnabledRef.current ?? false,
+  ]), []);
+
+  // A design loaded (opened, switched, new): changes count afresh
+  useEffect(() => {
+    openedKeyRef.current = null;
+    savedKeyRef.current = null;
+  }, [loadVersion]);
+
+  const noteInteraction = useCallback(() => {
+    if (openedKeyRef.current !== null) return;
+    const key = designKey();
+    openedKeyRef.current = key;
+    savedKeyRef.current = key;
+  }, [designKey]);
+
+  const markSaved = useCallback(() => {
+    const key = designKey();
+    openedKeyRef.current = key;
+    savedKeyRef.current = key;
+  }, [designKey]);
+
+  const saveState = useCallback((): EditorSaveState => {
+    const saving = timerRef.current !== null || savesInFlightRef.current > 0;
+    if (openedKeyRef.current === null) return { edited: false, unsaved: false, saving };
+    const key = designKey();
+    return { edited: key !== openedKeyRef.current, unsaved: key !== savedKeyRef.current, saving };
+  }, [designKey]);
+
   // Content fingerprint: only includes things that matter for saving.
   // Deliberately excludes viewState (zoom/pan) so scrolling/zooming never triggers a save.
   const contentKey = useMemo(() => {
@@ -149,6 +218,66 @@ export const useAutoSave = ({
     );
   }, [customFonts]);
 
+  // Saves the design as it is now. Run by the debounce timer, and at once
+  // when the editor closes with a save still waiting, so leaving never drops it.
+  const runSave = async () => {
+    let currentProjectId = projectIdRef.current;
+    const isNew = currentProjectId === null;
+
+    if (isNew) {
+      currentProjectId = generateProjectId();
+      projectIdRef.current = currentProjectId;
+      createdAtRef.current = Date.now();
+      onProjectCreated(currentProjectId);
+    }
+
+    // What this save holds, to know later whether it's the latest design
+    const savingKey = designKey();
+    const touched = openedKeyRef.current !== null;
+    const noteSaved = () => {
+      if (touched && openedKeyRef.current !== null) savedKeyRef.current = savingKey;
+    };
+    const project = await captureProject(currentProjectId!, isNew ? createdAtRef.current : Date.now());
+    savesInFlightRef.current += 1;
+
+    // For existing projects, preserve original createdAt from storage
+    // (only needed for the localStorage path)
+    if (!isNew && !onSaveRef.current) {
+      try {
+        const stored = localStorage.getItem('ca_projects');
+        if (stored) {
+          const all = JSON.parse(stored) as Record<string, Project>;
+          if (all[currentProjectId]) {
+            project.createdAt = all[currentProjectId].createdAt;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (onSaveRef.current) {
+      // External (cloud) save path , caller owns storage
+      onSaveRef.current(project).then(() => {
+        noteSaved();
+        onSaved?.();
+      }).catch(() => {
+        // Non-fatal; will retry on next content change. The changes stay unsaved meanwhile.
+      }).finally(() => {
+        savesInFlightRef.current -= 1;
+      });
+    } else {
+      // Local-storage fallback path (backward compatible)
+      saveProject(project);
+      setLastProjectId(currentProjectId);
+      noteSaved();
+      savesInFlightRef.current -= 1;
+      onSaved?.();
+    }
+  };
+  const runSaveRef = useRef(runSave);
+  runSaveRef.current = runSave;
+
   useEffect(() => {
     // Skip the very first mount render , we don't want to overwrite a project
     // the moment the editor mounts before the parent has a chance to load a project from storage.
@@ -174,50 +303,9 @@ export const useAutoSave = ({
       clearTimeout(timerRef.current);
     }
 
-    timerRef.current = setTimeout(async () => {
+    timerRef.current = setTimeout(() => {
       timerRef.current = null;
-
-      let currentProjectId = projectIdRef.current;
-      const isNew = currentProjectId === null;
-
-      if (isNew) {
-        currentProjectId = generateProjectId();
-        projectIdRef.current = currentProjectId;
-        createdAtRef.current = Date.now();
-        onProjectCreated(currentProjectId);
-      }
-
-      const project = await captureProject(currentProjectId!, isNew ? createdAtRef.current : Date.now());
-
-      // For existing projects, preserve original createdAt from storage
-      // (only needed for the localStorage path)
-      if (!isNew && !onSaveRef.current) {
-        try {
-          const stored = localStorage.getItem('ca_projects');
-          if (stored) {
-            const all = JSON.parse(stored) as Record<string, Project>;
-            if (all[currentProjectId]) {
-              project.createdAt = all[currentProjectId].createdAt;
-            }
-          }
-        } catch {
-          // ignore
-        }
-      }
-
-      if (onSaveRef.current) {
-        // External (cloud) save path , caller owns storage
-        onSaveRef.current(project).then(() => {
-          onSaved?.();
-        }).catch(() => {
-          // Non-fatal; will retry on next content change
-        });
-      } else {
-        // Local-storage fallback path (backward compatible)
-        saveProject(project);
-        setLastProjectId(currentProjectId);
-        onSaved?.();
-      }
+      void runSaveRef.current();
     }, DEBOUNCE_MS);
   // contentKey changes only when objects/background/page-structure change , not on zoom/pan
   // customFontsKey ensures custom font add/delete is persisted even without object edits
@@ -225,14 +313,17 @@ export const useAutoSave = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contentKey, customFontsKey, projectTitle, isMockupEnabled]);
 
-  // Cleanup timer on unmount
+  // Closing the editor (leaving the page, opening another design) with a
+  // save still waiting: save now rather than drop the latest changes
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
+        timerRef.current = null;
+        void runSaveRef.current();
       }
     };
   }, []);
 
-  return { snapshot };
+  return { snapshot, saveState, markSaved, noteInteraction };
 };

@@ -111,6 +111,24 @@ export interface ExportedPage {
 }
 
 /**
+ * Whether the design has changes that would be lost on leaving. Counted
+ * from the first touch, click or key press after a design is opened, so what
+ * the editor does by itself while opening (laying out text once fonts load,
+ * reading picture sizes) never counts as a change.
+ */
+export interface EditorSaveState {
+  /** Something was changed since the design was opened (or since `markSaved`). */
+  edited: boolean;
+  /**
+   * Changes `onSave` hasn't saved yet: waiting to be saved, being saved, or
+   * a save that failed. False again once a save of the latest design succeeds.
+   */
+  unsaved: boolean;
+  /** An auto-save is waiting or under way. */
+  saving: boolean;
+}
+
+/**
  * What a host can do with an open editor, through `editorRef` on
  * `EditorLayout`. Available once the editor has mounted.
  */
@@ -132,6 +150,15 @@ export interface EditorApi {
    * with the print area.
    */
   replaceMockup: (pageId: string, change: import('@sabi-canvas/lib/printOnDemand').MockupChange) => void;
+  /**
+   * Whether leaving now would lose changes, e.g. to ask "Leave the editor?"
+   * only when it would. With auto-save (`onSave`) check `unsaved`; when the
+   * design is only saved by your own button, check `edited` and call
+   * `markSaved` after saving.
+   */
+  saveState: () => EditorSaveState;
+  /** The design as it is now counts as saved, e.g. after your own "Save" step. */
+  markSaved: () => void;
 }
 
 /**

@@ -144,6 +144,14 @@ export interface EditorLayoutProps {
    */
   downloadButton?: DownloadButtonOptions;
   /**
+   * Closing or reloading the browser tab shows the browser's "Leave site?"
+   * warning when it would lose work: `unsaved` (default) while changes are
+   * waiting for `onSave` or being saved (or a save failed), `edited` after any
+   * change (for designs only saved by your own button), `false` never.
+   * Leaving the editor any other way saves what's waiting at once.
+   */
+  warnOnTabClose?: 'unsaved' | 'edited' | false;
+  /**
    * Hides the "Enable Mockup" button (setting up a product picture and print
    * area), e.g. for customers who only design. Customer mode never shows it.
    */
@@ -214,7 +222,7 @@ async function waitForPictures(stage: Konva.Stage, expected: number, timeoutMs =
   }
 }
 
-const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, projectTitleOverride, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction, customerMode = false, hideDownload = false, downloadButton, hideMockupToggle = false, editorRef, appBarCenter, appBarStart, mobileToolPanelHeight }) => {
+const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, projectTitleOverride, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction, customerMode = false, hideDownload = false, downloadButton, hideMockupToggle = false, warnOnTabClose = 'unsaved', editorRef, appBarCenter, appBarStart, mobileToolPanelHeight }) => {
   useKeyboardShortcuts();
 
   const {
@@ -246,6 +254,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     exportActivePageJson,
     importActivePageJson,
     loadProjectData,
+    loadVersion,
     insertPages,
     setActivePage,
     undo,
@@ -408,7 +417,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     return stageRef.current?.current ?? null;
   }, []);
 
-  const { snapshot } = useAutoSave({
+  const { snapshot, saveState, markSaved, noteInteraction } = useAutoSave({
     pages,
     activePageId,
     projectId,
@@ -418,6 +427,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
     onSave,
     customFonts,
     isMockupEnabled,
+    loadVersion,
   });
 
   // Read inside exportPages, which waits across renders while it switches pages
@@ -552,9 +562,23 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
 
   useImperativeHandle(
     editorRef,
-    () => ({ snapshot, exportPages, replaceMockupPicture, replaceMockup }),
-    [snapshot, exportPages, replaceMockupPicture, replaceMockup],
+    () => ({ snapshot, exportPages, replaceMockupPicture, replaceMockup, saveState, markSaved }),
+    [snapshot, exportPages, replaceMockupPicture, replaceMockup, saveState, markSaved],
   );
+
+  // Closing or reloading the tab with work that would be lost: the browser asks first
+  useEffect(() => {
+    if (!warnOnTabClose) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      const state = saveState();
+      if (!(warnOnTabClose === 'edited' ? state.edited : state.unsaved)) return;
+      event.preventDefault();
+      // Older browsers need a return value to ask
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [warnOnTabClose, saveState]);
 
   // Handed to the save action, so the host can see the design as it is now
   const saveActionContext = useMemo<SaveActionContext>(() => ({ snapshot, exportPages }), [snapshot, exportPages]);
@@ -854,7 +878,14 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
   ];
 
   return (
-    <div className={cn('flex flex-col h-dvh w-full overflow-hidden bg-background', className)}>
+    <div
+      className={cn('flex flex-col h-dvh w-full overflow-hidden bg-background', className)}
+      // Changes count from the user's first touch, click or key press (panels
+      // in portals included); what the editor does while opening doesn't count
+      onPointerDownCapture={noteInteraction}
+      onKeyDownCapture={noteInteraction}
+      onDropCapture={noteInteraction}
+    >
       {/* App Bar */}
       <AppBar
         title={projectTitle}

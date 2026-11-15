@@ -346,10 +346,11 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 | `hideTools` | `string[]` | , | Toolbar tools to leave out, by id: `templates`, `elements`, `text`, `photos`, `upload`, `background`, `layers`, `resize`, or yours |
 | `appBarStart` | `ReactNode` | , | Your own content at the very start of the top bar, before the menu button and the title, e.g. a back arrow out of an editor opened as a full-screen dialog |
 | `downloadButton` | `DownloadButtonOptions` | , | How Download looks and where it goes on phones: `variant` (default filled, or outlined when your `saveAction` is the filled button, so only one stands out), `label` (default "Download"), `phone`: `'menu'` (in the "⋯" menu, the default) or `'bar'` |
+| `warnOnTabClose` | `'unsaved' \| 'edited' \| false` | `'unsaved'` | The browser's "Leave site?" warning on closing or reloading the tab when work would be lost. See [Leaving the editor](#leaving-the-editor) |
 | `hideMockupToggle` | `boolean` | `false` | Hides "Enable Mockup" (setting up a product picture and print area), e.g. for customers who only design. Customer mode never shows it |
 | `appBarCenter` | `ReactNode` | , | Your own content in the middle of the top bar, e.g. a product's colour and size picker. Swap the product picture with `editorRef.current.replaceMockupPicture(pageId, src)`; the design and undo history stay |
 | `mobileToolPanelHeight` | `string` | `'85dvh'` | Height of the tool panel sheet on phones and tablets, as any CSS length (`'90dvh'`, `'600px'`) |
-| `editorRef` | `Ref<EditorApi>` | , | Receives `{ snapshot, exportPages }` once the editor mounts, to save or export from outside the editor |
+| `editorRef` | `Ref<EditorApi>` | , | Receives `{ snapshot, exportPages, replaceMockup, saveState, markSaved }` once the editor mounts, to save or export from outside the editor, and to ask before leaving only when it would lose changes. See [Leaving the editor](#leaving-the-editor) |
 | `enableJsonDevTools` | `boolean` | `false` | Adds dev tools to the app bar: export/import the active page as JSON, and import a Polotno design into the open project (it replaces a single empty page, otherwise its pages are added after the existing ones) |
 | `className` | `string` | , | Extra CSS class on the root element |
 
@@ -815,7 +816,7 @@ import { SabiCanvasProvider, useSabiCanvasConfig, getSabiCanvasConfig } from 'sa
 import type { SabiCanvasConfig, SabiCanvasAIConfig } from 'sabi-canvas';
 
 // App bar and editor API
-import type { AppBarSaveAction, SaveActionContext, EditorApi, ExportPagesOptions, ExportedPage } from 'sabi-canvas';
+import type { AppBarSaveAction, SaveActionContext, EditorApi, EditorSaveState, ExportPagesOptions, ExportedPage } from 'sabi-canvas';
 
 // Print on demand
 import {
@@ -852,6 +853,37 @@ import type {
 > **Removed in 0.4:** `DESIGN_TEMPLATES`, `TEMPLATE_CATEGORIES`, and the `DesignTemplate` / `TemplateCategory` /
 > `TemplateCategoryItem` types. Templates now come from a template source; use `useTemplateList` and
 > `useTemplateFilters` to list them in your own pages.
+
+---
+
+## Leaving the editor
+
+Ask "Leave the editor?" only when leaving would lose something. `editorRef.current.saveState()` returns:
+
+| Field | Meaning |
+|---|---|
+| `edited` | Something was changed since the design was opened (or since `markSaved()`) |
+| `unsaved` | Changes `onSave` hasn't saved yet: waiting, being saved, or a save that failed. False again once a save of the latest design succeeds |
+| `saving` | An auto-save is waiting or under way, e.g. to say "still being saved" |
+
+Changes count from the user's first touch, click or key press after a design opens, so what the editor does by itself while opening (laying out text once fonts load, reading picture sizes, its own first save) never counts.
+
+```tsx
+const api = useRef<EditorApi>(null);
+
+const leave = () => {
+  const state = api.current?.saveState();
+  // With auto-save (onSave): `unsaved`. Saved only by your own button: `edited`
+  if (state?.unsaved) setConfirmLeave(true);
+  else close();
+};
+
+<EditorLayout editorRef={api} onSave={saveToServer} />;
+```
+
+When your own button saves the design and the editor stays open, call `api.current.markSaved()` so later checks start from there.
+
+Closing or reloading the browser tab shows the browser's own "Leave site?" warning when work would be lost (`warnOnTabClose`: `'unsaved'` by default, `'edited'` for designs saved only by your own button, or `false`). Leaving the editor any other way (another page, another design) saves what's waiting at once instead of dropping it.
 
 ---
 

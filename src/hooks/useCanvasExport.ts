@@ -131,7 +131,7 @@ async function addExportBackground(
  */
 export const DEFAULT_THUMBNAIL_CONFIG: Required<SabiCanvasThumbnailConfig> = {
   maxSide: 600,
-  quality: 0.7,
+  quality: 0.8,
   mimeType: 'image/webp',
 };
 

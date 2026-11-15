@@ -153,7 +153,7 @@ export interface SabiCanvasConfig {
 export interface SabiCanvasThumbnailConfig {
   /** Longest side in pixels, never larger than the design itself. Default 600. */
   maxSide?: number;
-  /** Quality from 0 to 1 for JPEG and WebP. Default 0.7. */
+  /** Quality from 0 to 1 for JPEG and WebP. Default 0.8. */
   quality?: number;
   /**
    * Image type. Default 'image/webp', about a third of the size of JPEG at the

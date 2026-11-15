@@ -86,6 +86,8 @@ interface CanvasObjectsContextValue {
 
   // Project persistence
   loadProjectData: (pages: CanvasPage[], activePageId: string, fallbackSize?: { width: number; height: number }) => void;
+  /** Goes up each time a design is loaded (opened, switched, started afresh), not on edits. */
+  loadVersion: number;
   /**
    * Print on demand: shows another product picture on a page (e.g. another
    * colour), keeping the customer's design and undo history. Only the
@@ -298,6 +300,7 @@ const synchronizeGroupChildren = (objects: CanvasObject[]): CanvasObject[] => {
 
 export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ children }) => {
   const [pages, setPages] = useState<CanvasPage[]>(() => [createEmptyPage('Page 1', 0)]);
+  const [loadVersion, setLoadVersion] = useState(0);
   const [activePageId, setActivePageId] = useState<string>(() => pages[0].id);
 
   const activePage = useMemo<CanvasPage>(() => {
@@ -1290,6 +1293,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
       const first = hydrated[0];
       if (!first) return;
       setPages(hydrated);
+      setLoadVersion((version) => version + 1);
       const targetId = hydrated.some((p) => p.id === incomingActivePageId)
         ? incomingActivePageId
         : first.id;
@@ -1444,10 +1448,12 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
       exportActivePageJson,
       importActivePageJson,
       loadProjectData,
+      loadVersion,
       replaceMockupPicture,
       replaceMockup,
     }),
     [
+      loadVersion,
       pages,
       activePageId,
       activePage,

@@ -109,6 +109,7 @@ export type {
   DownloadButtonOptions,
   SaveActionContext,
   EditorApi,
+  EditorSaveState,
   ExportPagesOptions,
   ExportedPage,
   TouchSelectionOptions,
