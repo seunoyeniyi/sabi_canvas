@@ -199,7 +199,20 @@ export type {
   PrintIssue,
   PrintIssueKind,
   AnalyzePrintOptions,
+  MockupChange,
 } from './lib/printOnDemand';
+export {
+  composeRealisticMockup,
+  readMockupLight,
+  readPictureLight,
+  readPlacedPictureLight,
+  mockupLightOverlays,
+  loadReadablePicture,
+  resolveMockupRealism,
+  changesShape,
+  DEFAULT_MOCKUP_REALISM,
+} from './lib/mockupRealism';
+export type { MockupRealism, MockupLightMap, ComposeMockupOptions } from './lib/mockupRealism';
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 export { cn } from './lib/utils';

@@ -1305,6 +1305,57 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
 
   const shouldHideContextualToolbar = isDragging || isObjectDragging || isTouchStagePanning || isStageZooming;
 
+  // While a customer designs on a product, their design gets a layer of its
+  // own, above the product, so the product picture's light can fall on the
+  // design alone (see MockupLighting)
+  const splitDesignLayer = isMockupEnabled && editorMode === 'customer';
+  const renderCanvasObjects = (part: 'all' | 'mockup' | 'customer') => (
+    <CanvasObjects
+      stageRef={stageRef}
+      scale={dimensions.scale}
+      offsetX={safeAreaRect.x}
+      offsetY={safeAreaRect.y}
+      clipWidth={config.designWidth}
+      clipHeight={config.designHeight}
+      mode={mode}
+      cropTargetId={isCropMode && selectedObject?.type === 'image' ? selectedObject.id : undefined}
+      onDragMove={handleCanvasObjectDragMove}
+      onDragEnd={handleCanvasObjectDragEnd}
+      onHover={setHoveredId}
+      onImageDoubleClick={(id) => {
+        const obj = objects.find(o => o.id === id);
+        if (obj?.type === 'image' && !isSvgSrc((obj as ImageObject).src ?? '')) {
+          setIsCropMode(true);
+        }
+      }}
+      editingTextId={editingTextId}
+      editingShapeTextId={editingShapeTextId}
+      editingTableCell={editingTableCell}
+      onTextEditRequest={startInlineTextEdit}
+      onShapeTextEditRequest={startInlineShapeTextEdit}
+      onCellTextEditRequest={startInlineCellEdit}
+      onCellSelection={(tableId, cells) => setSelectedTableCells(cells.map((c) => ({ tableId, ...c })))}
+      onObjectSelect={() => {
+        if (editingTextId) {
+          commitInlineTextEdit();
+        }
+        if (editingShapeTextId) {
+          commitInlineShapeTextEdit();
+        }
+        if (editingTableCell) {
+          commitInlineCellEdit(editingCellValue);
+        }
+        if (isDesktop && activeToolPanel) {
+          setActiveToolPanel(null);
+        }
+      }}
+      isInteractionLocked={isTouchGestureLocked}
+      dragSelectedOnly={isMobile && mode === 'select'}
+      shouldSuppressTapSelection={shouldSuppressTapSelection}
+      part={part}
+    />
+  );
+
   return (
     <CanvasContextMenu>
       <div
@@ -1367,49 +1418,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
             )}
 
             {/* Canvas Objects - Main user content */}
-            <CanvasObjects
-              stageRef={stageRef}
-              scale={dimensions.scale}
-              offsetX={safeAreaRect.x}
-              offsetY={safeAreaRect.y}
-              clipWidth={config.designWidth}
-              clipHeight={config.designHeight}
-              mode={mode}
-              cropTargetId={isCropMode && selectedObject?.type === 'image' ? selectedObject.id : undefined}
-              onDragMove={handleCanvasObjectDragMove}
-              onDragEnd={handleCanvasObjectDragEnd}
-              onHover={setHoveredId}
-              onImageDoubleClick={(id) => {
-                const obj = objects.find(o => o.id === id);
-                if (obj?.type === 'image' && !isSvgSrc((obj as ImageObject).src ?? '')) {
-                  setIsCropMode(true);
-                }
-              }}
-              editingTextId={editingTextId}
-              editingShapeTextId={editingShapeTextId}
-              editingTableCell={editingTableCell}
-              onTextEditRequest={startInlineTextEdit}
-              onShapeTextEditRequest={startInlineShapeTextEdit}
-              onCellTextEditRequest={startInlineCellEdit}
-              onCellSelection={(tableId, cells) => setSelectedTableCells(cells.map((c) => ({ tableId, ...c })))}
-              onObjectSelect={() => {
-                if (editingTextId) {
-                  commitInlineTextEdit();
-                }
-                if (editingShapeTextId) {
-                  commitInlineShapeTextEdit();
-                }
-                if (editingTableCell) {
-                  commitInlineCellEdit(editingCellValue);
-                }
-                if (isDesktop && activeToolPanel) {
-                  setActiveToolPanel(null);
-                }
-              }}
-              isInteractionLocked={isTouchGestureLocked}
-              dragSelectedOnly={isMobile && mode === 'select'}
-              shouldSuppressTapSelection={shouldSuppressTapSelection}
-            />
+            {renderCanvasObjects(splitDesignLayer ? 'mockup' : 'all')}
 
             {/* Legacy children - for backward compatibility */}
             {children && (
@@ -1446,6 +1455,9 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, ExtendedEditorCanvasP
               </Group>
             )}
           </Layer>
+
+          {/* The customer's design, on its own layer (print on demand) */}
+          {splitDesignLayer && <Layer>{renderCanvasObjects('customer')}</Layer>}
 
           <Layer>
             {/* Alignment Guides */}

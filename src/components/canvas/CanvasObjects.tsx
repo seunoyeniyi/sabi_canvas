@@ -3,13 +3,15 @@ import { Group } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
-import { CanvasObject, DrawObject, PrintAreaObject, TableObject } from '@sabi-canvas/types/canvas-objects';
+import { CanvasObject, DrawObject, ImageObject, PrintAreaObject, TableObject } from '@sabi-canvas/types/canvas-objects';
+import { MOCKUP_PICTURE_NAME } from '@sabi-canvas/lib/printOnDemand';
 import { CanvasShape } from './CanvasShape';
 import { CanvasImage } from './CanvasImage';
 import { CachedGroupWrapper } from './CachedGroupWrapper';
 import { CanvasTable } from './CanvasTable';
 import { CanvasDraw } from './CanvasDraw';
 import { CanvasPrintArea } from './CanvasPrintArea';
+import { MockupLighting } from './MockupLighting';
 import { InteractionMode } from '@sabi-canvas/types/canvas';
 
 interface CanvasObjectsProps {
@@ -36,6 +38,13 @@ interface CanvasObjectsProps {
   isInteractionLocked?: boolean;
   dragSelectedOnly?: boolean;
   shouldSuppressTapSelection?: () => boolean;
+  /**
+   * In customer mode, which part to draw: the product (`mockup`), the
+   * customer's design (`customer`, with the picture's light over it), or both
+   * (`all`, the default). The editor draws the design in a layer of its own,
+   * so the picture's light falls on the design alone.
+   */
+  part?: 'all' | 'mockup' | 'customer';
 }
 
 export const CanvasObjects: React.FC<CanvasObjectsProps> = ({
@@ -62,6 +71,7 @@ export const CanvasObjects: React.FC<CanvasObjectsProps> = ({
   isInteractionLocked = false,
   dragSelectedOnly = false,
   shouldSuppressTapSelection,
+  part = 'all',
 }) => {
   const {
     objects,
@@ -532,25 +542,36 @@ export const CanvasObjects: React.FC<CanvasObjectsProps> = ({
     const mockupObjects = topLevelObjects.filter((o) => o.objectRole !== 'customer');
     const customerObjects = topLevelObjects.filter((o) => o.objectRole === 'customer');
     const pa = printAreaObj;
+    const picture = mockupObjects.find(
+      (o) => o.type === 'image' && o.name === MOCKUP_PICTURE_NAME && o.visible !== false,
+    ) as ImageObject | undefined;
 
     return (
       <>
         {/* Mockup layer: fully locked, zero events */}
-        <Group name="canvas-mockup-layer" x={offsetX} y={offsetY} scaleX={scale} scaleY={scale} listening={false}>
-          {mockupObjects.map((object) => renderObject(object))}
-        </Group>
+        {part !== 'customer' && (
+          <Group name="canvas-mockup-layer" x={offsetX} y={offsetY} scaleX={scale} scaleY={scale} listening={false}>
+            {mockupObjects.map((object) => renderObject(object))}
+          </Group>
+        )}
         {/* Customer layer: interactive, clipped to print area when one exists */}
-        <Group
-          name="canvas-customer-layer"
-          x={offsetX}
-          y={offsetY}
-          scaleX={scale}
-          scaleY={scale}
-          listening={mode !== 'pan' && !isInteractionLocked}
-          {...(pa ? { clipX: pa.x, clipY: pa.y, clipWidth: pa.width, clipHeight: pa.height } : {})}
-        >
-          {customerObjects.map((object) => renderObject(object))}
-        </Group>
+        {part !== 'mockup' && (
+          <Group
+            name="canvas-customer-layer"
+            x={offsetX}
+            y={offsetY}
+            scaleX={scale}
+            scaleY={scale}
+            listening={mode !== 'pan' && !isInteractionLocked}
+            {...(pa ? { clipX: pa.x, clipY: pa.y, clipWidth: pa.width, clipHeight: pa.height } : {})}
+          >
+            {customerObjects.map((object) => renderObject(object))}
+            {/* The picture's light on the design: only where the design is on its own layer */}
+            {part === 'customer' && pa && customerObjects.length > 0 && (
+              <MockupLighting picture={picture} printArea={pa} />
+            )}
+          </Group>
+        )}
       </>
     );
   }

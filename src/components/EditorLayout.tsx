@@ -24,7 +24,8 @@ import { cn } from '@sabi-canvas/lib/utils';
 import { AppBarAction } from '@sabi-canvas/types/editor';
 import type { AppBarSaveAction, EditorApi, ExportedPage, ExportPagesOptions, SaveActionContext } from '@sabi-canvas/types/editor';
 import { renderStageArea } from '@sabi-canvas/hooks/useCanvasExport';
-import { customerObjects, printAreaOf } from '@sabi-canvas/lib/printOnDemand';
+import { customerObjects, MOCKUP_PICTURE_NAME, printAreaOf } from '@sabi-canvas/lib/printOnDemand';
+import { composeRealisticMockup, MOCKUP_LIGHTING_NAME } from '@sabi-canvas/lib/mockupRealism';
 import { useKeyboardShortcuts } from '@sabi-canvas/hooks/useKeyboardShortcuts';
 import { useAutoSave } from '@sabi-canvas/hooks/useAutoSave';
 import { getLastProjectId, getProject, setLastProjectId } from '@sabi-canvas/hooks/useProjectManager';
@@ -161,10 +162,20 @@ const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() 
  * passes, e.g. when one can't be loaded). A picture shows a placeholder until
  * it loads, so the stage's pictures are counted against the page's.
  */
+/** A canvas as a file; a browser that can't write the type (Safari and WebP) gives JPEG instead. */
+async function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality?: number): Promise<Blob | null> {
+  const write = (type: string) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
+  const blob = await write(mimeType);
+  if (blob && blob.type !== mimeType && mimeType !== 'image/png') return write('image/jpeg');
+  return blob;
+}
+
 async function waitForPictures(stage: Konva.Stage, expected: number, timeoutMs = 8000) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
     const loaded = stage.find('Image').filter((node) => {
+      // The live light over a design isn't a picture of the page
+      if (node.name() === MOCKUP_LIGHTING_NAME) return false;
       const image = (node as Konva.Image).image();
       return !!image && (!(image instanceof HTMLImageElement) || (image.complete && image.naturalWidth > 0));
     });
@@ -421,14 +432,47 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
 
           if (options.preview) {
             const maxSide = options.preview.maxSide ?? 1600;
-            result.preview = await renderStageArea(stage, {
-              designSize,
-              background: page.background,
-              pixelRatio: maxSide / Math.max(designSize.width, designSize.height),
-              mimeType: options.preview.mimeType ?? 'image/png',
-              quality: options.preview.quality,
-              as: 'blob',
-            });
+            const pixelRatio = maxSide / Math.max(designSize.width, designSize.height);
+            const mimeType = options.preview.mimeType ?? 'image/png';
+            const quality = options.preview.quality;
+            const hasPicture = page.objects.some((object) => object.type === 'image' && object.name === MOCKUP_PICTURE_NAME && object.visible !== false);
+
+            // On a product: the design as it would look printed on it (the
+            // picture's light, folds and shape). Drawn flat if that fails.
+            if (options.preview.realistic !== false && isMockupEnabled && printArea && hasPicture && !result.isEmpty) {
+              try {
+                const region = { x: printArea.x, y: printArea.y, width: printArea.width * printArea.scaleX, height: printArea.height * printArea.scaleY };
+                const base = await renderStageArea(stage, { designSize, background: page.background, pixelRatio, mockupOnly: true, as: 'canvas' });
+                const design = await renderStageArea(stage, {
+                  designSize,
+                  region,
+                  pixelRatio: pixelRatio * 2,
+                  transparent: true,
+                  designOnly: true,
+                  as: 'canvas',
+                });
+                const composed = composeRealisticMockup({
+                  base,
+                  design,
+                  area: { x: region.x * pixelRatio, y: region.y * pixelRatio, width: region.width * pixelRatio, height: region.height * pixelRatio },
+                  realism: printArea.realism,
+                });
+                result.preview = (await canvasToBlob(composed, mimeType, quality)) ?? undefined;
+              } catch {
+                result.preview = undefined;
+              }
+            }
+
+            if (!result.preview) {
+              result.preview = await renderStageArea(stage, {
+                designSize,
+                background: page.background,
+                pixelRatio,
+                mimeType,
+                quality,
+                as: 'blob',
+              });
+            }
           }
 
           const wantedSize = options.printFile?.(pageToProjectPage(page));

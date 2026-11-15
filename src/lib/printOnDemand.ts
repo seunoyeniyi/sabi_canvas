@@ -4,7 +4,7 @@
  * area, both locked, and the customer designs inside the print area. Open the
  * result with `<EditorLayout initialProject={…} customerMode />`.
  */
-import type { CanvasObject, ImageObject, PrintAreaObject } from '@sabi-canvas/types/canvas-objects';
+import type { CanvasObject, ImageObject, MockupRealism, PrintAreaObject } from '@sabi-canvas/types/canvas-objects';
 import { generateObjectId } from '@sabi-canvas/types/canvas-objects';
 import type { Project, ProjectPage } from '@sabi-canvas/types/project';
 import { generateProjectId } from '@sabi-canvas/types/project';
@@ -25,6 +25,11 @@ export interface MockupSide {
   printArea: { x: number; y: number; width: number; height: number };
   /** The print's width ÷ height, for a side without a picture. Default 1 (square). */
   printAspect?: number;
+  /**
+   * How the design sits on the picture in previews: its light and folds on
+   * the design, and the surface's shape. Unset: light and folds on, flat.
+   */
+  realism?: MockupRealism;
 }
 
 export interface MockupProjectOptions {
@@ -104,6 +109,7 @@ export function createMockupProject(options: MockupProjectOptions): Project {
       borderWidth: 2,
       fillColor: 'transparent',
       fillOpacity: 0,
+      ...(side.picture && side.realism ? { realism: { ...side.realism } } : {}),
     };
 
     return {
@@ -138,6 +144,16 @@ export interface PrintAreaFractions {
   height: number;
 }
 
+/** What can change about a side's mockup. */
+export interface MockupChange {
+  /** Another product picture. */
+  src?: string;
+  /** Another print area; the customer's items move and scale with it. */
+  printArea?: PrintAreaFractions;
+  /** Other preview settings. `null` returns to the defaults. */
+  realism?: MockupRealism | null;
+}
+
 /**
  * A page's objects with another product picture and, optionally, another
  * print area. When the print area moves or changes size, the customer's
@@ -146,7 +162,7 @@ export interface PrintAreaFractions {
 export function withMockup(
   objects: CanvasObject[],
   pageSize: { width: number; height: number },
-  change: { src?: string; printArea?: PrintAreaFractions },
+  change: MockupChange,
 ): CanvasObject[] {
   const oldArea = objects.find((object) => object.type === 'print-area') as PrintAreaObject | undefined;
   const next = change.printArea && oldArea
@@ -163,14 +179,23 @@ export function withMockup(
   // One scale for both directions keeps the design's proportions
   const scale = moved ? Math.min(next!.width / Math.max(1, oldW), next!.height / Math.max(1, oldH)) : 1;
 
+  const realismChanged = change.realism !== undefined
+    && JSON.stringify(change.realism ?? null) !== JSON.stringify(oldArea?.realism ?? null);
+
   return objects.map((object) => {
     if (change.src && object.type === 'image' && object.objectRole === 'mockup' && object.name === MOCKUP_PICTURE_NAME) {
       return (object as ImageObject).src === change.src ? object : ({ ...(object as ImageObject), src: change.src } as CanvasObject);
     }
-    if (!moved) return object;
-    if (object.type === 'print-area') {
-      return { ...object, x: next!.x, y: next!.y, width: next!.width, height: next!.height, scaleX: 1, scaleY: 1 } as CanvasObject;
+    if (object.type === 'print-area' && (moved || realismChanged)) {
+      const area = { ...(object as PrintAreaObject) };
+      if (moved) Object.assign(area, { x: next!.x, y: next!.y, width: next!.width, height: next!.height, scaleX: 1, scaleY: 1 });
+      if (realismChanged) {
+        if (change.realism) area.realism = { ...change.realism };
+        else delete area.realism;
+      }
+      return area as CanvasObject;
     }
+    if (!moved) return object;
     if (object.objectRole === 'customer') {
       return {
         ...object,
@@ -186,15 +211,22 @@ export function withMockup(
 
 /**
  * The same design with another product picture on one side, e.g. after the
- * customer picks another colour, and optionally that colour's own print area.
- * The customer's work is kept (and moved with the print area). In an open
- * editor use `editorRef.current.replaceMockup`.
+ * customer picks another colour, and optionally that colour's own print area
+ * and the side's current preview settings. The customer's work is kept (and
+ * moved with the print area). In an open editor use
+ * `editorRef.current.replaceMockup`.
  */
-export function replaceMockupPicture(project: Project, pageId: string, src: string, printArea?: PrintAreaFractions): Project {
+export function replaceMockupPicture(
+  project: Project,
+  pageId: string,
+  src: string,
+  printArea?: PrintAreaFractions,
+  realism?: MockupRealism | null,
+): Project {
   return {
     ...project,
     pages: project.pages.map((page) =>
-      page.id !== pageId ? page : { ...page, objects: withMockup(page.objects, page.size ?? project.canvasSize, { src, printArea }) },
+      page.id !== pageId ? page : { ...page, objects: withMockup(page.objects, page.size ?? project.canvasSize, { src, printArea, realism }) },
     ),
   };
 }

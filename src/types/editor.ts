@@ -63,11 +63,13 @@ export interface ExportPagesOptions {
   /** Pages to export, by id. Default: every page. */
   pageIds?: string[];
   /**
-   * A picture of each whole page as it looks in the editor, product picture
-   * included: a proof. Its longest side is `maxSide` pixels (default 1600).
-   * Left out when not set.
+   * A picture of each whole page with the product picture: a proof. Its
+   * longest side is `maxSide` pixels (default 1600). On a print on demand
+   * page the design takes the picture's light, bends with its folds and
+   * follows its shape (the print area's `realism`), as on a real product;
+   * `realistic: false` draws it flat, as in the editor. Left out when not set.
    */
-  preview?: { maxSide?: number; mimeType?: 'image/png' | 'image/jpeg' | 'image/webp'; quality?: number };
+  preview?: { maxSide?: number; mimeType?: 'image/png' | 'image/jpeg' | 'image/webp'; quality?: number; realistic?: boolean };
   /**
    * A print file for each page: only what the customer added, inside the
    * print area, on a transparent background, at the size returned in pixels
@@ -111,10 +113,11 @@ export interface EditorApi {
   replaceMockupPicture: (pageId: string, src: string) => void;
   /**
    * The same, with that picture's own print area (fractions of the page) when
-   * it differs, e.g. a colour photographed a little differently. The
-   * customer's items move and scale with the print area.
+   * it differs, e.g. a colour photographed a little differently, and the
+   * side's preview settings (`realism`). The customer's items move and scale
+   * with the print area.
    */
-  replaceMockup: (pageId: string, change: { src?: string; printArea?: import('@sabi-canvas/lib/printOnDemand').PrintAreaFractions }) => void;
+  replaceMockup: (pageId: string, change: import('@sabi-canvas/lib/printOnDemand').MockupChange) => void;
 }
 
 /**

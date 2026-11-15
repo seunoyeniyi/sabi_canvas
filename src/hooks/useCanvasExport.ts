@@ -4,6 +4,28 @@ import { jsPDF } from 'jspdf';
 import { ensureFontFamiliesReady } from '@sabi-canvas/lib/fontLoader';
 import type { CanvasBackground } from '@sabi-canvas/types/pages';
 import type { SabiCanvasThumbnailConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
+import { MOCKUP_LIGHTING_NAME } from '@sabi-canvas/lib/mockupRealism';
+
+// ─── What the editor draws ─────────────────────────────────────────────────────
+
+
+/**
+ * The groups holding the page's content, in drawing order: the content
+ * layer's groups, then the customer's design when it has its own layer (print
+ * on demand, so the picture's light can fall on the design alone).
+ */
+export function pageContentGroups(stage: Konva.Stage): Konva.Group[] {
+  const contentLayer = stage.getLayers()[0];
+  const groups = (contentLayer?.getChildren() ?? []).filter((child): child is Konva.Group => child instanceof Konva.Group);
+  const customer = stage.findOne('.canvas-customer-layer');
+  if (customer instanceof Konva.Group && customer.getLayer() !== contentLayer) groups.push(customer);
+  return groups;
+}
+
+/** A group's own items worth exporting: no live light pictures. */
+export function exportableChildren(group: Konva.Group): Konva.Node[] {
+  return group.getChildren().filter((node) => node.name() !== MOCKUP_LIGHTING_NAME);
+}
 
 // ─── Background rendering helpers (mirror of SafeArea.tsx helpers) ────────────
 
@@ -156,11 +178,9 @@ export async function captureSafeAreaThumbnail(
     clipHeight: designHeight,
   });
 
-  const contentLayer = stage.getLayers()[0];
-  for (const child of contentLayer?.getChildren() ?? []) {
-    if (!(child instanceof Konva.Group)) continue;
+  for (const child of pageContentGroups(stage)) {
     if (child.name() === 'safe-area') continue;
-    for (const node of child.getChildren()) {
+    for (const node of exportableChildren(child)) {
       exportContentGroup.add(node.clone());
     }
   }
@@ -212,6 +232,11 @@ export interface RenderStageAreaOptions {
    * customer added: a print file. Ignored when the editor isn't in customer mode.
    */
   designOnly?: boolean;
+  /**
+   * The opposite: only the product (picture, background), without the
+   * customer's design. Ignored when the editor isn't in customer mode.
+   */
+  mockupOnly?: boolean;
 }
 
 const isPrintAreaNode = (node: Konva.Node) => {
@@ -227,12 +252,13 @@ const isPrintAreaNode = (node: Konva.Node) => {
  * screen. Waits for the fonts in use first.
  */
 export async function renderStageArea(stage: Konva.Stage, options: RenderStageAreaOptions & { as: 'blob' }): Promise<Blob>;
+export async function renderStageArea(stage: Konva.Stage, options: RenderStageAreaOptions & { as: 'canvas' }): Promise<HTMLCanvasElement>;
 export async function renderStageArea(stage: Konva.Stage, options: RenderStageAreaOptions & { as?: 'dataUrl' }): Promise<string>;
 export async function renderStageArea(
   stage: Konva.Stage,
-  options: RenderStageAreaOptions & { as?: 'blob' | 'dataUrl' },
-): Promise<Blob | string> {
-  const { designSize, background, region, pixelRatio, mimeType = 'image/png', quality, transparent, designOnly } = options;
+  options: RenderStageAreaOptions & { as?: 'blob' | 'dataUrl' | 'canvas' },
+): Promise<Blob | string | HTMLCanvasElement> {
+  const { designSize, background, region, pixelRatio, mimeType = 'image/png', quality, transparent, designOnly, mockupOnly } = options;
 
   const textNodes = stage.find('Text');
   const stageFontFamilies = Array.from(new Set(textNodes
@@ -274,11 +300,10 @@ export async function renderStageArea(
       clipHeight: area.height,
     });
 
-    const contentLayer = stage.getLayers()[0];
-    for (const child of contentLayer?.getChildren() ?? []) {
-      if (!(child instanceof Konva.Group)) continue;
+    for (const child of pageContentGroups(stage)) {
       if (child.name() === 'safe-area') continue;
       if (designOnly && child.name() === 'canvas-mockup-layer') continue;
+      if (mockupOnly && child.name() === 'canvas-customer-layer') continue;
 
       // The customer layer is cut to the print area on screen; keep that cut.
       const clip = child.name() === 'canvas-customer-layer' ? child.clip() : undefined;
@@ -287,7 +312,7 @@ export async function renderStageArea(
         : exportContentGroup;
       if (target !== exportContentGroup) exportContentGroup.add(target);
 
-      for (const node of child.getChildren()) {
+      for (const node of exportableChildren(child)) {
         if (isPrintAreaNode(node)) continue;
         target.add(node.clone());
       }
@@ -296,6 +321,9 @@ export async function renderStageArea(
     exportLayer.add(exportContentGroup);
     exportLayer.draw();
 
+    if (options.as === 'canvas') {
+      return exportStage.toCanvas({ pixelRatio: 1 });
+    }
     if (options.as === 'blob') {
       return await exportStage.toBlob({ mimeType, quality }) as Blob;
     }
@@ -436,10 +464,8 @@ export const useCanvasExport = (
       return null;
     }
 
-    // Clone the content from the original stage's first layer
-    // We need to find the CanvasObjects group (the second Group in the content layer)
-    const contentLayer = stage.getLayers()[0];
-    const children = contentLayer.getChildren();
+    // Clone the page's content groups (the CanvasObjects groups)
+    const children = pageContentGroups(stage);
 
     // Create a group that transforms from the original coordinate system
     // to our export coordinate system
@@ -469,7 +495,7 @@ export const useCanvasExport = (
         const originalOffsetY = child.y();
 
         // Clone each actual canvas object
-        for (const objNode of child.getChildren()) {
+        for (const objNode of exportableChildren(child)) {
           const cloned = objNode.clone();
           // Adjust position: remove the original offset and work in design coordinates
           contentGroup.add(cloned);

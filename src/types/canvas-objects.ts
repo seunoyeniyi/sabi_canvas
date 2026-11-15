@@ -297,6 +297,24 @@ export interface DrawObject extends BaseCanvasObject {
   drawTool: 'pen' | 'marker' | 'highlighter';
 }
 
+/**
+ * How a customer's design sits on the product picture in previews (never in
+ * print files): the picture's light and folds on the design, and the
+ * surface's shape. Every field is optional; see `resolveMockupRealism`.
+ */
+export interface MockupRealism {
+  /** 0–1: how strongly the picture's light, shadows and texture show on the design. Default 1. */
+  shading?: number;
+  /** 0–1: how much the design bends with folds and creases. Default 0.5. */
+  folds?: number;
+  /** 0–1: how round the surface is (mugs, bottles): the design narrows towards its sides. Default 0, flat. */
+  roundness?: number;
+  /** −1–1: how the design's top edge curves. Positive dips in the middle, negative arches up. Default 0. */
+  curveTop?: number;
+  /** −1–1: the same for the bottom edge. Default 0. */
+  curveBottom?: number;
+}
+
 export interface PrintAreaObject extends BaseCanvasObject {
   type: 'print-area';
   label?: string;
@@ -305,6 +323,8 @@ export interface PrintAreaObject extends BaseCanvasObject {
   borderWidth: number;
   fillColor: string;
   fillOpacity: number;
+  /** How the design sits on the product picture in previews. Unset: the defaults. */
+  realism?: MockupRealism;
 }
 
 export type CanvasObject =

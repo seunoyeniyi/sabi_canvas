@@ -12,7 +12,7 @@ import {
   generateObjectId,
 } from '@sabi-canvas/types/canvas-objects';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
-import { withMockup, type PrintAreaFractions } from '@sabi-canvas/lib/printOnDemand';
+import { withMockup, type MockupChange } from '@sabi-canvas/lib/printOnDemand';
 import { ActivePageImportResult, ActivePageJsonPayload, CanvasBackground, CanvasPage } from '@sabi-canvas/types/pages';
 
 interface CanvasObjectsContextValue {
@@ -93,7 +93,7 @@ interface CanvasObjectsContextValue {
    */
   replaceMockupPicture: (pageId: string, src: string) => void;
   /** The same, with that picture's own print area too; the customer's items move and scale with it. */
-  replaceMockup: (pageId: string, change: { src?: string; printArea?: PrintAreaFractions }) => void;
+  replaceMockup: (pageId: string, change: MockupChange) => void;
 }
 
 const CanvasObjectsContext = createContext<CanvasObjectsContextValue | undefined>(undefined);
@@ -1258,7 +1258,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
     });
   }, [clearDebounceTimer, modifyActivePage]);
 
-  const replaceMockup = useCallback((pageId: string, change: { src?: string; printArea?: PrintAreaFractions }) => {
+  const replaceMockup = useCallback((pageId: string, change: MockupChange) => {
     setPages((prev) =>
       prev.map((page) => {
         if (page.id !== pageId) return page;
@@ -1267,7 +1267,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
         return {
           ...page,
           objects: swap(page.objects),
-          // Undo and redo keep the new picture and print area: they aren't the customer's edits
+          // Undo and redo keep the new picture, print area and preview settings: they aren't the customer's edits
           past: page.past.map(swap),
           future: page.future.map(swap),
         };

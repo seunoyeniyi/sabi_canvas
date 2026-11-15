@@ -905,17 +905,40 @@ const files = await api.current!.exportPages({
 
 The editor can also be mounted off screen (give its container a real width and height) just to make print files from a saved design.
 
+**Realistic previews.** Proofs look printed on the product, the way Photoshop mockup templates and Printful's or Printify's mockups do it. Everything is read from the plain product picture, so nothing else needs uploading:
+
+- **Light and texture**: the picture's shadows darken the design (multiply) and its highlights lighten it (screen), so folds, shine and the fabric's weave show through. It works on white, coloured and black products, and white artwork stays visible.
+- **Folds**: a smoothed map of the picture's light moves the design's pixels (a displacement map), so the design bends with creases.
+- **Shape**: `roundness` narrows the design towards its sides (mugs, bottles); `curveTop` and `curveBottom` bend its edges (pouches, caps).
+
+While the customer edits, only the light and texture show, live, so the design stays exactly where its handles are. `exportPages({ preview })` gives the full look; pass `preview: { realistic: false }` for a flat proof. Print files are never affected. Set it per side:
+
+```ts
+createMockupProject({
+  sides: [{
+    id: 'front', name: 'Front', picture, printArea,
+    // All optional. Defaults: shading 1, folds 0.5, flat
+    realism: { shading: 1, folds: 0.5, roundness: 0.75, curveTop: 0.2, curveBottom: 0.3 },
+  }],
+});
+```
+
+Outside the editor, `composeRealisticMockup({ base, design, area, realism })` puts any design canvas on any product canvas the same way. Pictures must allow reading from other sites (Cloudinary does); a picture that doesn't is shown flat.
+
 | Export | What it does |
 |---|---|
 | `createMockupProject({ sides, title?, pageSize?, printAreaColor? })` | A new design on a product, one page per side (page id = side id). A side without `picture` is a plain page in the print's shape (`printAspect`) |
-| `replaceMockupPicture(project, pageId, src, printArea?)` | Swaps a side's product picture in a saved design (e.g. another colour), optionally with that picture's own print area; the customer's items move and scale with it. In an open editor use `editorRef.current.replaceMockup(pageId, { src, printArea })`, which keeps the undo history too |
-| `withMockup(objects, pageSize, { src?, printArea? })` | The same for one page's objects |
+| `replaceMockupPicture(project, pageId, src, printArea?, realism?)` | Swaps a side's product picture in a saved design (e.g. another colour), optionally with that picture's own print area and the side's current `realism`; the customer's items move and scale with the print area. In an open editor use `editorRef.current.replaceMockup(pageId, { src, printArea, realism })`, which keeps the undo history too |
+| `withMockup(objects, pageSize, { src?, printArea?, realism? })` | The same for one page's objects |
+| `composeRealisticMockup({ base, design, area, realism? })` | A product canvas with a design canvas on it, lit by the picture, bent by its folds and shaped (`MockupRealism`). Returns a new canvas |
+| `readMockupLight(imageData)`, `readPictureLight(src, region)`, `mockupLightOverlays(light)` | Low level: the light read from a picture, and the see-through shadow and highlight pictures the editor draws over a design |
+| `resolveMockupRealism(realism)`, `DEFAULT_MOCKUP_REALISM` | Settings with every field filled in and in range |
 | `analyzePrintDesign(pages, specs, { minDpi?, goodDpi?, tolerance? })` | Preflight: `empty`, `blurry` (< 100 DPI), `soft` (< 150 DPI), `cut-off`, `outside` |
 | `printPixels(width, height, unit, dpi)` | A print size in pixels (`unit`: `'cm'`, `'in'` or `'mm'`) |
 | `customerObjects(page)`, `printAreaOf(page)` | The customer's items on a page, and its print area |
 | `renderStageArea(stage, options)` | Low level: draws part of a Konva stage at any resolution (what `exportPages` uses) |
 
-In customer mode a design's own objects carry `objectRole: 'customer'`; the product picture and print area carry `objectRole: 'mockup'`.
+In customer mode a design's own objects carry `objectRole: 'customer'`; the product picture and print area carry `objectRole: 'mockup'`. The print area keeps the side's `realism`. The customer's design is drawn on a Konva layer of its own, above the product, so the picture's light falls on the design alone.
 
 ---
 
