@@ -248,7 +248,8 @@ export function isBlankBackground(background?: CanvasBackground | null): boolean
   return background.type === 'solid' && WHITE.test(background.color.trim());
 }
 
-const pictureSize = (src: string) =>
+/** A picture's own size, or null when it can't be loaded. */
+export const loadPictureSize = (src: string) =>
   new Promise<{ width: number; height: number } | null>((resolve) => {
     const image = new Image();
     image.crossOrigin = 'anonymous';
@@ -257,11 +258,45 @@ const pictureSize = (src: string) =>
     image.src = src;
   });
 
-/** The page's colour, gradient or picture as an item of the customer's, over `box`. Null when it prints as nothing. */
-async function backgroundItem(
+type Box = { x: number; y: number; width: number; height: number };
+
+/** Where a page of `size` lands when fitted inside `area` and centred (as its items are). */
+export function fitPageInArea(size: { width: number; height: number }, area: Box): Box {
+  const s = Math.min(area.width / size.width, area.height / size.height);
+  return {
+    x: area.x + (area.width - size.width * s) / 2,
+    y: area.y + (area.height - size.height * s) / 2,
+    width: size.width * s,
+    height: size.height * s,
+  };
+}
+
+/** The crop that makes a picture of `natural` size cover `box`, centred, as a page's picture background does. */
+export function coverCrop(natural: { width: number; height: number }, box: { width: number; height: number }) {
+  const scale = Math.max(box.width / natural.width, box.height / natural.height);
+  const cropWidth = box.width / scale;
+  const cropHeight = box.height / scale;
+  return {
+    naturalWidth: natural.width,
+    naturalHeight: natural.height,
+    cropX: (natural.width - cropWidth) / 2,
+    cropY: (natural.height - cropHeight) / 2,
+    cropWidth,
+    cropHeight,
+  };
+}
+
+/**
+ * A page's colour, gradient or picture as one of the customer's items over
+ * `box`, to sit behind the design. Null when it prints as nothing (none,
+ * see-through or plain white). A picture covers the box once its size is
+ * known (`natural`); without it, see `coverCrop`.
+ */
+export function pageBackgroundItem(
   background: CanvasBackground | undefined,
-  box: { x: number; y: number; width: number; height: number },
-): Promise<CanvasObject | null> {
+  box: Box,
+  natural?: { width: number; height: number } | null,
+): CanvasObject | null {
   if (!background || isBlankBackground(background)) return null;
   const base = {
     id: generateObjectId(),
@@ -280,23 +315,7 @@ async function backgroundItem(
     name: 'Background',
   };
   if (background.type === 'image') {
-    // Drawn to cover the page, as the editor draws a page's picture
-    const natural = await pictureSize(background.src);
-    const picture: ImageObject = { ...base, type: 'image', src: background.src, maskShape: 'none' };
-    if (natural) {
-      const scale = Math.max(box.width / natural.width, box.height / natural.height);
-      const cropWidth = box.width / scale;
-      const cropHeight = box.height / scale;
-      Object.assign(picture, {
-        naturalWidth: natural.width,
-        naturalHeight: natural.height,
-        cropX: (natural.width - cropWidth) / 2,
-        cropY: (natural.height - cropHeight) / 2,
-        cropWidth,
-        cropHeight,
-      });
-    }
-    return picture;
+    return { ...base, type: 'image', src: background.src, maskShape: 'none', ...(natural ? coverCrop(natural, box) : {}) } as ImageObject;
   }
   const rect: RectangleObject = { ...base, type: 'rectangle', fill: '', stroke: '', strokeWidth: 0, cornerRadius: 0 };
   if (background.type === 'solid') {
@@ -327,15 +346,9 @@ export async function placeDesignOnProduct(project: Project, pages: DesignPageSo
       if (!source || !area || !source.size?.width || !source.size?.height) return page;
       const areaBox = { ...area, width: area.width * (area.scaleX || 1), height: area.height * (area.scaleY || 1) } as PrintAreaObject;
       const items = scalePageIntoPrintArea({ size: source.size, objects: source.objects ?? [], background: source.background }, areaBox);
-      // Where the page lands: the same fit as its items
-      const s = Math.min(areaBox.width / source.size.width, areaBox.height / source.size.height);
-      const box = {
-        x: areaBox.x + (areaBox.width - source.size.width * s) / 2,
-        y: areaBox.y + (areaBox.height - source.size.height * s) / 2,
-        width: source.size.width * s,
-        height: source.size.height * s,
-      };
-      const behind = await backgroundItem(source.background, box);
+      const box = fitPageInArea(source.size, areaBox);
+      const natural = source.background?.type === 'image' ? await loadPictureSize(source.background.src) : null;
+      const behind = pageBackgroundItem(source.background, box, natural);
       return { ...page, objects: [...page.objects, ...(behind ? [behind] : []), ...items] };
     }),
   );

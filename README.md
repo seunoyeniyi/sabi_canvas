@@ -342,6 +342,8 @@ VITE_GROK_MODEL=...              # optional, default: grok-2-latest
 | `customerMode` | `boolean` | `false` | Print on demand: a customer designs on a product. Open a design made with `createMockupProject`; the product picture and print area stay locked, new items land inside the print area, and the mockup controls, page management and side menu are hidden. See [Print on demand](#print-on-demand) |
 | `hideDownload` | `boolean` | `false` | Hides the Download button, e.g. when designs are only sold printed |
 | `touchSelection` | `TouchSelectionOptions` | all on | Selecting several items on phones, where one finger moves the view. `pressAndHold`: press and hold an empty spot, then drag, to draw a selection box (a quick drag still moves the view, and the hold no longer opens the menu there). `holdMs`: how long to hold (default 400). `selectMore`: a "Select more" button over the selection, so each tap adds or removes an item, with an "N selected · Done" chip. `showTip`: a one-time tip about press and hold once there are two or more items |
+| `customTools` | `EditorCustomTool[]` | , | Your own buttons in the side toolbar (the bottom bar on phones), each opening your own panel. See [Your own toolbar tools](#your-own-toolbar-tools) |
+| `hideTools` | `string[]` | , | Toolbar tools to leave out, by id: `templates`, `elements`, `text`, `photos`, `upload`, `background`, `layers`, `resize`, or yours |
 | `appBarStart` | `ReactNode` | , | Your own content at the start of the top bar, before the title, e.g. a back button out of the editor |
 | `appBarCenter` | `ReactNode` | , | Your own content in the middle of the top bar, e.g. a product's colour and size picker. Swap the product picture with `editorRef.current.replaceMockupPicture(pageId, src)`; the design and undo history stay |
 | `mobileToolPanelHeight` | `string` | `'85dvh'` | Height of the tool panel sheet on phones and tablets, as any CSS length (`'90dvh'`, `'600px'`) |
@@ -851,6 +853,41 @@ import type {
 
 ---
 
+## Your own toolbar tools
+
+Add buttons to the editor's side toolbar (the bottom bar on phones), each opening a panel you write. The panel is rendered inside the editor, so the editor's hooks work in it: add objects with `useCanvasObjects`, place a design with `useApplyTemplate` (which, while a customer designs on a product, fits it inside the print area).
+
+```tsx
+import { EditorLayout, useApplyTemplate, type EditorCustomTool } from 'sabi-canvas';
+import { FolderOpen } from 'lucide-react';
+
+function SavedDesignsPanel({ onClose }: { onClose: () => void }) {
+  const apply = useApplyTemplate();
+  const pick = (design) => { apply(design); onClose(); };
+  return <MyDesignList onPick={pick} />;
+}
+
+// Made once (a constant or useMemo), so the panel keeps its state
+const tools: EditorCustomTool[] = [
+  {
+    id: 'saved-designs',
+    label: 'My projects',
+    icon: <FolderOpen className="h-5 w-5" />,
+    panel: SavedDesignsPanel,
+    placement: { after: 'templates' }, // or 'start', 'end' (default), { before: 'text' }
+    showIn: 'all', // or 'editor', or 'customer' (only while a customer designs on a product)
+  },
+];
+
+<EditorLayout customTools={tools} hideTools={['resize']} />;
+```
+
+`useApplyTemplate()` returns `apply(design, { asNewPages })`: by default the design's first page replaces the active page (its other pages are added after it); `asNewPages: true` adds every page after the active one instead, so nothing is lost. While a customer designs on a product it's always added inside the print area.
+
+`title` sets the panel's heading (default: `label`). A tool with the id of a built-in one, or one listed in `hideTools`, isn't shown.
+
+---
+
 ## Print on demand
 
 Customers design the product they buy (a T-shirt, a mug), the way Printful's and Customily's designers work: each **side** of the product (front, back, sleeve…) is a page holding the product's picture and a **print area**, both locked. The customer designs inside the print area; anything crossing its edge is cut, on screen and in the print file.
@@ -932,6 +969,7 @@ Outside the editor, `composeRealisticMockup({ base, design, area, realism })` pu
 | `createMockupProject({ sides, title?, pageSize?, printAreaColor? })` | A new design on a product, one page per side (page id = side id). A side without `picture` is a plain page in the print's shape (`printAspect`) |
 | `replaceMockupPicture(project, pageId, src, printArea?, realism?)` | Swaps a side's product picture in a saved design (e.g. another colour), optionally with that picture's own print area and the side's current `realism`; the customer's items move and scale with the print area. In an open editor use `editorRef.current.replaceMockup(pageId, { src, printArea, realism })`, which keeps the undo history too |
 | `withMockup(objects, pageSize, { src?, printArea?, realism? })` | The same for one page's objects |
+| `pageBackgroundItem(background, box, natural?)`, `fitPageInArea(size, area)`, `coverCrop(natural, box)` | Low level: a page's colour, gradient or picture as an item behind a design, where a fitted page lands, and the crop that makes a picture cover a box. `useApplyTemplate` uses them in customer mode, so a template keeps its background on a product |
 | `placeDesignOnProduct(project, pages)` | Puts an existing design (e.g. one made from a template in the free editor) on a product design from `createMockupProject`: page 1 on the first side, page 2 on the second…, each fitted inside the print area and centred. A page's colour, gradient or picture comes as an item behind the design; a plain white page doesn't. Async (it reads background pictures' sizes) |
 | `isBlankBackground(background)` | Whether a page background prints as nothing (none, see-through or plain white). Handy with `exportPages({ preview: { transparent: true } })` for a picture of a page without its white background |
 | `composeRealisticMockup({ base, design, area, realism? })` | A product canvas with a design canvas on it, lit by the picture, bent by its folds and shaped (`MockupRealism`). Returns a new canvas |

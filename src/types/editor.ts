@@ -294,7 +294,34 @@ export type InteractionMode = 'select' | 'pan' | 'draw' | 'text' | 'shape';
 export type EditorMode = 'mockup-design' | 'customer';
 
 // Active sidebar panel type
-export type SidebarPanelId = 'home' | 'templates' | 'elements' | 'text' | 'photos' | 'upload' | 'background' | 'layers' | 'projects' | 'uploads' | 'favorites' | 'resize' | 'settings' | 'help' | 'draw' | null;
+// A built-in panel's id, or a custom tool's (`EditorCustomTool.id`)
+export type SidebarPanelId = 'home' | 'templates' | 'elements' | 'text' | 'photos' | 'upload' | 'background' | 'layers' | 'projects' | 'uploads' | 'favorites' | 'resize' | 'settings' | 'help' | 'draw' | (string & {}) | null;
+
+/**
+ * Your own button in the editor's side toolbar (the bottom bar on phones),
+ * opening your own panel. Pass a list to `<EditorLayout customTools={…} />`,
+ * made once (a constant or `useMemo`), so its panels keep their state.
+ */
+export interface EditorCustomTool {
+  /** Unique, and not a built-in tool's: templates, elements, text, photos, upload, background, layers, resize. */
+  id: string;
+  /** Under the icon, and the panel's title unless `title` is set. Keep it short. */
+  label: string;
+  /** About 20px, e.g. `<FolderOpen className="h-5 w-5" />`. */
+  icon: React.ReactNode;
+  /**
+   * The panel's content, shown inside the editor, so the editor's hooks work
+   * there (`useCanvasObjects`, `useApplyTemplate`…). Call `onClose` to close
+   * it, e.g. after adding something to the design.
+   */
+  panel: React.ComponentType<{ onClose: () => void }>;
+  /** Above the panel. Default: `label`. */
+  title?: string;
+  /** Where the button goes: before or after another tool (by id), or at the start or end. Default `end`. */
+  placement?: 'start' | 'end' | { before: string } | { after: string };
+  /** `customer`: only while a customer designs on a product; `editor`: never then. Default `all`. */
+  showIn?: 'all' | 'editor' | 'customer';
+}
 
 // Editor Context Types
 export interface EditorState {
@@ -356,6 +383,10 @@ export interface TouchSelectionOptions {
 }
 
 export interface EditorContextValue extends EditorState {
+  /** Your own toolbar tools (`EditorLayout`'s `customTools`). */
+  customTools: EditorCustomTool[];
+  /** Tools left out of the toolbar, by id (`EditorLayout`'s `hideTools`). */
+  hiddenTools: string[];
   /** Touch selection settings, every field filled in. */
   touchSelection: Required<TouchSelectionOptions>;
   /** "Select more" on touch screens: each tap adds or removes an item. */

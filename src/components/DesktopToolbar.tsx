@@ -5,7 +5,7 @@ import { Button } from '@sabi-canvas/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sabi-canvas/ui/tooltip';
 import { Separator } from '@sabi-canvas/ui/separator';
 import { cn } from '@sabi-canvas/lib/utils';
-import { editorTools, EditorTool } from './shared/editorToolsConfig';
+import { useEditorTools, CUSTOMER_HIDDEN_TOOLS, type ToolbarTool } from './shared/useEditorTools';
 import { ToolPanelContent } from './shared/ToolPanels';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
 import { SidebarPanelId } from '@sabi-canvas/types/editor';
@@ -27,11 +27,8 @@ export const DesktopToolbar: React.FC<DesktopToolbarProps> = ({
   const activeTool = isDesktop ? activeToolPanel : null;
 
   const isCustomerMode = isMockupEnabled && editorMode === 'customer';
-  // Tools that are not available to customers
-  const CUSTOMER_HIDDEN_TOOLS = new Set(['background', 'resize']);
-  const visibleTools = isCustomerMode
-    ? editorTools.filter((t) => !CUSTOMER_HIDDEN_TOOLS.has(t.id))
-    : editorTools;
+  // Built-in tools (less those a customer doesn't get) and the host's own
+  const { tools: visibleTools, find: findTool } = useEditorTools();
 
   // Close restricted panels if they are open when entering customer mode
   useEffect(() => {
@@ -41,7 +38,7 @@ export const DesktopToolbar: React.FC<DesktopToolbarProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCustomerMode]);
 
-  const handleToolClick = (tool: EditorTool) => {
+  const handleToolClick = (tool: ToolbarTool) => {
     if (tool.hasPanel) {
       toggleToolPanel(tool.id as SidebarPanelId);
     }
@@ -110,7 +107,7 @@ export const DesktopToolbar: React.FC<DesktopToolbarProps> = ({
             className="flex flex-col bg-card border border-panel-border rounded-xl shadow-editor-md p-3 w-[260px] h-full"
           >
             <h4 className="font-medium text-sm mb-2 shrink-0">
-              {editorTools.find((t) => t.id === activeTool)?.label}
+              {findTool(activeTool)?.title}
             </h4>
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
               <ToolPanelContent activeTool={activeTool} onClose={closePanel} />

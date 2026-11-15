@@ -92,7 +92,7 @@ export { useMediaQuery, useBreakpoint, useIsMobile, useIsTablet, useIsDesktop } 
 export { useDebounce } from './hooks/use-debounce';
 export { useTemplateSource, useTemplateList, useTemplateFilters, useTemplateDesignLoader, templateQueryKeys } from './hooks/useTemplates';
 export { useApplyTemplate } from './hooks/useApplyTemplate';
-export type { ApplyTemplateResult } from './hooks/useApplyTemplate';
+export type { ApplyTemplateResult, ApplyTemplateOptions } from './hooks/useApplyTemplate';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type {
@@ -111,6 +111,7 @@ export type {
   ExportPagesOptions,
   ExportedPage,
   TouchSelectionOptions,
+  EditorCustomTool,
   ToolbarProps,
   ToolItem,
   EditorDrawerProps,
@@ -191,6 +192,10 @@ export {
   withMockup,
   placeDesignOnProduct,
   isBlankBackground,
+  pageBackgroundItem,
+  fitPageInArea,
+  coverCrop,
+  loadPictureSize,
   INCHES_PER,
   MOCKUP_PICTURE_NAME,
 } from './lib/printOnDemand';

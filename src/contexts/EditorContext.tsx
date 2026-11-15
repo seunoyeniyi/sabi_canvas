@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
-import { EditorContextValue, EditorMode, EditorState, EditorTheme, InlineTextSelectionState, InteractionMode, SidebarPanelId, TouchSelectionOptions } from '@sabi-canvas/types/editor';
+import { EditorContextValue, EditorCustomTool, EditorMode, EditorState, EditorTheme, InlineTextSelectionState, InteractionMode, SidebarPanelId, TouchSelectionOptions } from '@sabi-canvas/types/editor';
 
 // Default to Instagram Post size (1080x1080)
 const defaultState: EditorState = {
@@ -47,14 +47,27 @@ export interface EditorProviderProps {
   customerMode?: boolean;
   /** Selecting several items on touch screens. See `TouchSelectionOptions`. */
   touchSelection?: TouchSelectionOptions;
+  /** Your own toolbar tools. See `EditorCustomTool`. */
+  customTools?: EditorCustomTool[];
+  /** Built-in or custom tools to leave out, by id. */
+  hideTools?: string[];
 }
+
+const NO_TOOLS: EditorCustomTool[] = [];
+const NO_IDS: string[] = [];
 
 export const EditorProvider: React.FC<EditorProviderProps> = ({
   children,
   initialState = {},
   customerMode = false,
   touchSelection: touchSelectionOptions,
+  customTools = NO_TOOLS,
+  hideTools = NO_IDS,
 }) => {
+  // A list written inline changes every render; the same ids keep the same list
+  const hiddenKey = hideTools.join('|');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const hiddenTools = useMemo(() => hideTools, [hiddenKey]);
   const { pressAndHold = true, holdMs = 400, selectMore = true, showTip = true } = touchSelectionOptions ?? {};
   const touchSelection = useMemo<Required<TouchSelectionOptions>>(
     () => ({ pressAndHold, holdMs: Math.max(150, holdMs), selectMore, showTip }),
@@ -272,6 +285,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 
   const value = useMemo<EditorContextValue>(() => ({
     ...state,
+    customTools,
+    hiddenTools,
     touchSelection,
     isSelectMoreMode: isSelectMoreMode && touchSelection.selectMore,
     setSelectMoreMode,
@@ -317,7 +332,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     cropApply,
     cropReset,
     cropCancel,
-  }), [state, touchSelection, isSelectMoreMode, setTheme, toggleDrawer, closeDrawer, togglePropertyPanel, toggleEffectsPanel, setActiveTool, setActiveNavItem, setZoom, setInteractionMode, setActiveSidebarPanel, toggleSidebarPanel, setActiveToolPanel, toggleToolPanel, setCanvasSize, startTextEdit, stopTextEdit, startShapeTextEdit, stopShapeTextEdit, startTableCellEdit, stopTableCellEdit, setSelectedTableCells, setIsCropMode, setLastGraphicsSearch, setLastIconsSearch, setLastPhotosSearch, setLastBackgroundPhotosSearch, setLastElementsCategory, setInlineTextSelectionState, registerApplyInlineStyleFn, applyInlineTextStyle, setDrawTool, setDrawColor, setDrawSize, setDrawTension, setReplacingImageId, setEditorMode, toggleMockupEnabled, setMockupEnabled, registerCropActions, cropApply, cropReset, cropCancel]);
+  }), [state, customTools, hiddenTools, touchSelection, isSelectMoreMode, setTheme, toggleDrawer, closeDrawer, togglePropertyPanel, toggleEffectsPanel, setActiveTool, setActiveNavItem, setZoom, setInteractionMode, setActiveSidebarPanel, toggleSidebarPanel, setActiveToolPanel, toggleToolPanel, setCanvasSize, startTextEdit, stopTextEdit, startShapeTextEdit, stopShapeTextEdit, startTableCellEdit, stopTableCellEdit, setSelectedTableCells, setIsCropMode, setLastGraphicsSearch, setLastIconsSearch, setLastPhotosSearch, setLastBackgroundPhotosSearch, setLastElementsCategory, setInlineTextSelectionState, registerApplyInlineStyleFn, applyInlineTextStyle, setDrawTool, setDrawColor, setDrawSize, setDrawTension, setReplacingImageId, setEditorMode, toggleMockupEnabled, setMockupEnabled, registerCropActions, cropApply, cropReset, cropCancel]);
 
   return (
     <EditorContext.Provider value={value}>

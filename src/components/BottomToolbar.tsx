@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@sabi-canvas/lib/utils';
 import { ScrollArea, ScrollBar } from '@sabi-canvas/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@sabi-canvas/ui/sheet';
-import { editorTools, EditorTool } from './shared/editorToolsConfig';
+import { useEditorTools, CUSTOMER_HIDDEN_TOOLS, type ToolbarTool } from './shared/useEditorTools';
 import { ToolPanelContent } from './shared/ToolPanels';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
 import { SidebarPanelId } from '@sabi-canvas/types/editor';
@@ -24,10 +24,8 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({ className, panelHe
   const activeTool = activeToolPanel;
 
   const isCustomerMode = isMockupEnabled && editorMode === 'customer';
-  const CUSTOMER_HIDDEN_TOOLS = new Set(['background', 'resize']);
-  const visibleTools = isCustomerMode
-    ? editorTools.filter((t) => !CUSTOMER_HIDDEN_TOOLS.has(t.id))
-    : editorTools;
+  // Built-in tools (less those a customer doesn't get) and the host's own
+  const { tools: visibleTools, find: findTool } = useEditorTools();
 
   // Close restricted panels if they are open when entering customer mode
   useEffect(() => {
@@ -37,7 +35,7 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({ className, panelHe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCustomerMode]);
 
-  const handleToolClick = (tool: EditorTool) => {
+  const handleToolClick = (tool: ToolbarTool) => {
     if (tool.hasPanel) {
       toggleToolPanel(tool.id as SidebarPanelId);
     }
@@ -45,10 +43,7 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({ className, panelHe
 
   const closePanel = () => setActiveToolPanel(null);
 
-  const getPanelTitle = () => {
-    const tool = editorTools.find(t => t.id === activeTool);
-    return tool?.label || '';
-  };
+  const getPanelTitle = () => findTool(activeTool)?.title || '';
 
   return (
     <>

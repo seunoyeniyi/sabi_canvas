@@ -22,7 +22,7 @@ import { DownloadDialog } from './DownloadDialog';
 import { TemplateLockedDialog, useTemplateLockedDialog } from './shared/TemplateLockedDialog';
 import { cn } from '@sabi-canvas/lib/utils';
 import { AppBarAction } from '@sabi-canvas/types/editor';
-import type { AppBarSaveAction, EditorApi, ExportedPage, ExportPagesOptions, SaveActionContext, TouchSelectionOptions } from '@sabi-canvas/types/editor';
+import type { AppBarSaveAction, EditorApi, EditorCustomTool, ExportedPage, ExportPagesOptions, SaveActionContext, TouchSelectionOptions } from '@sabi-canvas/types/editor';
 import { renderStageArea } from '@sabi-canvas/hooks/useCanvasExport';
 import { customerObjects, MOCKUP_PICTURE_NAME, printAreaOf } from '@sabi-canvas/lib/printOnDemand';
 import { composeRealisticMockup, MOCKUP_LIGHTING_NAME } from '@sabi-canvas/lib/mockupRealism';
@@ -143,6 +143,14 @@ export interface EditorLayoutProps {
    * Both on by default. See `TouchSelectionOptions`.
    */
   touchSelection?: TouchSelectionOptions;
+  /**
+   * Your own buttons in the side toolbar (the bottom bar on phones), each
+   * opening your own panel, e.g. a customer's saved designs. Make the list
+   * once (a constant or `useMemo`). See `EditorCustomTool`.
+   */
+  customTools?: EditorCustomTool[];
+  /** Tools to leave out of the toolbar, by id: built-in (templates, elements, text, photos, upload, background, layers, resize) or yours. */
+  hideTools?: string[];
   /**
    * Your own content in the middle of the top bar, e.g. the product's colour
    * and size picker while a customer designs it. Keep it compact on phones.
@@ -971,7 +979,12 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ config, ...props }) 
   return (
     <EditorQueryClient>
       <SabiCanvasProvider config={resolvedConfig}>
-        <EditorProvider customerMode={props.customerMode} touchSelection={props.touchSelection}>
+        <EditorProvider
+          customerMode={props.customerMode}
+          touchSelection={props.touchSelection}
+          customTools={props.customTools}
+          hideTools={props.hideTools}
+        >
           <CanvasObjectsProvider>
             <CustomFontsProvider>
               <EditorLayoutContent {...props} />

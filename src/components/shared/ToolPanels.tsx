@@ -14,6 +14,7 @@ import { useCanvasObjects } from '@sabi-canvas/contexts/CanvasObjectsContext';
 import { useSabiCanvasConfig } from '@sabi-canvas/contexts/SabiCanvasConfigContext';
 import { TextObject, createDefaultObject } from '@sabi-canvas/types/canvas-objects';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@sabi-canvas/ui/tabs';
+import { useEditorTools } from './useEditorTools';
 
 interface ToolPanelProps {
   activeTool: string | null;
@@ -24,6 +25,11 @@ export const ToolPanelContent: React.FC<ToolPanelProps> = ({ activeTool, onClose
   const { canvasSize } = useEditor();
   const { updateActivePageSize } = useCanvasObjects();
   const { templates } = useSabiCanvasConfig();
+  const { find } = useEditorTools();
+
+  // The host's own tool: its own panel
+  const CustomPanel = find(activeTool)?.panel;
+  if (CustomPanel) return <CustomPanel onClose={onClose} />;
 
   switch (activeTool) {
     case 'templates': {
