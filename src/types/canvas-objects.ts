@@ -159,6 +159,15 @@ export interface ArrowObject extends BaseCanvasObject {
 export interface PathObject extends BaseCanvasObject {
   type: 'path';
   data: string; // SVG path data
+  /**
+   * The size of the box `data` is drawn in (an SVG's viewBox, e.g. 24 × 24
+   * for an icon). The path is stretched from that box to `width` × `height`,
+   * so resizing works like any other shape. Without it (designs made before
+   * it existed) the path is drawn at its own size and only `scaleX`/`scaleY`
+   * resize it.
+   */
+  pathWidth?: number;
+  pathHeight?: number;
   fill: string;
   stroke: string;
   strokeWidth: number;
@@ -573,12 +582,42 @@ export const createDefaultObject = (
   }
 };
 
-// Create path object from SVG data
+/**
+ * How much a path is stretched inside its shape: from the box its data is
+ * drawn in (`pathWidth` × `pathHeight`) to `width` × `height`. 1 for paths
+ * made before that box was kept.
+ */
+export const pathScaleOf = (path: Pick<PathObject, 'width' | 'height' | 'pathWidth' | 'pathHeight'>) => ({
+  pathScaleX: path.pathWidth && path.pathWidth > 0 ? path.width / path.pathWidth : 1,
+  pathScaleY: path.pathHeight && path.pathHeight > 0 ? path.height / path.pathHeight : 1,
+});
+
+/**
+ * An older path (drawn at its own size, resized by `scaleX`/`scaleY`) as a
+ * path stretched from its drawing box, looking exactly the same. Paths that
+ * already have their box come back unchanged.
+ */
+export const withPathBox = (path: PathObject): PathObject => {
+  if (path.pathWidth && path.pathWidth > 0 && path.pathHeight && path.pathHeight > 0) return path;
+  const sx = Math.abs(path.scaleX) || 1;
+  const sy = Math.abs(path.scaleY) || 1;
+  return {
+    ...path,
+    pathWidth: path.width / sx,
+    pathHeight: path.height / sy,
+    scaleX: Math.sign(path.scaleX) || 1,
+    scaleY: Math.sign(path.scaleY) || 1,
+  };
+};
+
+// Create path object from SVG data. `pathSize` is the box the data is drawn
+// in (its viewBox); the path is stretched from it to `dimensions`.
 export const createPathObject = (
   pathData: string,
   position: { x: number; y: number },
   dimensions: { width: number; height: number },
-  fill: string = 'hsl(217, 91%, 60%)'
+  fill: string = 'hsl(217, 91%, 60%)',
+  pathSize: { width: number; height: number } = dimensions
 ): PathObject => {
   return {
     id: generateObjectId(),
@@ -587,6 +626,8 @@ export const createPathObject = (
     y: position.y,
     width: dimensions.width,
     height: dimensions.height,
+    pathWidth: pathSize.width,
+    pathHeight: pathSize.height,
     rotation: 0,
     scaleX: 1,
     scaleY: 1,

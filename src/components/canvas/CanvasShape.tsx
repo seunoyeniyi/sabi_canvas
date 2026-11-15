@@ -19,6 +19,7 @@ import {
   PathObject,
   TextObject,
   TextSpan,
+  pathScaleOf,
 } from '@sabi-canvas/types/canvas-objects';
 import { CanvasText } from './CanvasText';
 
@@ -485,13 +486,21 @@ export const CanvasShape: React.FC<CanvasShapeProps> = ({
 
     case 'path': {
       const path = object as PathObject;
+      // Stretched from the box it's drawn in to the shape's size. Older paths
+      // without that box are drawn at their own size, as they always were.
+      const { pathScaleX, pathScaleY } = pathScaleOf(path);
       return (
         <Group {...commonProps} {...shapeInteractionProps}>
           <Path
             data={path.data}
+            scaleX={pathScaleX}
+            scaleY={pathScaleY}
             fill={path.fill}
             stroke={path.stroke}
             strokeWidth={path.strokeWidth}
+            // The outline keeps its width however the path is stretched (older
+            // paths are resized by scale, and keep the outline they had)
+            strokeScaleEnabled={!path.pathWidth}
             perfectDrawEnabled={false}
             {...shadowProps}
           />

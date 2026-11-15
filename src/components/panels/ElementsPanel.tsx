@@ -44,7 +44,9 @@ export const ElementsPanel: React.FC<ElementsPanelProps> = ({ onClose }) => {
         shape.pathData,
         { x: p.x, y: p.y },
         { width: p.width, height: p.height },
-        shape.defaultFill || 'hsl(217, 91%, 60%)'
+        shape.defaultFill || 'hsl(217, 91%, 60%)',
+        // The shape's own drawing box, stretched to the size it's placed at
+        { width: w, height: h }
       );
       addObject(pathObj);
       onClose();

@@ -154,17 +154,16 @@ export const IconsGrid: React.FC<IconsGridProps> = ({ onClose }) => {
         } else {
           const originalWidth = iconData.width || data.width || 24;
           const originalHeight = iconData.height || data.height || 24;
-          const scaleX = size / originalWidth;
-          const scaleY = size / originalHeight;
 
+          // The icon's viewBox is stretched to its size on the page, so it
+          // resizes like any other shape (no extra scale to lose on resize)
           const newObj = createPathObject(
             pathData,
             { x, y },
-            { width: size, height: size },
-            'hsl(217, 91%, 60%)'
+            { width: size, height: (size * originalHeight) / originalWidth },
+            'hsl(217, 91%, 60%)',
+            { width: originalWidth, height: originalHeight }
           );
-          newObj.scaleX = scaleX;
-          newObj.scaleY = scaleY;
 
           addObject(newObj);
         }

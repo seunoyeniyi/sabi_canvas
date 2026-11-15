@@ -4,9 +4,11 @@ import { DEFAULT_BACKGROUND } from '@sabi-canvas/types/pages';
 import {
   CanvasObject,
   GroupObject,
+  PathObject,
   PrintAreaObject,
   TextObject,
   generateObjectId,
+  withPathBox,
 } from '@sabi-canvas/types/canvas-objects';
 
 /** Copies objects with new ids, keeping parent and group references intact. */
@@ -33,7 +35,9 @@ export function scalePageIntoPrintArea(page: TemplatePageContent, printArea: Pri
   const offsetX = printArea.x + (printArea.width - page.size.width * s) / 2;
   const offsetY = printArea.y + (printArea.height - page.size.height * s) / 2;
 
-  const sourceObjects = withFreshIds(page.objects.filter((o) => o.type !== 'print-area'));
+  // Older paths are resized by scale; give them their drawing box so the width and height below resize them
+  const sourceObjects = withFreshIds(page.objects.filter((o) => o.type !== 'print-area'))
+    .map((o) => (o.type === 'path' ? withPathBox(o as PathObject) : o));
 
   return sourceObjects.map((obj) => {
     const base: CanvasObject = {

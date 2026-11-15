@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Transformer } from 'react-konva';
 import Konva from 'konva';
-import { CanvasObject, EllipseObject, TextObject, TableObject, StarObject } from '@sabi-canvas/types/canvas-objects';
+import { CanvasObject, EllipseObject, TextObject, TableObject, StarObject, PathObject } from '@sabi-canvas/types/canvas-objects';
 import {
   getTransformerAnchorVisibility,
   getResponsiveEnabledAnchors,
@@ -494,6 +494,52 @@ export const CanvasTransformer: React.FC<CanvasTransformerProps> = ({
         });
 
         onTransformEnd(id, updates);
+        return;
+      }
+
+      // Paths (heart, diamond, icons…): the new size goes into width/height and
+      // the path is stretched to it from the box it's drawn in. A path made
+      // before that box was kept gets it now, worked out from how it was
+      // shown, so it stays exactly as big as the user left it.
+      if (nodeClass === 'Group' && obj.type === 'path') {
+        const path = obj as PathObject;
+        const legacy = !(path.pathWidth && path.pathWidth > 0 && path.pathHeight && path.pathHeight > 0);
+        // Older paths are drawn at their own size inside a scaled group: their
+        // drawing box is their width divided by that scale (an icon's 24 × 24)
+        const pathWidth = legacy ? path.width / (Math.abs(path.scaleX) || 1) : path.pathWidth!;
+        const pathHeight = legacy ? path.height / (Math.abs(path.scaleY) || 1) : path.pathHeight!;
+        // The box as it was drawn before this resize, times the resize. For an
+        // older path the group's scale already holds its old scale.
+        const newWidth = Math.max(1, (legacy ? pathWidth : path.width) * Math.abs(node.scaleX()));
+        const newHeight = Math.max(1, (legacy ? pathHeight : path.height) * Math.abs(node.scaleY()));
+
+        ((node as Konva.Group).find('Text') as Konva.Text[])
+          .filter((t) => (t.name() || '').startsWith('_innerText_'))
+          .forEach((textNode) => {
+            textNode.scaleX(1);
+            textNode.scaleY(1);
+          });
+
+        const pathUpdates = {
+          ...updates,
+          width: newWidth,
+          height: newHeight,
+          pathWidth,
+          pathHeight,
+          scaleX: Math.sign(node.scaleX()) || 1,
+          scaleY: Math.sign(node.scaleY()) || 1,
+        } as Partial<PathObject>;
+
+        // Show the new size at once, before React draws it again
+        node.scaleX(pathUpdates.scaleX!);
+        node.scaleY(pathUpdates.scaleY!);
+        const pathNode = (node as Konva.Group).findOne('Path');
+        pathNode?.scaleX(newWidth / pathWidth);
+        pathNode?.scaleY(newHeight / pathHeight);
+        pathNode?.setAttr('strokeScaleEnabled', false);
+        transformer.forceUpdate();
+
+        onTransformEnd(id, pathUpdates as Partial<CanvasObject>);
         return;
       }
 
