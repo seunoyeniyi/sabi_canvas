@@ -9,6 +9,11 @@ export interface EditorTheme {
 
 // App Bar Types
 export interface AppBarProps {
+  /**
+   * At the very start of the bar, before the menu button and the title, e.g.
+   * a back arrow out of an editor opened over another page.
+   */
+  start?: React.ReactNode;
   logo?: React.ReactNode;
   title?: string;
   onTitleChange?: (title: string) => void;
@@ -23,6 +28,8 @@ export interface AppBarProps {
    * button. Designed for Save / Publish workflows.
    */
   saveAction?: AppBarSaveAction;
+  /** How Download looks and where it goes on phones. See `DownloadButtonOptions`. */
+  downloadButton?: DownloadButtonOptions;
   /** Passed to `saveAction.onClick`. EditorLayout provides it. */
   saveActionContext?: SaveActionContext;
   centerContent?: React.ReactNode;
@@ -133,6 +140,26 @@ export interface EditorApi {
  * controlled by the host application , a typical pattern is "Publish" when the
  * item is a draft and "Save" when it is already published.
  */
+/**
+ * How the top bar shows Download. Pass to `<EditorLayout downloadButton={…} />`.
+ * Every field is optional.
+ */
+export interface DownloadButtonOptions {
+  /**
+   * The button's look on wide screens. Default: filled, unless your
+   * `saveAction` is filled (`variant: "default"`), then outlined, so only one
+   * button stands out.
+   */
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  /** Default "Download". */
+  label?: string;
+  /**
+   * On phones: in the "⋯" menu (`menu`, the default, which leaves the bar room
+   * for your main action) or as an icon in the bar (`bar`).
+   */
+  phone?: 'menu' | 'bar';
+}
+
 export interface AppBarSaveAction {
   /** Button label text, e.g. "Save", "Publish", "Save & Publish". */
   label: string;

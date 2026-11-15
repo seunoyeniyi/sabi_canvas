@@ -22,7 +22,7 @@ import { DownloadDialog } from './DownloadDialog';
 import { TemplateLockedDialog, useTemplateLockedDialog } from './shared/TemplateLockedDialog';
 import { cn } from '@sabi-canvas/lib/utils';
 import { AppBarAction } from '@sabi-canvas/types/editor';
-import type { AppBarSaveAction, EditorApi, EditorCustomTool, ExportedPage, ExportPagesOptions, SaveActionContext, TouchSelectionOptions } from '@sabi-canvas/types/editor';
+import type { AppBarSaveAction, DownloadButtonOptions, EditorApi, EditorCustomTool, ExportedPage, ExportPagesOptions, SaveActionContext, TouchSelectionOptions } from '@sabi-canvas/types/editor';
 import { renderStageArea } from '@sabi-canvas/hooks/useCanvasExport';
 import { customerObjects, MOCKUP_PICTURE_NAME, printAreaOf } from '@sabi-canvas/lib/printOnDemand';
 import { composeRealisticMockup, MOCKUP_LIGHTING_NAME } from '@sabi-canvas/lib/mockupRealism';
@@ -138,6 +138,17 @@ export interface EditorLayoutProps {
   /** Hides the Download button, e.g. when designs are only sold printed. */
   hideDownload?: boolean;
   /**
+   * How Download looks (`variant`, `label`) and, on phones, whether it's in
+   * the "⋯" menu (default) or the bar. By default it's outlined when your
+   * `saveAction` is the filled button. See `DownloadButtonOptions`.
+   */
+  downloadButton?: DownloadButtonOptions;
+  /**
+   * Hides the "Enable Mockup" button (setting up a product picture and print
+   * area), e.g. for customers who only design. Customer mode never shows it.
+   */
+  hideMockupToggle?: boolean;
+  /**
    * Selecting several items on touch screens: press and hold then drag for a
    * selection box, and a "Select more" button for tapping items in and out.
    * Both on by default. See `TouchSelectionOptions`.
@@ -157,9 +168,9 @@ export interface EditorLayoutProps {
    */
   appBarCenter?: React.ReactNode;
   /**
-   * Your own content at the start of the top bar, before the title, e.g. a
-   * back button out of the editor. Laid out with the bar, so it never covers
-   * the title.
+   * Your own content at the very start of the top bar, before the menu button
+   * and the title, e.g. a back arrow out of an editor opened over another
+   * page. Laid out with the bar, so it never covers the title.
    */
   appBarStart?: React.ReactNode;
   /**
@@ -203,7 +214,7 @@ async function waitForPictures(stage: Konva.Stage, expected: number, timeoutMs =
   }
 }
 
-const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, projectTitleOverride, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction, customerMode = false, hideDownload = false, editorRef, appBarCenter, appBarStart, mobileToolPanelHeight }) => {
+const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className, enableJsonDevTools = false, templateId, isBlank, hideTitle, projectId: externalProjectId, initialProject, projectTitleOverride, onSave, externalProjects, isLoadingProjects, onDeleteProject, onRefreshProjects, onSelectProject, onNewProject: onHostNewProject, onThemeToggle, logo, drawerTitle, saveAction, customerMode = false, hideDownload = false, downloadButton, hideMockupToggle = false, editorRef, appBarCenter, appBarStart, mobileToolPanelHeight }) => {
   useKeyboardShortcuts();
 
   const {
@@ -813,9 +824,9 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
   const appBarActions: AppBarAction[] = [
     ...(hideDownload
       ? []
-      : [{ id: 'download', icon: <Download className="h-4.5 w-4.5" />, label: 'Download', onClick: () => setIsDownloadOpen(true) }]),
+      : [{ id: 'download', icon: <Download className="h-4.5 w-4.5" />, label: downloadButton?.label || 'Download', onClick: () => setIsDownloadOpen(true) }]),
     // A customer designing a product can't take the mockup off
-    ...(customerMode
+    ...(customerMode || hideMockupToggle
       ? []
       : [{ id: 'mockup-toggle', icon: <Printer className={cn('h-4.5 w-4.5', isMockupEnabled && 'text-primary')} />, label: isMockupEnabled ? 'Disable Mockup' : 'Enable Mockup', onClick: toggleMockupEnabled }]),
     ...(enableJsonDevTools
@@ -856,8 +867,9 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
         actions={appBarActions}
         saveAction={saveAction}
         saveActionContext={saveActionContext}
+        downloadButton={downloadButton}
         centerContent={appBarCenterContent ?? appBarCenter}
-        logo={appBarStart}
+        start={appBarStart}
         hideTitle={hideTitle}
         onThemeToggle={onThemeToggle}
       />

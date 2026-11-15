@@ -106,6 +106,7 @@ export type {
   AppBarProps,
   AppBarAction,
   AppBarSaveAction,
+  DownloadButtonOptions,
   SaveActionContext,
   EditorApi,
   ExportPagesOptions,

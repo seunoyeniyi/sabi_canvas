@@ -11,7 +11,8 @@ import {
   MoreHorizontal,
   FileBox,
   PenLine,
-  Loader2
+  Loader2,
+  Download
 } from 'lucide-react';
 import type { AppBarProps, SaveActionContext } from '@sabi-canvas/types/editor';
 import { Button } from '@sabi-canvas/ui/button';
@@ -35,6 +36,7 @@ const NO_SAVE_ACTION_CONTEXT: SaveActionContext = {
 };
 
 export const AppBar: React.FC<AppBarProps> = ({
+  start,
   logo,
   title = 'Untitled',
   onTitleChange,
@@ -46,6 +48,7 @@ export const AppBar: React.FC<AppBarProps> = ({
   actions = [],
   saveAction,
   saveActionContext,
+  downloadButton,
   centerContent,
   className,
   hideTitle = false,
@@ -119,6 +122,10 @@ export const AppBar: React.FC<AppBarProps> = ({
 
   // Helper to find specific actions
   const downloadAction = actions.find(a => a.id === 'download');
+  // Only one filled button: when the host's own action is the main one, Download steps back
+  const downloadVariant = downloadButton?.variant
+    ?? (saveAction && (saveAction.variant ?? 'outline') === 'default' ? 'outline' : 'default');
+  const downloadOnPhoneBar = downloadButton?.phone === 'bar';
   const devActions = actions.filter(a => a.id.includes('json-dev'));
   const otherActions = actions.filter(a =>
     a.id !== 'download' &&
@@ -138,8 +145,12 @@ export const AppBar: React.FC<AppBarProps> = ({
         className
       )}
     >
-      {/* Left Section: Menu + Logo */}
-      <div className="flex items-center gap-2 min-w-0 shrink-0">
+      {/* Left Section: Menu + Logo. Gives way first on narrow screens: the
+          title shortens, the actions on the right always fit */}
+      <div className="flex items-center gap-2 min-w-0 shrink">
+        {/* The way out first, as full-screen dialogs have it */}
+        {start}
+
         {onMenuToggle && (
           <Button
             variant="ghost"
@@ -172,7 +183,7 @@ export const AppBar: React.FC<AppBarProps> = ({
               onClick={handleTitleClick}
               className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-toolbar-hover cursor-pointer transition-colors min-w-0"
             >
-              <span className="font-medium text-sm truncate max-w-[120px] md:max-w-[200px]">
+              <span className="font-medium text-sm truncate max-w-[120px] md:max-w-[200px] min-w-0">
                 {title}
               </span>
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -189,7 +200,7 @@ export const AppBar: React.FC<AppBarProps> = ({
       )}
 
       {/* Right Section: Actions */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 shrink-0">
         {/* Undo/Redo - Always visible */}
         <div className="flex items-center">
           <Tooltip>
@@ -245,7 +256,7 @@ export const AppBar: React.FC<AppBarProps> = ({
             {/* Standard Desktop Actions */}
             {downloadAction && (
               <Button
-                variant="default"
+                variant={downloadVariant}
                 size="sm"
                 onClick={downloadAction.onClick}
                 disabled={downloadAction.disabled}
@@ -329,11 +340,12 @@ export const AppBar: React.FC<AppBarProps> = ({
               </Button>
             )}
 
-            {/* Show only Download on mobile initially */}
-            {downloadAction && (
+            {/* Download in the bar, when the host asks for it */}
+            {downloadAction && downloadOnPhoneBar && (
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label={downloadAction.label}
                 onClick={downloadAction.onClick}
                 disabled={downloadAction.disabled}
                 className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-toolbar-hover"
@@ -342,18 +354,43 @@ export const AppBar: React.FC<AppBarProps> = ({
               </Button>
             )}
 
-            {/* Mobile "More" Menu */}
+            {/* Mobile "More" Menu: Download (by default) and the other actions
+                live here, so the bar keeps room for the main action */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label="More"
                   className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-toolbar-hover"
                 >
                   <MoreHorizontal className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+                {downloadAction && !downloadOnPhoneBar && (
+                  <DropdownMenuItem
+                    onClick={downloadAction.onClick}
+                    disabled={downloadAction.disabled}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    {downloadAction.label}
+                  </DropdownMenuItem>
+                )}
+                {otherActions.map((action) => (
+                  <DropdownMenuItem
+                    key={action.id}
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    className="gap-2 [&_svg]:h-4 [&_svg]:w-4"
+                  >
+                    {action.icon}
+                    {action.label}
+                  </DropdownMenuItem>
+                ))}
+                {((downloadAction && !downloadOnPhoneBar) || otherActions.length > 0) && <DropdownMenuSeparator />}
+
                 {devActions.length > 0 && (
                   <>
                     <DropdownMenuLabel>JSON Dev Tools</DropdownMenuLabel>
