@@ -69,7 +69,14 @@ export interface ExportPagesOptions {
    * follows its shape (the print area's `realism`), as on a real product;
    * `realistic: false` draws it flat, as in the editor. Left out when not set.
    */
-  preview?: { maxSide?: number; mimeType?: 'image/png' | 'image/jpeg' | 'image/webp'; quality?: number; realistic?: boolean };
+  preview?: {
+    maxSide?: number;
+    mimeType?: 'image/png' | 'image/jpeg' | 'image/webp';
+    quality?: number;
+    realistic?: boolean;
+    /** Leave out the page's background (PNG or WebP keep the see-through parts). Not for product pages. */
+    transparent?: boolean;
+  };
   /**
    * A print file for each page: only what the customer added, inside the
    * print area, on a transparent background, at the size returned in pixels

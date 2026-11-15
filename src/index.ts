@@ -189,6 +189,8 @@ export {
   printAreaOf,
   printPixels,
   withMockup,
+  placeDesignOnProduct,
+  isBlankBackground,
   INCHES_PER,
   MOCKUP_PICTURE_NAME,
 } from './lib/printOnDemand';
@@ -201,6 +203,7 @@ export type {
   PrintIssueKind,
   AnalyzePrintOptions,
   MockupChange,
+  DesignPageSource,
 } from './lib/printOnDemand';
 export {
   composeRealisticMockup,

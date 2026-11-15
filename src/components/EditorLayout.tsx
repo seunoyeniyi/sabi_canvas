@@ -481,6 +481,7 @@ const EditorLayoutContent: React.FC<EditorLayoutProps> = ({ children, className,
                 pixelRatio,
                 mimeType,
                 quality,
+                transparent: !!options.preview.transparent && !isMockupEnabled,
                 as: 'blob',
               });
             }

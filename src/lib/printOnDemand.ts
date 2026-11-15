@@ -4,10 +4,12 @@
  * area, both locked, and the customer designs inside the print area. Open the
  * result with `<EditorLayout initialProject={…} customerMode />`.
  */
-import type { CanvasObject, ImageObject, MockupRealism, PrintAreaObject } from '@sabi-canvas/types/canvas-objects';
+import type { CanvasObject, ImageObject, MockupRealism, PrintAreaObject, RectangleObject } from '@sabi-canvas/types/canvas-objects';
 import { generateObjectId } from '@sabi-canvas/types/canvas-objects';
+import type { CanvasBackground } from '@sabi-canvas/types/pages';
 import type { Project, ProjectPage } from '@sabi-canvas/types/project';
 import { generateProjectId } from '@sabi-canvas/types/project';
+import { scalePageIntoPrintArea } from '@sabi-canvas/lib/templates/placeTemplate';
 
 /** A side of a product that can be printed on. */
 export interface MockupSide {
@@ -229,6 +231,115 @@ export function replaceMockupPicture(
       page.id !== pageId ? page : { ...page, objects: withMockup(page.objects, page.size ?? project.canvasSize, { src, printArea, realism }) },
     ),
   };
+}
+
+/** A page of an existing design, to put on a product. */
+export interface DesignPageSource {
+  size: { width: number; height: number };
+  objects: CanvasObject[];
+  background?: CanvasBackground;
+}
+
+const WHITE = /^(#fff|#ffffff|white|rgba?\(\s*255\s*,\s*255\s*,\s*255\s*(,\s*1(\.0+)?\s*)?\))$/i;
+
+/** Whether a page background prints as nothing: none, see-through or plain white. */
+export function isBlankBackground(background?: CanvasBackground | null): boolean {
+  if (!background || background.type === 'transparent') return true;
+  return background.type === 'solid' && WHITE.test(background.color.trim());
+}
+
+const pictureSize = (src: string) =>
+  new Promise<{ width: number; height: number } | null>((resolve) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image.naturalWidth ? { width: image.naturalWidth, height: image.naturalHeight } : null);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+
+/** The page's colour, gradient or picture as an item of the customer's, over `box`. Null when it prints as nothing. */
+async function backgroundItem(
+  background: CanvasBackground | undefined,
+  box: { x: number; y: number; width: number; height: number },
+): Promise<CanvasObject | null> {
+  if (!background || isBlankBackground(background)) return null;
+  const base = {
+    id: generateObjectId(),
+    x: box.x,
+    y: box.y,
+    width: box.width,
+    height: box.height,
+    rotation: 0,
+    scaleX: 1,
+    scaleY: 1,
+    opacity: 1,
+    draggable: true,
+    visible: true,
+    locked: false,
+    objectRole: 'customer' as const,
+    name: 'Background',
+  };
+  if (background.type === 'image') {
+    // Drawn to cover the page, as the editor draws a page's picture
+    const natural = await pictureSize(background.src);
+    const picture: ImageObject = { ...base, type: 'image', src: background.src, maskShape: 'none' };
+    if (natural) {
+      const scale = Math.max(box.width / natural.width, box.height / natural.height);
+      const cropWidth = box.width / scale;
+      const cropHeight = box.height / scale;
+      Object.assign(picture, {
+        naturalWidth: natural.width,
+        naturalHeight: natural.height,
+        cropX: (natural.width - cropWidth) / 2,
+        cropY: (natural.height - cropHeight) / 2,
+        cropWidth,
+        cropHeight,
+      });
+    }
+    return picture;
+  }
+  const rect: RectangleObject = { ...base, type: 'rectangle', fill: '', stroke: '', strokeWidth: 0, cornerRadius: 0 };
+  if (background.type === 'solid') {
+    rect.fill = background.color;
+  } else if (background.type === 'linear-gradient' || background.type === 'radial-gradient') {
+    rect.fill = background.colors[0] ?? '#ffffff';
+    rect.fillType = background.type;
+    rect.gradientColors = background.colors;
+    if (background.type === 'linear-gradient') rect.gradientAngle = background.angle;
+  }
+  return rect;
+}
+
+/**
+ * An existing design put on a product (e.g. a template the customer made in
+ * the free editor, now to be printed): its pages in order on the product's
+ * sides (page 1 on the first side, page 2 on the second…), each scaled to fit
+ * inside the side's print area and centred. A page's colour, gradient or
+ * picture comes with it as an item behind the design; a plain white page
+ * doesn't (white isn't printed on clothing, and on paper it's the paper).
+ * Extra pages are left out. The customer's items already on a side stay.
+ */
+export async function placeDesignOnProduct(project: Project, pages: DesignPageSource[]): Promise<Project> {
+  const placed = await Promise.all(
+    project.pages.map(async (page, index) => {
+      const source = pages[index];
+      const area = printAreaOf(page);
+      if (!source || !area || !source.size?.width || !source.size?.height) return page;
+      const areaBox = { ...area, width: area.width * (area.scaleX || 1), height: area.height * (area.scaleY || 1) } as PrintAreaObject;
+      const items = scalePageIntoPrintArea({ size: source.size, objects: source.objects ?? [], background: source.background }, areaBox);
+      // Where the page lands: the same fit as its items
+      const s = Math.min(areaBox.width / source.size.width, areaBox.height / source.size.height);
+      const box = {
+        x: areaBox.x + (areaBox.width - source.size.width * s) / 2,
+        y: areaBox.y + (areaBox.height - source.size.height * s) / 2,
+        width: source.size.width * s,
+        height: source.size.height * s,
+      };
+      const behind = await backgroundItem(source.background, box);
+      return { ...page, objects: [...page.objects, ...(behind ? [behind] : []), ...items] };
+    }),
+  );
+  return { ...project, pages: placed, updatedAt: Date.now() };
 }
 
 /** The customer's own items on a page (not the product picture or print area). */
