@@ -4,7 +4,7 @@
  * area, both locked, and the customer designs inside the print area. Open the
  * result with `<EditorLayout initialProject={…} customerMode />`.
  */
-import type { CanvasObject, ImageObject, MockupRealism, PrintAreaObject, RectangleObject } from '@sabi-canvas/types/canvas-objects';
+import type { CanvasObject, GroupObject, ImageObject, MockupRealism, PrintAreaObject, RectangleObject } from '@sabi-canvas/types/canvas-objects';
 import { generateObjectId } from '@sabi-canvas/types/canvas-objects';
 import type { CanvasBackground } from '@sabi-canvas/types/pages';
 import type { Project, ProjectPage } from '@sabi-canvas/types/project';
@@ -198,7 +198,8 @@ export function withMockup(
       return area as CanvasObject;
     }
     if (!moved) return object;
-    if (object.objectRole === 'customer') {
+    // Items inside a group are placed relative to it and move with it
+    if (object.objectRole === 'customer' && !object.parentId) {
       return {
         ...object,
         x: next!.x + (object.x - oldArea!.x) * scale,
@@ -355,9 +356,35 @@ export async function placeDesignOnProduct(project: Project, pages: DesignPageSo
   return { ...project, pages: placed, updatedAt: Date.now() };
 }
 
+/**
+ * Gives each group the layer of what's in it (customer design or product
+ * picture). Groups made before groups kept a layer had none, so they were drawn
+ * outside the print area's clip. Returns the same array when nothing changes.
+ */
+export function withGroupRoles(objects: CanvasObject[]): CanvasObject[] {
+  if (!objects.some((object) => object.type === 'group' && !object.objectRole)) return objects;
+  const byId = new Map(objects.map((object) => [object.id, object]));
+
+  const roleOf = (object: CanvasObject, seen: Set<string>): CanvasObject['objectRole'] => {
+    if (object.objectRole) return object.objectRole;
+    if (object.type !== 'group' || seen.has(object.id)) return undefined;
+    seen.add(object.id);
+    const roles = (object as GroupObject).childrenIds
+      .map((id) => byId.get(id))
+      .map((child) => (child ? roleOf(child, seen) : undefined));
+    return roles.includes('customer') ? 'customer' : roles.find(Boolean);
+  };
+
+  return objects.map((object) => {
+    if (object.type !== 'group' || object.objectRole) return object;
+    const objectRole = roleOf(object, new Set());
+    return objectRole ? ({ ...object, objectRole } as CanvasObject) : object;
+  });
+}
+
 /** The customer's own items on a page (not the product picture or print area). */
 export function customerObjects(page: Pick<ProjectPage, 'objects'>): CanvasObject[] {
-  return (page.objects ?? []).filter((object) => object.objectRole === 'customer' && object.visible !== false);
+  return withGroupRoles(page.objects ?? []).filter((object) => object.objectRole === 'customer' && object.visible !== false);
 }
 
 /** The page's print area, if it has one. */

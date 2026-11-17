@@ -42,8 +42,9 @@ export function scalePageIntoPrintArea(page: TemplatePageContent, printArea: Pri
   return sourceObjects.map((obj) => {
     const base: CanvasObject = {
       ...obj,
-      x: offsetX + obj.x * s,
-      y: offsetY + obj.y * s,
+      // Items inside a group are placed relative to it, so only the scale applies
+      x: (obj.parentId ? 0 : offsetX) + obj.x * s,
+      y: (obj.parentId ? 0 : offsetY) + obj.y * s,
       width: obj.width * s,
       height: obj.height * s,
       objectRole: 'customer' as const,

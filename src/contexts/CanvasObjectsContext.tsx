@@ -12,7 +12,7 @@ import {
   generateObjectId,
 } from '@sabi-canvas/types/canvas-objects';
 import { useEditor } from '@sabi-canvas/contexts/EditorContext';
-import { withMockup, type MockupChange } from '@sabi-canvas/lib/printOnDemand';
+import { withGroupRoles, withMockup, type MockupChange } from '@sabi-canvas/lib/printOnDemand';
 import { ActivePageImportResult, ActivePageJsonPayload, CanvasBackground, CanvasPage } from '@sabi-canvas/types/pages';
 
 interface CanvasObjectsContextValue {
@@ -988,10 +988,17 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
 
     const groupId = generateObjectId();
 
+    // On a product, the group sits on the same layer as what's in it, so the
+    // customer's grouped items stay clipped to the print area
+    const objectRole = selectedObjects.some((obj) => obj.objectRole === 'customer')
+      ? 'customer'
+      : selectedObjects[0].objectRole;
+
     const groupObject: GroupObject = {
       id: groupId,
       type: 'group',
       parentId,
+      ...(objectRole ? { objectRole } : {}),
       x: bounds.minX,
       y: bounds.minY,
       width: Math.max(1, bounds.maxX - bounds.minX),
@@ -1285,6 +1292,7 @@ export const CanvasObjectsProvider: React.FC<CanvasObjectsProviderProps> = ({ ch
       clearDebounceTimer();
       const hydrated = incomingPages.map((page) => ({
         ...page,
+        objects: withGroupRoles(page.objects ?? []),
         size: page.size ?? fallbackSize,
         selectedIds: [],
         past: [] as CanvasPage['past'],
